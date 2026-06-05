@@ -77,7 +77,7 @@ export async function getProducts(req: Request, res: Response, next: NextFunctio
 
 export async function getProduct(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const item = await prisma.product.findUnique({ where: { id: parseInt(req.params.id, 10) }, include: INCLUDE });
+    const item = await prisma.product.findUnique({ where: { id: parseInt(String(req.params.id), 10) }, include: INCLUDE });
     if (!item) { res.status(404).json({ error: 'Product not found.' }); return; }
     res.json(item);
   } catch (err) { next(err); }
@@ -108,7 +108,7 @@ export async function updateProduct(req: Request, res: Response, next: NextFunct
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
   try {
     const item = await prisma.product.update({
-      where: { id: parseInt(req.params.id, 10) },
+      where: { id: parseInt(String(req.params.id), 10) },
       data: buildPayload(req.body),
       include: INCLUDE,
     });
@@ -120,7 +120,7 @@ export async function uploadImage(req: Request, res: Response, next: NextFunctio
   try {
     if (!req.file) { res.status(400).json({ error: 'No image file provided.' }); return; }
 
-    const id      = parseInt(req.params.id, 10);
+    const id      = parseInt(String(req.params.id), 10);
     const product = await prisma.product.findUnique({ where: { id } });
     if (!product) {
       fs.unlinkSync(req.file.path);
@@ -137,8 +137,8 @@ export async function uploadImage(req: Request, res: Response, next: NextFunctio
 
 export async function deleteImage(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const id       = parseInt(req.params.id, 10);
-    const filename = req.params.filename;
+    const id       = parseInt(String(req.params.id), 10);
+    const filename = String(req.params.filename);
 
     const product = await prisma.product.findUnique({ where: { id } });
     if (!product) { res.status(404).json({ error: 'Product not found.' }); return; }
@@ -156,7 +156,7 @@ export async function deleteImage(req: Request, res: Response, next: NextFunctio
 
 export async function deleteProduct(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await prisma.product.update({ where: { id: parseInt(req.params.id, 10) }, data: { isActive: false } });
+    await prisma.product.update({ where: { id: parseInt(String(req.params.id), 10) }, data: { isActive: false } });
     res.json({ message: 'Product deactivated successfully.' });
   } catch (err) { next(err); }
 }

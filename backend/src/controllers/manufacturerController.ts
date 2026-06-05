@@ -42,7 +42,7 @@ export async function getManufacturers(req: Request, res: Response, next: NextFu
 
 export async function getManufacturer(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const item = await prisma.manufacturer.findUnique({ where: { id: parseInt(req.params.id, 10) } });
+    const item = await prisma.manufacturer.findUnique({ where: { id: parseInt(String(req.params.id), 10) } });
     if (!item) { res.status(404).json({ error: 'Manufacturer not found.' }); return; }
     res.json(item);
   } catch (err) { next(err); }
@@ -72,14 +72,14 @@ export async function updateManufacturer(req: Request, res: Response, next: Next
   const errors = validationResult(req);
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
   try {
-    const item = await prisma.manufacturer.update({ where: { id: parseInt(req.params.id, 10) }, data: buildPayload(req.body) });
+    const item = await prisma.manufacturer.update({ where: { id: parseInt(String(req.params.id), 10) }, data: buildPayload(req.body) });
     res.json(item);
   } catch (err) { next(err); }
 }
 
 export async function deleteManufacturer(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await prisma.manufacturer.update({ where: { id: parseInt(req.params.id, 10) }, data: { isActive: false } });
+    await prisma.manufacturer.update({ where: { id: parseInt(String(req.params.id), 10) }, data: { isActive: false } });
     res.json({ message: 'Manufacturer deactivated successfully.' });
   } catch (err) { next(err); }
 }

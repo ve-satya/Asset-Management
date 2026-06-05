@@ -57,7 +57,7 @@ async function getAssets(req: Request, res: Response, next: NextFunction): Promi
 async function getAsset(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const item = await prisma.asset.findUnique({
-      where: { id: parseInt(req.params.id, 10) },
+      where: { id: parseInt(String(req.params.id), 10) },
       include: { productType: { select: { displayName: true, id: true } } },
     });
     if (!item) { res.status(404).json({ error: 'Asset not found.' }); return; }
@@ -79,7 +79,7 @@ async function updateAsset(req: Request, res: Response, next: NextFunction): Pro
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
   try {
     const item = await prisma.asset.update({
-      where: { id: parseInt(req.params.id, 10) },
+      where: { id: parseInt(String(req.params.id), 10) },
       data: buildPayload(req.body),
       include: { productType: { select: { displayName: true, id: true } } },
     });
@@ -90,7 +90,7 @@ async function updateAsset(req: Request, res: Response, next: NextFunction): Pro
 async function deleteAsset(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     await prisma.asset.update({
-      where: { id: parseInt(req.params.id, 10) },
+      where: { id: parseInt(String(req.params.id), 10) },
       data: { isActive: false },
     });
     res.json({ message: 'Asset deactivated successfully.' });

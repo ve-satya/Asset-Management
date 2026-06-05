@@ -46,7 +46,7 @@ export async function getSoftwareLicenseTypes(req: Request, res: Response, next:
 export async function getSoftwareLicenseType(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const item = await prisma.softwareLicenseType.findUnique({
-      where: { id: parseInt(req.params.id, 10) },
+      where: { id: parseInt(String(req.params.id), 10) },
       include: INCLUDE,
     });
     if (!item) { res.status(404).json({ error: 'Software License Type not found.' }); return; }
@@ -79,7 +79,7 @@ export async function updateSoftwareLicenseType(req: Request, res: Response, nex
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
   try {
     const item = await prisma.softwareLicenseType.update({
-      where: { id: parseInt(req.params.id, 10) },
+      where: { id: parseInt(String(req.params.id), 10) },
       data: buildPayload(req.body),
       include: INCLUDE,
     });
@@ -89,7 +89,7 @@ export async function updateSoftwareLicenseType(req: Request, res: Response, nex
 
 export async function deleteSoftwareLicenseType(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await prisma.softwareLicenseType.update({ where: { id: parseInt(req.params.id, 10) }, data: { isActive: false } });
+    await prisma.softwareLicenseType.update({ where: { id: parseInt(String(req.params.id), 10) }, data: { isActive: false } });
     res.json({ message: 'Software License Type deactivated successfully.' });
   } catch (err) { next(err); }
 }

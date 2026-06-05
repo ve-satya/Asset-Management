@@ -42,7 +42,7 @@ export async function getAssetStates(req: Request, res: Response, next: NextFunc
 
 export async function getAssetState(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const item = await prisma.assetState.findUnique({ where: { id: parseInt(req.params.id, 10) } });
+    const item = await prisma.assetState.findUnique({ where: { id: parseInt(String(req.params.id), 10) } });
     if (!item) { res.status(404).json({ error: 'Asset State not found.' }); return; }
     res.json(item);
   } catch (err) { next(err); }
@@ -72,14 +72,14 @@ export async function updateAssetState(req: Request, res: Response, next: NextFu
   const errors = validationResult(req);
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
   try {
-    const item = await prisma.assetState.update({ where: { id: parseInt(req.params.id, 10) }, data: buildPayload(req.body) });
+    const item = await prisma.assetState.update({ where: { id: parseInt(String(req.params.id), 10) }, data: buildPayload(req.body) });
     res.json(item);
   } catch (err) { next(err); }
 }
 
 export async function deleteAssetState(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await prisma.assetState.update({ where: { id: parseInt(req.params.id, 10) }, data: { isActive: false } });
+    await prisma.assetState.update({ where: { id: parseInt(String(req.params.id), 10) }, data: { isActive: false } });
     res.json({ message: 'Asset State deactivated successfully.' });
   } catch (err) { next(err); }
 }

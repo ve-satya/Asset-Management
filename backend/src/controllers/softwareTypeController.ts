@@ -42,7 +42,7 @@ export async function getSoftwareTypes(req: Request, res: Response, next: NextFu
 
 export async function getSoftwareType(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const item = await prisma.softwareType.findUnique({ where: { id: parseInt(req.params.id, 10) } });
+    const item = await prisma.softwareType.findUnique({ where: { id: parseInt(String(req.params.id), 10) } });
     if (!item) { res.status(404).json({ error: 'Software Type not found.' }); return; }
     res.json(item);
   } catch (err) { next(err); }
@@ -72,14 +72,14 @@ export async function updateSoftwareType(req: Request, res: Response, next: Next
   const errors = validationResult(req);
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
   try {
-    const item = await prisma.softwareType.update({ where: { id: parseInt(req.params.id, 10) }, data: buildPayload(req.body) });
+    const item = await prisma.softwareType.update({ where: { id: parseInt(String(req.params.id), 10) }, data: buildPayload(req.body) });
     res.json(item);
   } catch (err) { next(err); }
 }
 
 export async function deleteSoftwareType(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await prisma.softwareType.update({ where: { id: parseInt(req.params.id, 10) }, data: { isActive: false } });
+    await prisma.softwareType.update({ where: { id: parseInt(String(req.params.id), 10) }, data: { isActive: false } });
     res.json({ message: 'Software Type deactivated successfully.' });
   } catch (err) { next(err); }
 }
