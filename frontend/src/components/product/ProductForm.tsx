@@ -12,7 +12,7 @@ interface ProductFormProps {
 }
 
 const EMPTY = { name: '', productTypeId: '', manufacturerId: '', partNo: '', cost: '', description: '' };
-const IMG_BASE = 'http://localhost:5000/uploads/products/';
+const IMG_BASE = '/uploads/products/';
 
 export default function ProductForm({ record, onSuccess, onCancel }: ProductFormProps) {
   const [form,         setForm]         = useState(EMPTY);
