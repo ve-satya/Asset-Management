@@ -14,7 +14,6 @@
     "build": "npm run build --workspaces"
   },
   "dependencies": {
-    "all": "^0.0.0"
   },
   "devDependencies": {
     "concurrently": "^10.0.3"

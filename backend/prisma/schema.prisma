@@ -8,19 +8,19 @@ datasource db {
 }
 
 model ProductType {
-  id                 Int       @id @default(autoincrement())
-  displayName        String    @map("display_name")
-  displayPluralName  String    @map("display_plural_name")
-  apiName            String    @unique @map("api_name")
-  apiPluralName      String    @map("api_plural_name")
-  category           String    @map("category")
-  assetType          String    @map("asset_type")
-  assetCategory      String    @map("asset_category")
-  description        String?
-  parentId           Int?      @map("parent_id")
-  isActive           Boolean   @default(true) @map("is_active")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+  id                Int      @id @default(autoincrement())
+  displayName       String   @map("display_name")
+  displayPluralName String   @map("display_plural_name")
+  apiName           String   @unique @map("api_name")
+  apiPluralName     String   @map("api_plural_name")
+  category          String   @map("category")
+  assetType         String   @map("asset_type")
+  assetCategory     String   @map("asset_category")
+  description       String?
+  parentId          Int?     @map("parent_id")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   parent   ProductType?  @relation("Hierarchy", fields: [parentId], references: [id])
   children ProductType[] @relation("Hierarchy")
@@ -43,8 +43,9 @@ model Product {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  productType  ProductType   @relation(fields: [productTypeId], references: [id])
-  manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
+  productType    ProductType   @relation(fields: [productTypeId], references: [id])
+  manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
+  selectedAssets Asset[]       @relation("SelectedProduct")
 
   @@map("products")
 }
@@ -121,20 +122,20 @@ model AssetState {
   description       String?
   requiresOwnership Boolean  @default(false) @map("requires_ownership")
   requiresScan      Boolean  @default(false) @map("requires_scan")
-  isActive          Boolean  @default(true)  @map("is_active")
-  createdAt         DateTime @default(now())  @map("created_at")
-  updatedAt         DateTime @updatedAt       @map("updated_at")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@map("asset_states")
 }
 
 model Manufacturer {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
   description String?
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt      @map("updated_at")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   products             Product[]
   softwareLicenseTypes SoftwareLicenseType[]
@@ -174,6 +175,8 @@ model Asset {
   lastScanTime       DateTime? @map("last_scan_time")
   scanState          String?   @map("scan_state")
   stateComments      String?   @map("state_comments")
+  networks           Json?     @default("[]")
+  productId          Int?      @map("product_id")
   macAddress         String?   @map("mac_address")
   serviceTag         String?   @map("service_tag")
   domain             String?
@@ -194,7 +197,132 @@ model Asset {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  productType ProductType @relation(fields: [productTypeId], references: [id])
+  productType       ProductType             @relation(fields: [productTypeId], references: [id])
+  selectedProduct   Product?                @relation("SelectedProduct", fields: [productId], references: [id])
+  workstationDetail AssetWorkstationDetail?
 
   @@map("assets")
+}
+
+model AssetWorkstationDetail {
+  id                 Int      @id @default(autoincrement())
+  assetId            Int      @unique @map("asset_id")
+  monitoringProtocol String?  @map("monitoring_protocol")
+  lastLoggedInUser   String?  @map("last_logged_in_user")
+  biosName           String?  @map("bios_name")
+  serviceTag         String?  @map("service_tag")
+  biosVersion        String?  @map("bios_version")
+  biosManufacturer   String?  @map("bios_manufacturer")
+  biosDate           String?  @map("bios_date")
+  smbiosVersion      String?  @map("smbios_version")
+  domain             String?
+  totalMemory        String?  @map("total_memory")
+  virtualMemory      String?  @map("virtual_memory")
+  logicalProcessors  Int?     @map("logical_processors")
+  totalSlots         Int?     @map("total_slots")
+  osName             String?  @map("os_name")
+  osVersion          String?  @map("os_version")
+  osServicePack      String?  @map("os_service_pack")
+  osProductId        String?  @map("os_product_id")
+  osBuildNumber      String?  @map("os_build_number")
+  systemType         String?  @map("system_type")
+  licenseType        String?  @map("license_type")
+  licenseStatus      String?  @map("license_status")
+  systemDrive        String?  @map("system_drive")
+  vmPlatform         String?  @map("vm_platform")
+  installedVMs       String?  @map("installed_vms")
+  allowedVMs         String?  @map("allowed_vms")
+  networks           Json?    @default("[]")
+  mouseType          String?  @map("mouse_type")
+  mouseManufacturer  String?  @map("mouse_manufacturer")
+  mouseSerialNumber  String?  @map("mouse_serial_number")
+  mouseButtons       String?  @map("mouse_buttons")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  asset        Asset                         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  processors   AssetWorkstationProcessor[]
+  hardDisks    AssetWorkstationHardDisk[]
+  keyboards    AssetWorkstationKeyboard[]
+  monitors     AssetWorkstationMonitor[]
+  motherboards AssetWorkstationMotherboard[]
+
+  @@map("asset_workstation_details")
+}
+
+model AssetWorkstationProcessor {
+  id            Int      @id @default(autoincrement())
+  assetDetailId Int      @map("asset_detail_id")
+  processorInfo String?  @map("processor_info")
+  manufacturer  String?
+  clockSpeed    Int?     @map("clock_speed")
+  numberOfCores Int?     @map("number_of_cores")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  assetDetail AssetWorkstationDetail @relation(fields: [assetDetailId], references: [id], onDelete: Cascade)
+
+  @@map("asset_workstation_processors")
+}
+
+model AssetWorkstationHardDisk {
+  id            Int      @id @default(autoincrement())
+  assetDetailId Int      @map("asset_detail_id")
+  model         String?
+  serialNumber  String?  @map("serial_number")
+  manufacturer  String?
+  capacity      Int?     @map("capacity")
+  driveType     String?  @map("drive_type")
+  freeSpace     String?  @map("free_space")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  assetDetail AssetWorkstationDetail @relation(fields: [assetDetailId], references: [id], onDelete: Cascade)
+
+  @@map("asset_workstation_hard_disks")
+}
+
+model AssetWorkstationKeyboard {
+  id            Int      @id @default(autoincrement())
+  assetDetailId Int      @map("asset_detail_id")
+  keyboardType  String?  @map("keyboard_type")
+  manufacturer  String?
+  serialNumber  String?  @map("serial_number")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  assetDetail AssetWorkstationDetail @relation(fields: [assetDetailId], references: [id], onDelete: Cascade)
+
+  @@map("asset_workstation_keyboards")
+}
+
+model AssetWorkstationMonitor {
+  id            Int      @id @default(autoincrement())
+  assetDetailId Int      @map("asset_detail_id")
+  monitorType   String?  @map("monitor_type")
+  serialNumber  String?  @map("serial_number")
+  manufacturer  String?
+  maxResolution String?  @map("max_resolution")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  assetDetail AssetWorkstationDetail @relation(fields: [assetDetailId], references: [id], onDelete: Cascade)
+
+  @@map("asset_workstation_monitors")
+}
+
+model AssetWorkstationMotherboard {
+  id            Int       @id @default(autoincrement())
+  assetDetailId Int       @map("asset_detail_id")
+  product       String?
+  model         String?
+  version       String?
+  partNumber    String?   @map("part_number")
+  installedDate DateTime? @map("installed_date")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  assetDetail AssetWorkstationDetail @relation(fields: [assetDetailId], references: [id], onDelete: Cascade)
+
+  @@map("asset_workstation_motherboards")
 }
