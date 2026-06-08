@@ -7,7 +7,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://asset-management-n9wh.onrender.com',
+        target: 'http://localhost:5000',
         changeOrigin: true,
       },
     },
