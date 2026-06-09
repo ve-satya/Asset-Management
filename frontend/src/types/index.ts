@@ -277,6 +277,76 @@ export interface SoftwareLicenseType {
   manufacturer?: { id: number; name: string } | null;
 }
 
+export interface Software {
+  id: number;
+  name: string;
+  version: string | null;
+  softwareTypeId: number;
+  softwareCategoryId: number;
+  manufacturerId: number;
+  licenseTypeId: number | null;
+  description: string | null;
+  images: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  softwareType?: { id: number; name: string; enableCompliance: boolean };
+  softwareCategory?: { id: number; name: string };
+  manufacturer?: { id: number; name: string };
+  licenseType?: { id: number; name: string } | null;
+  installationsCount?: number;
+  installationsAllowed?: number;
+  licensedInstallations?: number;
+  availableForAllocation?: number;
+  complianceType?: string;
+  licenses?: SoftwareLicense[];
+  installations?: SoftwareInstallation[];
+  licenseAgreements?: SoftwareLicenseAgreement[];
+}
+
+export interface SoftwareLicense {
+  id: number;
+  softwareId: number;
+  licenseKey: string | null;
+  licenseType: string | null;
+  purchased: number;
+  installationsAllowed: number;
+  allocated: number;
+  available: number;
+  expiryDate: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SoftwareInstallation {
+  id: number;
+  softwareId: number;
+  computerName: string | null;
+  userName: string | null;
+  version: string | null;
+  licenseId: number | null;
+  installedOn: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  license?: { id: number; licenseKey: string | null; licenseType: string | null } | null;
+}
+
+export interface SoftwareLicenseAgreement {
+  id: number;
+  softwareId: number;
+  agreementName: string;
+  vendorId: number | null;
+  startDate: string | null;
+  endDate: string | null;
+  documentUrl: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  vendor?: { id: number; name: string } | null;
+}
+
 export interface TableColumn<T = Record<string, unknown>> {
   key: string;
   label: string;

@@ -8,6 +8,23 @@ interface LayoutProps {
   setDarkMode: (v: boolean) => void;
 }
 
+function buildBreadcrumb(pathname: string): string[] {
+  const labelMap: Record<string, string> = {
+    dashboard: 'Dashboard',
+    assets:    'Assets',
+    software:  'Software',
+    list:      '',
+    create:    'New',
+    edit:      'Edit',
+    detail:    'Detail',
+  };
+  return pathname
+    .split('/')
+    .filter(Boolean)
+    .map((p) => (isNaN(Number(p)) ? (labelMap[p] ?? (p.charAt(0).toUpperCase() + p.slice(1))) : ''))
+    .filter(Boolean);
+}
+
 export default function Layout({ darkMode, setDarkMode }: LayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
 
