@@ -26,7 +26,7 @@ const LS_KEY = 'asset_pt_columns';
 const DEFAULT_COL_WIDTHS: Record<string, number> = { id: 70, fullPath: 280, apiName: 200, assetType: 140, assetCategory: 160, description: 220 };
 
 const ASSET_TYPE_COLORS: Record<string, string> = { Asset: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', Consumable: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', Component: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' };
-const CATEGORY_COLORS: Record<string, string> = { IT: 'text-brand-600 dark:text-brand-400 font-medium', 'Non IT': 'text-rose-600 dark:text-rose-400 font-medium' };
+const CATEGORY_COLORS: Record<string, string> = { IT: 'text-brand-600 dark:text-brand-400 font-medium', 'Non-IT': 'text-rose-600 dark:text-rose-400 font-medium' };
 
 function Badge({ value, map }: { value: string; map: Record<string, string> }) {
   return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${map[value] || 'bg-gray-100 text-gray-600'}`}>{value}</span>;

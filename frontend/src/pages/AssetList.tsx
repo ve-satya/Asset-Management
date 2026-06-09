@@ -8,17 +8,50 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination from '../components/common/Pagination';
 import type { Asset, ProductTypeOption, PaginationMeta } from '../types';
 
-interface TreeNode extends ProductTypeOption { children: TreeNode[]; }
+interface TreeNode extends ProductTypeOption {
+  children: TreeNode[];
+  isCategoryRoot?: boolean;
+}
+
+const TREE_STATE_KEY = 'asset_tree_expanded_nodes';
+const CATEGORY_ROOTS = [
+  { id: -1, displayName: 'IT Assets', assetCategory: 'IT' },
+  { id: -2, displayName: 'Non-IT Assets', assetCategory: 'Non-IT' },
+];
+
+function normalizeAssetCategory(value: string | null | undefined): 'IT' | 'Non-IT' | null {
+  const normalized = value?.replace(/[-\s]+/g, ' ').trim().toLowerCase();
+  if (normalized === 'it') return 'IT';
+  if (normalized === 'non it') return 'Non-IT';
+  return null;
+}
 
 function buildTree(items: ProductTypeOption[]): TreeNode[] {
   const map: Record<number, TreeNode> = {};
   items.forEach((i) => { map[i.id] = { ...i, children: [] }; });
-  const roots: TreeNode[] = [];
+  const legacyContainerIds = new Set(items.filter((item) => item.displayName.trim().toLowerCase() === 'all assets').map((item) => item.id));
+  const categoryNodes = CATEGORY_ROOTS.map((root) => ({
+    ...root,
+    parentId: null,
+    fullPath: root.displayName,
+    children: [] as TreeNode[],
+    isCategoryRoot: true,
+  }));
+  const categoryMap = Object.fromEntries(categoryNodes.map((root) => [root.assetCategory, root]));
+
   items.forEach((i) => {
-    if (i.parentId !== null && i.parentId !== undefined && map[i.parentId]) map[i.parentId].children.push(map[i.id]);
-    else roots.push(map[i.id]);
+    const node = map[i.id];
+    const category = normalizeAssetCategory(i.assetCategory);
+    if (!node || !category) return;
+    if (legacyContainerIds.has(i.id)) return;
+
+    const parent = i.parentId !== null && i.parentId !== undefined ? map[i.parentId] : null;
+    const parentCategory = parent ? normalizeAssetCategory(parent.assetCategory) : null;
+    if (parent && parentCategory === category && !legacyContainerIds.has(parent.id)) parent.children.push(node);
+    else categoryMap[category].children.push(node);
   });
-  return roots;
+
+  return categoryNodes;
 }
 
 function getOpenNodeIds(tree: TreeNode[], targetId: number): Set<number> {
@@ -32,20 +65,36 @@ function getOpenNodeIds(tree: TreeNode[], targetId: number): Set<number> {
   return open;
 }
 
-function TreeNodeComp({ node, depth, selectedId, onSelect, isRoot, openNodeIds }: { node: TreeNode; depth: number; selectedId: number | null; onSelect: (id: number | null) => void; isRoot?: boolean; openNodeIds: Set<number> }) {
+function TreeNodeComp({
+  node, depth, selectedId, onSelect, expandedIds, onToggle,
+}: {
+  node: TreeNode;
+  depth: number;
+  selectedId: number | null;
+  onSelect: (id: number | null) => void;
+  expandedIds: Set<number>;
+  onToggle: (id: number) => void;
+}) {
   const hasChildren = node.children?.length > 0;
-  const isSelected  = isRoot ? selectedId === null : selectedId === node.id;
-  const [open, setOpen] = useState(() => openNodeIds?.has(node.id) ?? false);
-  function handleClick() { if (isRoot) { setOpen((v) => !v); onSelect(null); } else onSelect(node.id); }
+  const isSelected  = !node.isCategoryRoot && selectedId === node.id;
+  const open = expandedIds.has(node.id);
+  function handleClick() {
+    if (node.isCategoryRoot) {
+      onToggle(node.id);
+      onSelect(null);
+      return;
+    }
+    onSelect(node.id);
+  }
   return (
     <div>
       <div onClick={handleClick} className={`flex items-start gap-1 py-1 rounded cursor-pointer text-sm select-none transition-colors ${isSelected ? 'bg-blue-50 text-blue-700 dark:bg-blue-700/20 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900'}`} style={{ paddingLeft: `${depth * 12 + 6}px`, paddingRight: '8px' }}>
-        <span className="w-4 h-5 flex items-center justify-center shrink-0 mt-0.5" onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}>
+        <span className="w-4 h-5 flex items-center justify-center shrink-0 mt-0.5" onClick={(e) => { e.stopPropagation(); if (hasChildren || node.isCategoryRoot) onToggle(node.id); }}>
           {hasChildren ? open ? <ChevronDown size={11} /> : <ChevronRight size={11} /> : null}
         </span>
-        <span className={`leading-snug break-words min-w-0 ${isRoot ? 'font-semibold text-gray-800 dark:text-gray-100' : ''}`}>{node.displayName}</span>
+        <span className={`leading-snug break-words min-w-0 ${node.isCategoryRoot ? 'font-semibold text-gray-800 dark:text-gray-100' : ''}`}>{node.displayName}</span>
       </div>
-      {open && hasChildren && node.children.map((child) => <TreeNodeComp key={child.id} node={child} depth={depth + 1} selectedId={selectedId} onSelect={onSelect} openNodeIds={openNodeIds} />)}
+      {open && hasChildren && node.children.map((child) => <TreeNodeComp key={child.id} node={child} depth={depth + 1} selectedId={selectedId} onSelect={onSelect} expandedIds={expandedIds} onToggle={onToggle} />)}
     </div>
   );
 }
@@ -87,11 +136,25 @@ export default function AssetList() {
   const [visibleCols, setVisibleCols] = useState<string[]>(COLUMNS.map((c) => c.key));
   const [deleteTarget,setDeleteTarget]= useState<number[] | Asset | null>(null);
   const [deleting,    setDeleting]    = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(() => {
+    try {
+      const saved = localStorage.getItem(TREE_STATE_KEY);
+      if (saved) return new Set(JSON.parse(saved));
+    } catch {}
+    return new Set(CATEGORY_ROOTS.map((root) => root.id));
+  });
   const search = useDebounce(rawSearch, 300);
 
   const openNodeIds = useMemo(() => (selectedPtId && tree.length ? getOpenNodeIds(tree, selectedPtId) : new Set<number>()), [tree, selectedPtId]);
 
   useEffect(() => { getAllProductTypes().then((data) => setTree(buildTree(data))); }, []);
+  useEffect(() => {
+    if (!openNodeIds.size) return;
+    setExpandedIds((prev) => new Set([...prev, ...openNodeIds]));
+  }, [openNodeIds]);
+  useEffect(() => {
+    localStorage.setItem(TREE_STATE_KEY, JSON.stringify([...expandedIds]));
+  }, [expandedIds]);
 
   const fetchAssets = useCallback(async () => {
     setLoading(true);
@@ -108,6 +171,14 @@ export default function AssetList() {
     if (id === null) setSearchParams({});
     else setSearchParams({ 'asset-product-type-id': String(id) });
     setPagination((p) => ({ ...p, page: 1 })); setSelected([]);
+  }
+  function toggleTreeNode(id: number) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
   function toggleRow(id: number) { setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]); }
   function toggleAll() { setSelected((prev) => prev.length === assets.length ? [] : assets.map((a) => a.id)); }
@@ -129,7 +200,7 @@ export default function AssetList() {
     <div className="flex min-h-0">
       <aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 scrollbar-thin flex flex-col">
         <div className="p-2 flex-1">
-          {tree.map((node) => <TreeNodeComp key={node.id} node={node} depth={0} selectedId={selectedPtId} onSelect={selectPt} isRoot={!node.parentId} openNodeIds={openNodeIds} />)}
+          {tree.map((node) => <TreeNodeComp key={node.id} node={node} depth={0} selectedId={selectedPtId} onSelect={selectPt} expandedIds={expandedIds} onToggle={toggleTreeNode} />)}
         </div>
       </aside>
 

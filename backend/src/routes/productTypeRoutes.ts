@@ -5,7 +5,7 @@ import { getProductTypes, getProductType, getAllProductTypes, createProductType,
 const router = express.Router();
 
 const ASSET_TYPES      = ['Asset', 'Consumable', 'Component'];
-const ASSET_CATEGORIES = ['IT', 'Non IT'];
+const ASSET_CATEGORIES = ['IT', 'Non IT', 'Non-IT'];
 const CATEGORIES       = ['Hardware', 'Software', 'Network', 'Peripheral', 'Furniture', 'Vehicle', 'Other'];
 
 const validators = [

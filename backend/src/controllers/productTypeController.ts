@@ -6,6 +6,18 @@ const prisma = new PrismaClient();
 
 type Lookup = Record<number, ProductType>;
 
+function normalizeAssetCategory(value: string | null | undefined): string {
+  return value?.replace(/[-\s]+/g, ' ').trim().toLowerCase() === 'non it' ? 'Non-IT' : (value || '');
+}
+
+function toStoredAssetCategory(value: string | null | undefined): string {
+  return normalizeAssetCategory(value) === 'Non-IT' ? 'Non IT' : (value || '');
+}
+
+function serializeProductType(item: ProductType) {
+  return { ...item, assetCategory: normalizeAssetCategory(item.assetCategory) };
+}
+
 function buildPath(id: number, lookup: Lookup): string {
   const item = lookup[id];
   if (!item) return '';
@@ -61,7 +73,7 @@ async function getProductTypes(req: Request, res: Response, next: NextFunction):
         ],
       } : {}),
       ...(assetType     ? { assetType }     : {}),
-      ...(assetCategory ? { assetCategory } : {}),
+      ...(assetCategory ? { assetCategory: toStoredAssetCategory(assetCategory) } : {}),
       ...(category      ? { category }      : {}),
     };
 
@@ -76,7 +88,7 @@ async function getProductTypes(req: Request, res: Response, next: NextFunction):
     ]);
 
     const lookup = await buildLookup();
-    const data = items.map((item) => ({ ...item, fullPath: buildPath(item.id, lookup) }));
+    const data = items.map((item) => ({ ...serializeProductType(item), fullPath: buildPath(item.id, lookup) }));
 
     res.json({ data, pagination: { page: pageNum, pageSize: pageSizeNum, total, totalPages: Math.ceil(total / pageSizeNum) } });
   } catch (err) { next(err); }
@@ -87,7 +99,7 @@ async function getProductType(req: Request, res: Response, next: NextFunction): 
     const item = await prisma.productType.findUnique({ where: { id: parseInt(String(req.params.id), 10) } });
     if (!item) { res.status(404).json({ error: 'Not found' }); return; }
     const lookup = await buildLookup();
-    res.json({ ...item, fullPath: buildPath(item.id, lookup) });
+    res.json({ ...serializeProductType(item), fullPath: buildPath(item.id, lookup) });
   } catch (err) { next(err); }
 }
 
@@ -95,7 +107,13 @@ async function getAllProductTypes(req: Request, res: Response, next: NextFunctio
   try {
     const items = await prisma.productType.findMany({ where: { isActive: true }, orderBy: { id: 'asc' } });
     const lookup = Object.fromEntries(items.map((r) => [r.id, r])) as Lookup;
-    const data = items.map((item) => ({ id: item.id, displayName: item.displayName, parentId: item.parentId, fullPath: buildPath(item.id, lookup) }));
+    const data = items.map((item) => ({
+      id: item.id,
+      displayName: item.displayName,
+      assetCategory: normalizeAssetCategory(item.assetCategory),
+      parentId: item.parentId,
+      fullPath: buildPath(item.id, lookup),
+    }));
     res.json(data);
   } catch (err) { next(err); }
 }
@@ -106,10 +124,10 @@ async function createProductType(req: Request, res: Response, next: NextFunction
   try {
     const { displayName, displayPluralName, apiName, apiPluralName, category, assetType, assetCategory, description, parentId } = req.body;
     const item = await prisma.productType.create({
-      data: { displayName, displayPluralName, apiName, apiPluralName, category, assetType, assetCategory, description: description || null, parentId: parentId ? parseInt(parentId, 10) : null },
+      data: { displayName, displayPluralName, apiName, apiPluralName, category, assetType, assetCategory: toStoredAssetCategory(assetCategory), description: description || null, parentId: parentId ? parseInt(parentId, 10) : null },
     });
     const lookup = await buildLookup();
-    res.status(201).json({ ...item, fullPath: buildPath(item.id, lookup) });
+    res.status(201).json({ ...serializeProductType(item), fullPath: buildPath(item.id, lookup) });
   } catch (err) { next(err); }
 }
 
@@ -137,10 +155,10 @@ async function updateProductType(req: Request, res: Response, next: NextFunction
 
     const item = await prisma.productType.update({
       where: { id },
-      data: { displayName, displayPluralName, apiName, apiPluralName, category, assetType, assetCategory, description: description || null, parentId: parentId ? parseInt(parentId, 10) : null },
+      data: { displayName, displayPluralName, apiName, apiPluralName, category, assetType, assetCategory: toStoredAssetCategory(assetCategory), description: description || null, parentId: parentId ? parseInt(parentId, 10) : null },
     });
     const lookup = await buildLookup();
-    res.json({ ...item, fullPath: buildPath(item.id, lookup) });
+    res.json({ ...serializeProductType(item), fullPath: buildPath(item.id, lookup) });
   } catch (err) { next(err); }
 }
 

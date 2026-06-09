@@ -37,6 +37,7 @@ export interface ProductType {
 export interface ProductTypeOption {
   id: number;
   displayName: string;
+  assetCategory: string;
   parentId: number | null;
   fullPath: string;
 }

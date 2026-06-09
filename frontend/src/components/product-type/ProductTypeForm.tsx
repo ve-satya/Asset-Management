@@ -4,7 +4,7 @@ import { getAllProductTypes, createProductType, updateProductType } from '../../
 import type { ProductTypeOption } from '../../types';
 
 const ASSET_TYPES      = ['Asset', 'Consumable', 'Component'];
-const ASSET_CATEGORIES = ['IT', 'Non IT'];
+const ASSET_CATEGORIES = ['IT', 'Non-IT'];
 const CATEGORIES       = ['Hardware', 'Software', 'Network', 'Peripheral', 'Furniture', 'Vehicle', 'Other'];
 
 function toApiName(displayName: string) {
