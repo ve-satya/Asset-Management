@@ -6,6 +6,9 @@ import Assets from './pages/Assets';
 import AssetList from './pages/AssetList';
 import AssetDetailPage from './pages/AssetDetailPage';
 import AssetFormPage from './pages/AssetFormPage';
+import SoftwareList from './pages/SoftwareList';
+import SoftwareFormPage from './pages/SoftwareFormPage';
+import SoftwareDetailPage from './pages/SoftwareDetailPage';
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -28,7 +31,11 @@ export default function App() {
           <Route path="/assets/list"     element={<AssetList />} />
           <Route path="/assets/create"   element={<AssetFormPage />} />
           <Route path="/assets/edit/:id" element={<AssetFormPage />} />
-          <Route path="/assets/detail"   element={<AssetDetailPage />} />
+          <Route path="/assets/detail"         element={<AssetDetailPage />} />
+          <Route path="/software/list"          element={<SoftwareList />} />
+          <Route path="/software/create"        element={<SoftwareFormPage />} />
+          <Route path="/software/edit/:id"      element={<SoftwareFormPage />} />
+          <Route path="/software/detail/:id"    element={<SoftwareDetailPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

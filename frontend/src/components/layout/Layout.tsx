@@ -9,9 +9,20 @@ interface LayoutProps {
 }
 
 function buildBreadcrumb(pathname: string): string[] {
-  const map: Record<string, string> = { dashboard: 'Dashboard', assets: 'Assets' };
-  const parts = pathname.split('/').filter(Boolean);
-  return parts.map((p) => map[p] || p.charAt(0).toUpperCase() + p.slice(1));
+  const labelMap: Record<string, string> = {
+    dashboard: 'Dashboard',
+    assets:    'Assets',
+    software:  'Software',
+    list:      '',
+    create:    'New',
+    edit:      'Edit',
+    detail:    'Detail',
+  };
+  return pathname
+    .split('/')
+    .filter(Boolean)
+    .map((p) => (isNaN(Number(p)) ? (labelMap[p] ?? (p.charAt(0).toUpperCase() + p.slice(1))) : ''))
+    .filter(Boolean);
 }
 
 export default function Layout({ darkMode, setDarkMode }: LayoutProps) {

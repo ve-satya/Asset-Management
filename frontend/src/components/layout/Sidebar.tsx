@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Settings2, LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Package, Settings2, Monitor, LucideIcon } from 'lucide-react';
 
 interface NavItem {
   to: string;
@@ -8,9 +8,10 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { to: '/dashboard',   label: 'Dashboard',     icon: LayoutDashboard },
+  { to: '/dashboard',   label: 'Dashboard',    icon: LayoutDashboard },
   { to: '/assets',      label: 'Master Assets', icon: Settings2       },
   { to: '/assets/list', label: 'Assets',        icon: Package         },
+  { to: '/software/list', label: 'Software',    icon: Monitor         },
 ];
 
 interface SidebarProps {
@@ -28,6 +29,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       location.pathname.startsWith('/assets/detail')
     );
     if (to === '/assets') return location.pathname === '/assets';
+    if (to === '/software/list') return location.pathname.startsWith('/software');
     return location.pathname === to || location.pathname.startsWith(to + '/');
   }
 
