@@ -8,9 +8,9 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { to: '/dashboard',   label: 'Dashboard',     icon: LayoutDashboard },
-  { to: '/assets',      label: 'Master Assets', icon: Settings2       },
-  { to: '/assets/list', label: 'Assets',        icon: Package         },
+  { to: '/dashboard',   label: 'Dashboard',        icon: LayoutDashboard },
+  { to: '/assets/list', label: 'Asset',            icon: Package         },
+  { to: '/assets',      label: 'Asset Management', icon: Settings2       },
 ];
 
 interface SidebarProps {
@@ -33,32 +33,32 @@ export default function Sidebar({ collapsed }: SidebarProps) {
 
   return (
     <aside
-      className={`flex flex-col bg-gray-900 border-r border-gray-800 transition-all duration-200 ${
+      className={`flex flex-col bg-white border-r border-gray-200 transition-all duration-200 dark:bg-gray-900 dark:border-gray-800 ${
         collapsed ? 'w-16' : 'w-56'
       } shrink-0 h-full`}
     >
-      <div className="flex items-center justify-center h-14 border-b border-gray-800 px-3">
+      <div className="flex items-center justify-center h-14 border-b border-gray-200 px-3 dark:border-gray-800">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center shrink-0">
             <span className="text-white font-bold text-sm">A</span>
           </div>
           {!collapsed && (
-            <span className="text-sm font-semibold text-white truncate">AssetManager</span>
+            <span className="text-sm font-semibold text-gray-900 truncate dark:text-white">AssetManager</span>
           )}
         </div>
       </div>
 
-      <nav className="flex-1 py-3 space-y-0.5 px-2">
+      <nav className="flex-1 py-3 px-0 text-sm">
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/assets'}
             className={() =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              `flex h-12 items-center gap-3 border-b border-gray-100 px-5 font-medium transition-colors dark:border-gray-800 ${
                 isActive(to)
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+                  ? 'bg-sky-600 text-white'
+                  : 'text-gray-900 hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-gray-800'
               }`
             }
           >

@@ -6,7 +6,6 @@ import SoftwareTypeTable       from '../components/software-type/SoftwareTypeTab
 import SoftwareCategoryTable   from '../components/software-category/SoftwareCategoryTable';
 import SoftwareLicenseTypeTable from '../components/software-license-type/SoftwareLicenseTypeTable';
 import AssetStateTable          from '../components/asset-state/AssetStateTable';
-import ManufacturerTable        from '../components/manufacturer/ManufacturerTable';
 
 const TABS = [
   { key: 'producttype',         label: 'Product Type'          },
@@ -14,9 +13,8 @@ const TABS = [
   { key: 'vendor',              label: 'Vendor'                },
   { key: 'softwaretype',        label: 'Software Type'         },
   { key: 'softwarecategory',    label: 'Software Category'     },
-  { key: 'softwarelicensetype', label: 'Software License Type' },
+  { key: 'softwarelicensetype', label: 'Software License Types' },
   { key: 'assetstate',          label: 'Asset State'           },
-  { key: 'manufacturer',        label: 'Manufacturer'          },
 ];
 
 function Placeholder({ label }: { label: string }) {
@@ -36,41 +34,42 @@ export default function Assets() {
   function handleTab(key: string) { setSearchParams({ tab: key }); }
 
   return (
-    <div className="flex flex-col">
-      <div className="px-6 pt-4 pb-0">
-        <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-          Master Assets - Asset - {TABS.find((t) => t.key === activeTab)?.label || 'Product Type'}
-        </h1>
-      </div>
+    <div className="min-h-full bg-white dark:bg-gray-950">
+      <section className="min-w-0 overflow-hidden">
+        <div className="border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            Customization - Asset Management - {TABS.find((t) => t.key === activeTab)?.label || 'Product Type'}
+          </h1>
+        </div>
 
-      <div className="px-6 mt-3 border-b border-gray-200 dark:border-gray-700">
-        <nav className="flex gap-0 overflow-x-auto scrollbar-thin -mb-px">
-          {TABS.map(({ key, label }) => (
-            <button key={key} onClick={() => handleTab(key)}
-              className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeTab === key
-                  ? 'border-brand-600 text-brand-600 dark:text-brand-400 dark:border-brand-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
-      </div>
+        <div className="border-b border-gray-200 px-5 dark:border-gray-700">
+          <nav className="-mb-px flex gap-3 overflow-x-auto scrollbar-thin">
+            {TABS.map(({ key, label }) => (
+              <button key={key} onClick={() => handleTab(key)}
+                className={`whitespace-nowrap border-b-2 px-2 py-3 text-sm font-normal transition-colors ${
+                  activeTab === key
+                    ? 'border-sky-500 text-sky-600 dark:text-sky-400 dark:border-sky-400'
+                    : 'border-transparent text-gray-900 dark:text-gray-300 hover:text-sky-600 dark:hover:text-sky-300 hover:border-gray-300'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
 
-      <div className="p-6">
-        {activeTab === 'producttype'         ? <ProductTypeTable />
-         : activeTab === 'product'           ? <ProductTable />
-         : activeTab === 'vendor'            ? <VendorTable />
-         : activeTab === 'softwaretype'      ? <SoftwareTypeTable />
-         : activeTab === 'softwarecategory'  ? <SoftwareCategoryTable />
-         : activeTab === 'softwarelicensetype' ? <SoftwareLicenseTypeTable />
-         : activeTab === 'assetstate'        ? <AssetStateTable />
-         : activeTab === 'manufacturer'      ? <ManufacturerTable />
-         : <Placeholder label={TABS.find((t) => t.key === activeTab)?.label || ''} />
-        }
-      </div>
+        <div className="px-5 pt-2 pb-5">
+          {activeTab === 'producttype'         ? <ProductTypeTable />
+           : activeTab === 'product'           ? <ProductTable />
+           : activeTab === 'vendor'            ? <VendorTable />
+           : activeTab === 'softwaretype'      ? <SoftwareTypeTable />
+           : activeTab === 'softwarecategory'  ? <SoftwareCategoryTable />
+           : activeTab === 'softwarelicensetype' ? <SoftwareLicenseTypeTable />
+           : activeTab === 'assetstate'        ? <AssetStateTable />
+           : <Placeholder label={TABS.find((t) => t.key === activeTab)?.label || ''} />
+          }
+        </div>
+      </section>
     </div>
   );
 }
