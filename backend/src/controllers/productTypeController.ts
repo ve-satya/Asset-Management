@@ -95,7 +95,13 @@ async function getAllProductTypes(req: Request, res: Response, next: NextFunctio
   try {
     const items = await prisma.productType.findMany({ where: { isActive: true }, orderBy: { id: 'asc' } });
     const lookup = Object.fromEntries(items.map((r) => [r.id, r])) as Lookup;
-    const data = items.map((item) => ({ id: item.id, displayName: item.displayName, parentId: item.parentId, fullPath: buildPath(item.id, lookup) }));
+    const data = items.map((item) => ({
+      id: item.id,
+      displayName: item.displayName,
+      parentId: item.parentId,
+      assetCategory: item.assetCategory,
+      fullPath: buildPath(item.id, lookup),
+    }));
     res.json(data);
   } catch (err) { next(err); }
 }

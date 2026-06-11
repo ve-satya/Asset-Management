@@ -9,7 +9,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { to: '/dashboard',   label: 'Dashboard',        icon: LayoutDashboard },
-  { to: '/assets/list', label: 'Asset',            icon: Package         },
+  { to: '/assets/list', label: 'All Assets',            icon: Package         },
   { to: '/assets',      label: 'Asset Management', icon: Settings2       },
 ];
 

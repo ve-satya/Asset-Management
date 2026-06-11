@@ -9,7 +9,7 @@ async function getAssets(req: Request, res: Response, next: NextFunction): Promi
     const {
       page = '1', pageSize = '10',
       search = '', sortBy = 'id', sortOrder = 'asc',
-      productTypeId, assetState, isActive = 'true',
+      productTypeId, assetState, isActive = 'true', assetCategory,
     } = req.query as Record<string, string>;
 
     const pageNum     = Math.max(1, parseInt(page, 10));
@@ -22,6 +22,7 @@ async function getAssets(req: Request, res: Response, next: NextFunction): Promi
       ...(isActive !== 'all' ? { isActive: isActive === 'true' } : {}),
       ...(productTypeId ? { productTypeId: parseInt(productTypeId, 10) } : {}),
       ...(assetState    ? { assetState } : {}),
+      ...(assetCategory ? { productType: { assetCategory: assetCategory } } : {}),
       ...(search.trim() ? {
         OR: [
           { name:        { contains: search, mode: 'insensitive' } },
