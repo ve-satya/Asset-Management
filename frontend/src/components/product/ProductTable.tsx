@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Plus, X, ChevronRight, ChevronUp, ChevronDown, ChevronsUpDown,
-  Pencil, Trash2, Filter, AlignJustify, Loader2,
+  Plus, X, ChevronDown, ChevronLeft, ChevronRight,
+  Pencil, Trash2, AlignJustify, Loader2, Search, Columns3,
 } from 'lucide-react';
-import Pagination from '../common/Pagination';
 import { getProducts, deleteProduct } from '../../services/productService';
 import useDebounce from '../../hooks/useDebounce';
 import Modal from '../common/Modal';
@@ -18,14 +17,12 @@ const ALL_COLUMNS: ColDef[] = [
   { key: 'name',         label: 'Name',         sortable: true  },
   { key: 'productType',  label: 'Product Type', sortable: false },
   { key: 'manufacturer', label: 'Manufacturer', sortable: true  },
-  { key: 'partNo',       label: 'Part No',      sortable: true  },
   { key: 'cost',         label: 'Cost',         sortable: true  },
-  { key: 'isActive',     label: 'Active',       sortable: true  },
-  { key: 'description',  label: 'Description',  sortable: false },
+  { key: 'partNo',       label: 'Part No',      sortable: true  },
 ];
-const DEFAULT_VISIBLE = ['name', 'productType', 'manufacturer', 'partNo', 'cost', 'isActive', 'description'];
+const DEFAULT_VISIBLE = ['name', 'productType', 'manufacturer', 'cost', 'partNo'];
 const LS_KEY = 'asset_product_columns';
-const DEFAULT_COL_WIDTHS: Record<string, number> = { id: 70, name: 200, productType: 160, manufacturer: 160, partNo: 120, cost: 100, isActive: 100, description: 220 };
+const DEFAULT_COL_WIDTHS: Record<string, number> = { id: 70, name: 200, productType: 160, manufacturer: 160, cost: 100, partNo: 120 };
 
 function RowMenu({ row, onEdit, onDelete }: { row: Product; onEdit: (r: Product) => void; onDelete: (r: Product) => void }) {
   const [open, setOpen] = useState(false);
@@ -58,17 +55,12 @@ function RowMenu({ row, onEdit, onDelete }: { row: Product; onEdit: (r: Product)
   );
 }
 
-function SortIcon({ col, sortBy, sortOrder }: { col: string; sortBy: string; sortOrder: string }) {
-  if (sortBy !== col) return <ChevronsUpDown size={13} className="text-gray-300 dark:text-gray-600" />;
-  return sortOrder === 'asc' ? <ChevronUp size={13} className="text-brand-600" /> : <ChevronDown size={13} className="text-brand-600" />;
-}
-
 function FilterPopover({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false); const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []);
   return (
     <div className="relative inline-flex" ref={ref}>
-      <button onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }} className={`ml-1 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${value ? 'text-brand-600' : 'text-gray-400'}`}><Filter size={12} /></button>
+      <button onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }} className={`ml-1 p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${value ? 'text-brand-600' : 'text-gray-400'}`} title="Search column"><Search size={12} /></button>
       {open && <div className="absolute left-0 top-full mt-1 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-40 p-2">
         <input autoFocus type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder="Filter…" className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-brand-500" />
         {value && <button onClick={() => { onChange(''); setOpen(false); }} className="mt-1 text-xs text-red-500 hover:underline">Clear</button>}
@@ -77,23 +69,116 @@ function FilterPopover({ value, onChange }: { value: string; onChange: (v: strin
   );
 }
 
-function SelectColsDropdown({ visible, onChange }: { visible: string[]; onChange: (k: string) => void }) {
-  const [open, setOpen] = useState(false); const ref = useRef<HTMLDivElement>(null);
+function SelectColsDropdown({ visible, onApply }: { visible: string[]; onApply: (cols: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [draft, setDraft] = useState(visible);
+  const ref = useRef<HTMLDivElement>(null);
+  const filteredColumns = ALL_COLUMNS.filter((col) => col.label.toLowerCase().includes(query.toLowerCase()));
+
   useEffect(() => { const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []);
+  useEffect(() => { if (open) { setDraft(visible); setQuery(''); } }, [open, visible]);
+
+  function toggleColumn(key: string) {
+    setDraft((prev) => prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]);
+  }
+
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen((v) => !v)} className={`inline-flex items-center gap-2 px-3 h-8 text-sm font-medium rounded-md border transition bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 ${open ? 'bg-gray-50 dark:bg-gray-700 border-gray-300' : ''}`}>
-        {open ? <ChevronDown size={14} className="shrink-0 text-gray-500" /> : <ChevronRight size={14} className="shrink-0 text-gray-500" />}
-        <span>Select Columns</span>
+      <button type="button" onClick={() => setOpen((v) => !v)} className={`-ml-px inline-flex h-7 w-10 items-center justify-center border border-gray-300 transition dark:border-gray-600 ${open ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100' : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'}`} title="Add/remove columns">
+        <Columns3 size={16} />
       </button>
-      {open && <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-30 p-2">
-        {ALL_COLUMNS.map((col) => (
-          <label key={col.key} className="flex items-center gap-2.5 px-2 py-1.5 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
-            <input type="checkbox" checked={visible.includes(col.key)} onChange={() => onChange(col.key)} className="rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
-            {col.label}
-          </label>
-        ))}
+      {open && <div className="absolute left-0 top-full mt-1 w-60 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl z-30">
+        <div className="p-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+            <input autoFocus type="text" value={query} onChange={(e) => setQuery(e.target.value)} className="w-full h-7 pl-8 pr-2 text-sm border border-gray-300 rounded-[3px] focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white dark:border-gray-600 dark:bg-gray-900 text-gray-900 dark:text-gray-100" />
+          </div>
+        </div>
+        <div className="max-h-64 overflow-y-auto bg-white dark:bg-gray-800">
+          {filteredColumns.map((col) => (
+            <label key={col.key} className="flex h-8 items-center gap-2.5 px-3 border-b border-gray-100 dark:border-gray-700 cursor-pointer text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <input type="checkbox" checked={draft.includes(col.key)} onChange={() => toggleColumn(col.key)} className="h-3.5 w-3.5 rounded border-gray-300 text-blue-500 focus:ring-blue-500" />
+              {col.label}
+            </label>
+          ))}
+        </div>
+        <div className="flex items-center justify-end gap-2 px-2 py-2 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
+          <button type="button" onClick={() => { setDraft(visible); setOpen(false); }} className="h-7 px-3 text-sm border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700">Cancel</button>
+          <button type="button" onClick={() => { onApply(draft); setOpen(false); }} className="h-7 px-3 text-sm font-medium bg-blue-500 text-white hover:bg-blue-600">Save</button>
+        </div>
       </div>}
+    </div>
+  );
+}
+
+function ToolbarPagination({
+  pagination,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  pagination: PaginationMeta;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}) {
+  const { page, pageSize, total, totalPages } = pagination;
+  const [sizeOpen, setSizeOpen] = useState(false);
+  const sizeRef = useRef<HTMLDivElement>(null);
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (sizeRef.current && !sizeRef.current.contains(event.target as Node)) setSizeOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  return (
+    <div className="ml-3 flex h-7 items-center gap-0 text-sm text-gray-700 dark:text-gray-300">
+      <div className="relative" ref={sizeRef}>
+        <button
+          type="button"
+          onClick={() => setSizeOpen((open) => !open)}
+          className="flex h-7 w-[70px] items-center justify-between border border-gray-300 bg-white px-3 text-sm outline-none transition hover:bg-gray-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700"
+        >
+          <span>{pageSize}</span>
+          <ChevronDown size={15} className="text-gray-700 dark:text-gray-300" />
+        </button>
+        {sizeOpen && <div className="absolute left-0 top-full z-30 mt-1 w-[70px] border border-gray-300 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800">
+          {[10, 25, 50, 100].map((size) => (
+            <button
+              key={size}
+              type="button"
+              onClick={() => { onPageSizeChange(size); setSizeOpen(false); }}
+              className={`block h-8 w-full px-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${pageSize === size ? 'font-medium text-blue-600' : ''}`}
+            >
+              {size}
+            </button>
+          ))}
+        </div>}
+      </div>
+      <div className="-ml-px flex h-7 items-center gap-2 border border-gray-300 bg-white px-4 dark:border-gray-600 dark:bg-gray-800">
+        <span className="whitespace-nowrap">{from} - {to}</span>
+        <span className="px-1.5 leading-none text-gray-500">...</span>
+      </div>
+      <button
+        onClick={() => onPageChange(page - 1)}
+        disabled={page <= 1}
+        className="-ml-px inline-flex h-7 w-12 items-center justify-center border border-gray-300 bg-white text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-35 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        title="Previous page"
+      >
+        <ChevronLeft size={18} />
+      </button>
+      <button
+        onClick={() => onPageChange(page + 1)}
+        disabled={page >= totalPages}
+        className="-ml-px inline-flex h-7 w-12 items-center justify-center border border-gray-300 bg-white text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-35 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+        title="Next page"
+      >
+        <ChevronRight size={18} />
+      </button>
     </div>
   );
 }
@@ -102,33 +187,23 @@ export default function ProductTable() {
   const [data,         setData]        = useState<Product[]>([]);
   const [loading,      setLoading]     = useState(false);
   const [pagination,   setPagination]  = useState<PaginationMeta>({ page: 1, pageSize: 10, total: 0, totalPages: 0 });
-  const [sortBy,       setSortBy]      = useState('id');
-  const [sortOrder,    setSortOrder]   = useState('asc');
+  const sortBy = 'id';
+  const sortOrder = 'asc';
   const [rawSearch,    setRawSearch]   = useState('');
   const [colFilters,   setColFilters]  = useState<Record<string, string>>({});
   const [visibleCols,  setVisibleCols] = useState<string[]>(() => { try { const s = localStorage.getItem(LS_KEY); if (s) return JSON.parse(s); } catch {} return DEFAULT_VISIBLE; });
-  const [statusFilter, setStatusFilter]= useState('true');
-  const [statusOpen,   setStatusOpen]  = useState(false);
+  const statusFilter = 'true';
   const [formOpen,     setFormOpen]    = useState(false);
   const [editRecord,   setEditRecord]  = useState<Product | null>(null);
   const [deleteTarget, setDeleteTarget]= useState<Product | null>(null);
   const [deleting,     setDeleting]    = useState(false);
+  const [showFilters,  setShowFilters] = useState(false);
   const [colWidths,    setColWidths]   = useState<Record<string, number>>(() => { try { const s = localStorage.getItem(LS_KEY + '_widths'); if (s) return { ...DEFAULT_COL_WIDTHS, ...JSON.parse(s) }; } catch {} return DEFAULT_COL_WIDTHS; });
-  const [colOrder,    setColOrder]    = useState<string[]>(() => { try { const s = localStorage.getItem(LS_KEY + '_order'); if (s) return JSON.parse(s); } catch {} return ALL_COLUMNS.map((c) => c.key); });
-  const [dragKey,     setDragKey]     = useState<string | null>(null);
-  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
-  const statusRef = useRef<HTMLDivElement>(null);
   const search = useDebounce(rawSearch, 300);
 
-  useEffect(() => { const h = (e: MouseEvent) => { if (statusRef.current && !statusRef.current.contains(e.target as Node)) setStatusOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []);
   useEffect(() => { localStorage.setItem(LS_KEY, JSON.stringify(visibleCols)); }, [visibleCols]);
   useEffect(() => { localStorage.setItem(LS_KEY + '_widths', JSON.stringify(colWidths)); }, [colWidths]);
-  useEffect(() => { localStorage.setItem(LS_KEY + '_order', JSON.stringify(colOrder)); }, [colOrder]);
 
-  function handleColDrop(targetKey: string) {
-    if (!dragKey || dragKey === targetKey) return;
-    setColOrder((prev) => { const next = [...prev]; const from = next.indexOf(dragKey); const to = next.indexOf(targetKey); if (from === -1 || to === -1) return prev; next.splice(from, 1); next.splice(to, 0, dragKey); return next; });
-  }
   function startResize(key: string, e: React.MouseEvent) {
     e.preventDefault(); e.stopPropagation(); const startX = e.clientX; const startW = colWidths[key] || DEFAULT_COL_WIDTHS[key] || 150;
     const onMove = (ev: MouseEvent) => setColWidths((p) => ({ ...p, [key]: Math.max(60, startW + ev.clientX - startX) }));
@@ -148,13 +223,6 @@ export default function ProductTable() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  function handleSort(col: ColDef) {
-    if (!col.sortable) return;
-    if (sortBy === col.key) setSortOrder((o) => o === 'asc' ? 'desc' : 'asc');
-    else { setSortBy(col.key); setSortOrder('asc'); }
-    setPagination((p) => ({ ...p, page: 1 }));
-  }
-
   async function handleConfirmDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -163,29 +231,34 @@ export default function ProductTable() {
     finally { setDeleting(false); }
   }
 
-  const visibleDefs = colOrder.filter((k) => visibleCols.includes(k)).map((k) => ALL_COLUMNS.find((c) => c.key === k)).filter((c): c is ColDef => Boolean(c));
+  const visibleDefs = ALL_COLUMNS.filter((col) => visibleCols.includes(col.key));
   const hasFilters = rawSearch || Object.values(colFilters).some(Boolean);
-  const STATUS_OPTIONS = [{ value: 'true', label: 'Active Products' }, { value: 'false', label: 'Inactive Products' }, { value: 'all', label: 'All Products' }];
-  const currentStatus = STATUS_OPTIONS.find((o) => o.value === statusFilter) || STATUS_OPTIONS[0];
-
   return (
-    <div className="flex flex-col bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <div className="relative" ref={statusRef}>
-            <button onClick={() => setStatusOpen((v) => !v)} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">{currentStatus.label}<ChevronDown size={14} className="text-gray-400" /></button>
-            {statusOpen && <div className="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-30 py-1">{STATUS_OPTIONS.map((opt) => <button key={opt.value} onClick={() => { setStatusFilter(opt.value); setStatusOpen(false); setPagination((p) => ({ ...p, page: 1 })); }} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${statusFilter === opt.value ? 'text-brand-600 font-medium' : 'text-gray-700 dark:text-gray-300'}`}>{opt.label}</button>)}</div>}
+    <div className="flex flex-col bg-white dark:bg-gray-900 rounded-xl shadow-sm">
+      <div className="flex items-center justify-between px-4 py-1.5 border-b border-gray-200 dark:border-gray-700 gap-3 flex-wrap">
+        <div className="flex items-center gap-0">
+          <button
+            onClick={() => { setEditRecord(null); setFormOpen(true); }}
+            className="inline-flex h-7 w-10 items-center justify-center border border-gray-300 bg-white text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            title="New product"
+          >
+            <Plus size={16} />
+          </button>
+          <div className="flex items-center gap-0">
+            <button type="button" onClick={() => setShowFilters((value) => !value)} className={`-ml-px inline-flex h-7 w-10 items-center justify-center border border-gray-300 transition dark:border-gray-600 ${showFilters ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`} title="Show column filters">
+              <Search size={16} />
+            </button>
+            <SelectColsDropdown visible={visibleCols} onApply={setVisibleCols} />
           </div>
-          <button onClick={() => { setEditRecord(null); setFormOpen(true); }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"><Plus size={14} /> New</button>
+          <ToolbarPagination
+            pagination={pagination}
+            onPageChange={(p) => setPagination((prev) => ({ ...prev, page: p }))}
+            onPageSizeChange={(s) => setPagination((prev) => ({ ...prev, pageSize: s, page: 1 }))}
+          />
         </div>
         <div className="flex items-center gap-2 ml-auto">
           {hasFilters && <button onClick={() => { setRawSearch(''); setColFilters({}); setPagination((p) => ({ ...p, page: 1 })); }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50"><X size={13} /> Clear All Filters</button>}
-          <SelectColsDropdown visible={visibleCols} onChange={(k) => setVisibleCols((prev) => prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k])} />
         </div>
-      </div>
-
-      <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800">
-        <input type="text" value={rawSearch} onChange={(e) => { setRawSearch(e.target.value); setPagination((p) => ({ ...p, page: 1 })); }} placeholder="Search across all fields…" className="w-full max-w-sm px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-gray-900 dark:text-gray-100 dark:placeholder-gray-500" />
       </div>
 
       <div className="overflow-x-auto scrollbar-thin">
@@ -193,26 +266,33 @@ export default function ProductTable() {
           <colgroup><col style={{ width: 32 }} />{visibleDefs.map((col) => <col key={col.key} style={{ width: colWidths[col.key] || DEFAULT_COL_WIDTHS[col.key] || 150 }} />)}</colgroup>
           <thead className="sticky top-0 z-10">
             <tr className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
-              <th className="w-8 px-2 py-3" />
+              <th className="h-8 w-8 px-2 py-1" />
               {visibleDefs.map((col) => (
-                <th key={col.key} draggable
-                  onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', col.key); setDragKey(col.key); }}
-                  onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverKey(col.key); }}
-                  onDragLeave={() => setDragOverKey(null)}
-                  onDrop={(e) => { e.preventDefault(); handleColDrop(col.key); setDragOverKey(null); }}
-                  onDragEnd={() => { setDragKey(null); setDragOverKey(null); }}
-                  onClick={() => handleSort(col)}
-                  className={`relative px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide overflow-hidden transition-colors select-none ${col.sortable ? 'cursor-pointer' : 'cursor-grab'} ${dragKey === col.key ? 'opacity-40 bg-gray-100 dark:bg-gray-700' : 'text-gray-500 dark:text-gray-400'} ${dragOverKey === col.key && dragOverKey !== dragKey ? 'border-l-2 border-brand-500 bg-brand-50' : ''}`}
+                <th key={col.key}
+                  className="relative h-8 px-3 py-1.5 text-left text-xs font-semibold uppercase overflow-hidden select-none text-gray-500 dark:text-gray-400"
                   style={{ width: colWidths[col.key] || DEFAULT_COL_WIDTHS[col.key] || 150 }}>
                   <div className="flex items-center gap-1 overflow-hidden">
                     <span className="truncate">{col.label}</span>
-                    {col.sortable && <SortIcon col={col.key} sortBy={sortBy} sortOrder={sortOrder} />}
-                    <FilterPopover value={colFilters[col.key] || ''} onChange={(v) => { setColFilters((prev) => ({ ...prev, [col.key]: v })); setPagination((p) => ({ ...p, page: 1 })); }} />
                   </div>
                   <div draggable={false} onMouseDown={(e) => startResize(col.key, e)} className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400 dark:hover:bg-brand-500 select-none" />
                 </th>
               ))}
             </tr>
+            {showFilters && <tr className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
+              <th className="w-8 px-2 py-1" />
+              {visibleDefs.map((col) => (
+                <th key={`${col.key}-filter`} className="px-1 py-1 text-left font-normal border-r border-gray-200 dark:border-gray-700 last:border-r-0">
+                  {col.key !== 'cost' && (
+                    <input
+                      type="text"
+                      value={colFilters[col.key] || ''}
+                      onChange={(e) => { setColFilters((prev) => ({ ...prev, [col.key]: e.target.value })); setPagination((p) => ({ ...p, page: 1 })); }}
+                      className="h-7 w-full rounded-[3px] border border-gray-300 bg-white px-2 text-sm font-normal text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                    />
+                  )}
+                </th>
+              ))}
+            </tr>}
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
@@ -238,8 +318,6 @@ export default function ProductTable() {
           </tbody>
         </table>
       </div>
-
-      <Pagination pagination={pagination} onPageChange={(p) => setPagination((prev) => ({ ...prev, page: p }))} onPageSizeChange={(s) => setPagination((prev) => ({ ...prev, pageSize: s, page: 1 }))} />
 
       <Modal open={formOpen} onClose={() => { setFormOpen(false); setEditRecord(null); }} title={editRecord ? 'Edit Asset Product' : 'Add Asset Product'} maxWidth="max-w-2xl">
         <ProductForm record={editRecord} onSuccess={() => { setFormOpen(false); setEditRecord(null); fetchData(); }} onCancel={() => { setFormOpen(false); setEditRecord(null); }} />
