@@ -39,6 +39,7 @@ export async function getProducts(req: Request, res: Response, next: NextFunctio
     const {
       page = '1', pageSize = '10', search = '', sortBy = 'id', sortOrder = 'asc',
       isActive = 'true', manufacturerId, productTypeId,
+      id = '', name = '', productType = '', manufacturer = '', partNo = '',
     } = req.query as Record<string, string>;
 
     const pageNum     = Math.max(1, parseInt(page, 10));
@@ -49,8 +50,13 @@ export async function getProducts(req: Request, res: Response, next: NextFunctio
 
     const where: Record<string, unknown> = {
       ...(isActive !== 'all' ? { isActive: isActive === 'true' } : {}),
+      ...(id.trim() && !Number.isNaN(parseInt(id, 10)) ? { id: parseInt(id, 10) } : {}),
       ...(manufacturerId ? { manufacturerId: parseInt(manufacturerId, 10) } : {}),
       ...(productTypeId  ? { productTypeId:  parseInt(productTypeId, 10)  } : {}),
+      ...(name.trim() ? { name: { contains: name, mode: 'insensitive' } } : {}),
+      ...(partNo.trim() ? { partNo: { contains: partNo, mode: 'insensitive' } } : {}),
+      ...(productType.trim() ? { productType: { displayName: { contains: productType, mode: 'insensitive' } } } : {}),
+      ...(manufacturer.trim() ? { manufacturer: { name: { contains: manufacturer, mode: 'insensitive' } } } : {}),
       ...(search.trim() ? {
         OR: [
           { name:        { contains: search, mode: 'insensitive' } },
