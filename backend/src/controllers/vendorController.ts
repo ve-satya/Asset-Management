@@ -8,19 +8,25 @@ export async function getVendors(req: Request, res: Response, next: NextFunction
   try {
     const {
       page = '1', pageSize = '10', search = '', sortBy = 'id', sortOrder = 'asc',
-      isActive = 'true', currency, contactPerson,
+      isActive = 'true', id, name, currency, contactPerson, email, phone, website,
     } = req.query as Record<string, string>;
 
     const pageNum      = Math.max(1, parseInt(page, 10));
     const pageSizeNum  = Math.min(100, Math.max(1, parseInt(pageSize, 10)));
+    const idNum        = id && /^\d+$/.test(id) ? Number(id) : null;
     const SORTABLE     = ['id', 'name', 'currency', 'contactPerson', 'email', 'phone', 'isActive', 'createdAt'];
     const safeSortBy   = SORTABLE.includes(sortBy) ? sortBy : 'id';
     const safeSortOrder = sortOrder === 'desc' ? 'desc' : 'asc';
 
     const where: Record<string, unknown> = {
       ...(isActive !== 'all' ? { isActive: isActive === 'true' } : {}),
+      ...(idNum         ? { id:            idNum } : {}),
+      ...(name          ? { name:          { contains: name,          mode: 'insensitive' } } : {}),
       ...(currency      ? { currency:      { contains: currency,      mode: 'insensitive' } } : {}),
       ...(contactPerson ? { contactPerson: { contains: contactPerson, mode: 'insensitive' } } : {}),
+      ...(email         ? { email:         { contains: email,         mode: 'insensitive' } } : {}),
+      ...(phone         ? { phone:         { contains: phone,         mode: 'insensitive' } } : {}),
+      ...(website       ? { website:       { contains: website,       mode: 'insensitive' } } : {}),
       ...(search.trim() ? {
         OR: [
           { name:          { contains: search, mode: 'insensitive' } },
