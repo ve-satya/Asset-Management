@@ -45,6 +45,7 @@ model Product {
 
   productType  ProductType   @relation(fields: [productTypeId], references: [id])
   manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
+  assets       Asset[]
 
   @@map("products")
 }
@@ -69,6 +70,8 @@ model Vendor {
   country       String?
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
+
+  assets Asset[]
 
   @@map("vendors")
 }
@@ -125,6 +128,8 @@ model AssetState {
   createdAt         DateTime @default(now())  @map("created_at")
   updatedAt         DateTime @updatedAt       @map("updated_at")
 
+  assets Asset[]
+
   @@map("asset_states")
 }
 
@@ -150,24 +155,36 @@ model Asset {
   orgSerialNumber    String?   @map("org_serial_number")
   description        String?
   partNumber         String?   @map("part_number")
+  productId          Int?      @map("product_id")
   product            String?
+  vendorId           Int?      @map("vendor_id")
   vendor             String?
   barcode            String?
   manufacturer       String?
+  assetStateId       Int?      @map("asset_state_id")
   assetState         String?   @map("asset_state")
+  assignedUserId     Int?      @map("assigned_user_id")
   user               String?
+  departmentId       Int?      @map("department_id")
   department         String?
+  associatedAssetId  Int?      @map("associated_asset_id")
   associatedToAssets String?   @map("associated_to_assets")
+  retainUserSiteAsAssetSite Boolean @default(false) @map("retain_user_site_as_asset_site")
+  siteId             Int?      @map("site_id")
   site               String?
   region             String?
   location           String?
   isLoanable         Boolean   @default(false) @map("is_loanable")
   loanStart          DateTime? @map("loan_start")
   loanEnd            DateTime? @map("loan_end")
+  comments           String?
   acquisitionDate    DateTime? @map("acquisition_date")
   expiryDate         DateTime? @map("expiry_date")
   purchaseCost       Float?    @map("purchase_cost")
   warrantyExpiryDate DateTime? @map("warranty_expiry_date")
+  impactDetails      String?   @map("impact_details")
+  impact             String?
+  assetAudited       String?   @map("asset_audited")
   purchaseOrder      String?   @map("purchase_order")
   purchaseOrderNo    String?   @map("purchase_order_no")
   lastScanStatus     String?   @map("last_scan_status")
@@ -195,6 +212,11 @@ model Asset {
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
   productType ProductType @relation(fields: [productTypeId], references: [id])
+  productRef  Product?    @relation(fields: [productId], references: [id])
+  vendorRef   Vendor?     @relation(fields: [vendorId], references: [id])
+  stateRef    AssetState? @relation(fields: [assetStateId], references: [id])
+  associatedAsset Asset?  @relation("AssociatedAsset", fields: [associatedAssetId], references: [id])
+  associatedAssets Asset[] @relation("AssociatedAsset")
 
   @@map("assets")
 }

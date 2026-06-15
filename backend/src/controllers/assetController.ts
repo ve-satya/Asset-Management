@@ -59,7 +59,13 @@ async function getAsset(req: Request, res: Response, next: NextFunction): Promis
   try {
     const item = await prisma.asset.findUnique({
       where: { id: parseInt(String(req.params.id), 10) },
-      include: { productType: { select: { displayName: true, id: true } } },
+      include: {
+        productType: { select: { displayName: true, id: true } },
+        productRef: { select: { id: true, name: true } },
+        vendorRef: { select: { id: true, name: true } },
+        stateRef: { select: { id: true, name: true } },
+        associatedAsset: { select: { id: true, name: true, assetTag: true } },
+      },
     });
     if (!item) { res.status(404).json({ error: 'Asset not found.' }); return; }
     res.json(item);
@@ -100,6 +106,7 @@ async function deleteAsset(req: Request, res: Response, next: NextFunction): Pro
 
 function buildPayload(body: Record<string, unknown>) {
   const toDate = (v: unknown) => (v ? new Date(String(v)) : null);
+  const toInt = (v: unknown) => (v !== undefined && v !== null && String(v) !== '' ? parseInt(String(v), 10) : null);
   return {
     productTypeId:      parseInt(String(body.productTypeId), 10),
     name:               String(body.name || '').trim(),
@@ -107,24 +114,36 @@ function buildPayload(body: Record<string, unknown>) {
     orgSerialNumber:    String(body.orgSerialNumber || '').trim()    || null,
     description:        String(body.description || '').trim()        || null,
     partNumber:         String(body.partNumber || '').trim()         || null,
+    productId:          toInt(body.productId),
     product:            String(body.product || '').trim()            || null,
+    vendorId:           toInt(body.vendorId),
     vendor:             String(body.vendor || '').trim()             || null,
     barcode:            String(body.barcode || '').trim()            || null,
     manufacturer:       String(body.manufacturer || '').trim()       || null,
+    assetStateId:       toInt(body.assetStateId),
     assetState:         String(body.assetState || '').trim()         || null,
+    assignedUserId:     toInt(body.assignedUserId),
     user:               String(body.user || '').trim()               || null,
+    departmentId:       toInt(body.departmentId),
     department:         String(body.department || '').trim()         || null,
+    associatedAssetId:  toInt(body.associatedAssetId),
     associatedToAssets: String(body.associatedToAssets || '').trim() || null,
+    retainUserSiteAsAssetSite: Boolean(body.retainUserSiteAsAssetSite),
+    siteId:             toInt(body.siteId),
     site:               String(body.site || '').trim()               || null,
     region:             String(body.region || '').trim()             || null,
     location:           String(body.location || '').trim()           || null,
     isLoanable:         Boolean(body.isLoanable),
     loanStart:          toDate(body.loanStart),
     loanEnd:            toDate(body.loanEnd),
+    comments:           String(body.comments || '').trim()           || null,
     acquisitionDate:    toDate(body.acquisitionDate),
     expiryDate:         toDate(body.expiryDate),
     purchaseCost:       body.purchaseCost ? parseFloat(String(body.purchaseCost)) : null,
     warrantyExpiryDate: toDate(body.warrantyExpiryDate),
+    impactDetails:      String(body.impactDetails || '').trim()      || null,
+    impact:             String(body.impact || '').trim()             || null,
+    assetAudited:       String(body.assetAudited || '').trim()       || null,
     purchaseOrder:      String(body.purchaseOrder || '').trim()      || null,
     purchaseOrderNo:    String(body.purchaseOrderNo || '').trim()    || null,
     lastScanStatus:     String(body.lastScanStatus || '').trim()     || null,

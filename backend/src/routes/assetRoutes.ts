@@ -6,7 +6,11 @@ const router = express.Router();
 
 const validators = [
   body('productTypeId').notEmpty().isInt().withMessage('Product Type is required.'),
-  body('name').trim().notEmpty().withMessage('Name is required.'),
+  body('name').trim().notEmpty().withMessage('Asset Name is required.'),
+  body().custom((value) => {
+    if (value.productId || String(value.product || '').trim()) return true;
+    throw new Error('Product is required.');
+  }),
 ];
 
 router.get('/',    getAssets);
