@@ -107,6 +107,9 @@ function AssetDetailContent({ asset }: { asset: Asset }) {
         <Field label="Region"               value={asset.region} />
         <Field label="Location"             value={asset.location} />
         <Field label="Is Loanable"          value={asset.isLoanable != null ? (asset.isLoanable ? 'Yes' : 'No') : null} />
+        <Field label="Loan Start"           value={fmt(asset.loanStart)} />
+        <Field label="Loan End"             value={fmt(asset.loanEnd)} />
+        <Field label="Comments"             value={asset.comments || asset.stateComments} />
       </Grid2></Section>
       <Section title="Purchase Details"><Grid2>
         <Field label="Acquisition Date"     value={fmt(asset.acquisitionDate)} />
@@ -115,6 +118,11 @@ function AssetDetailContent({ asset }: { asset: Asset }) {
         <Field label="Warranty Expiry Date" value={fmt(asset.warrantyExpiryDate)} />
         <Field label="Purchase Order"       value={asset.purchaseOrder} />
         <Field label="Purchase Order No"    value={asset.purchaseOrderNo} />
+      </Grid2></Section>
+      <Section title="Asset Additional Fields"><Grid2>
+        <Field label="Impact Details" value={asset.impactDetails} />
+        <Field label="Impact"         value={asset.impact} />
+        <Field label="Asset Audited"  value={asset.assetAudited} />
       </Grid2></Section>
       <Section title="Computer Details"><Grid2>
         <Field label="Service Tag"      value={asset.serviceTag} />
