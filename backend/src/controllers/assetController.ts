@@ -65,6 +65,20 @@ async function getAsset(req: Request, res: Response, next: NextFunction): Promis
         vendorRef: { select: { id: true, name: true } },
         stateRef: { select: { id: true, name: true } },
         associatedAsset: { select: { id: true, name: true, assetTag: true } },
+        dynamicFieldValues: {
+          include: {
+            field: {
+              select: {
+                id: true,
+                fieldName: true,
+                fieldKey: true,
+                fieldType: true,
+                sectionName: true,
+                productTypeId: true,
+              },
+            },
+          },
+        },
       },
     });
     if (!item) { res.status(404).json({ error: 'Asset not found.' }); return; }
@@ -76,7 +90,11 @@ async function createAsset(req: Request, res: Response, next: NextFunction): Pro
   const errors = validationResult(req);
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
   try {
-    const item = await prisma.asset.create({ data: buildPayload(req.body) });
+    const item = await prisma.$transaction(async (tx) => {
+      const created = await tx.asset.create({ data: buildPayload(req.body) });
+      await saveDynamicFieldValues(tx, created.id, req.body);
+      return tx.asset.findUnique({ where: { id: created.id } });
+    });
     res.status(201).json(item);
   } catch (err) { next(err); }
 }
@@ -85,10 +103,17 @@ async function updateAsset(req: Request, res: Response, next: NextFunction): Pro
   const errors = validationResult(req);
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
   try {
-    const item = await prisma.asset.update({
-      where: { id: parseInt(String(req.params.id), 10) },
-      data: buildPayload(req.body),
-      include: { productType: { select: { displayName: true, id: true } } },
+    const id = parseInt(String(req.params.id), 10);
+    const item = await prisma.$transaction(async (tx) => {
+      await tx.asset.update({
+        where: { id },
+        data: buildPayload(req.body),
+      });
+      await saveDynamicFieldValues(tx, id, req.body);
+      return tx.asset.findUnique({
+        where: { id },
+        include: { productType: { select: { displayName: true, id: true } } },
+      });
     });
     res.json(item);
   } catch (err) { next(err); }
@@ -167,6 +192,25 @@ function buildPayload(body: Record<string, unknown>) {
     physicalMemory:     String(body.physicalMemory || '').trim()     || null,
     processors:         Array.isArray(body.processors) ? body.processors : [],
   };
+}
+
+type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+async function saveDynamicFieldValues(tx: TransactionClient, assetId: number, body: Record<string, unknown>) {
+  const values = Array.isArray(body.dynamicFieldValues) ? body.dynamicFieldValues : [];
+  if (!values.length) return;
+
+  for (const raw of values) {
+    const item = raw as Record<string, unknown>;
+    const fieldId = item.productTypeFieldId ? parseInt(String(item.productTypeFieldId), 10) : null;
+    if (!fieldId) continue;
+    const value = item.value === undefined || item.value === null || String(item.value) === '' ? null : String(item.value);
+    await tx.assetDynamicFieldValue.upsert({
+      where: { assetId_productTypeFieldId: { assetId, productTypeFieldId: fieldId } },
+      create: { assetId, productTypeFieldId: fieldId, value },
+      update: { value },
+    });
+  }
 }
 
 export { getAssets, getAsset, createAsset, updateAsset, deleteAsset };

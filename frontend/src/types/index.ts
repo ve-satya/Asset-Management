@@ -42,6 +42,33 @@ export interface ProductTypeOption {
   assetCategory?: string | null;
 }
 
+export interface DynamicAssetField {
+  id: number;
+  productTypeId: number;
+  fieldName: string;
+  fieldKey: string;
+  fieldType: 'text' | 'number' | 'date' | 'checkbox' | 'textarea' | 'select' | string;
+  required: boolean;
+  displayOrder: number;
+  sectionName: string;
+  isInheritedToChildren: boolean;
+  sourceProductType: { id: number; displayName: string } | null;
+}
+
+export interface ResolvedDynamicAssetFields {
+  productTypeId: number;
+  hierarchy: { id: number; displayName: string; parentId: number | null }[];
+  fields: DynamicAssetField[];
+}
+
+export interface AssetDynamicFieldValue {
+  id: number;
+  assetId: number;
+  productTypeFieldId: number;
+  value: string | null;
+  field?: DynamicAssetField;
+}
+
 export interface Asset {
   id: number;
   productTypeId: number;
@@ -106,6 +133,7 @@ export interface Asset {
   createdAt: string;
   updatedAt: string;
   productType?: { id: number; displayName: string };
+  dynamicFieldValues?: AssetDynamicFieldValue[];
 }
 
 export interface Product {

@@ -4,6 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import errorHandler from './middleware/errorHandler';
 import productTypeRoutes from './routes/productTypeRoutes';
+import productTypeFieldRoutes from './routes/productTypeFieldRoutes';
 import assetRoutes from './routes/assetRoutes';
 import productRoutes from './routes/productRoutes';
 import vendorRoutes from './routes/vendorRoutes';
@@ -36,6 +37,7 @@ app.get('/', (_req, res) => {
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/product-types',           productTypeRoutes);
+app.use('/api/product-type-fields',     productTypeFieldRoutes);
 app.use('/api/assets',                  assetRoutes);
 app.use('/api/products',                productRoutes);
 app.use('/api/vendors',                 vendorRoutes);
