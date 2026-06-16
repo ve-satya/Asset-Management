@@ -9,12 +9,13 @@ interface ProductFormProps {
   record: Product | Record<string, unknown> | null;
   onSuccess: () => void;
   onCancel: () => void;
+  defaultProductTypeId?: string;
 }
 
 const EMPTY = { name: '', productTypeId: '', manufacturerId: '', partNo: '', cost: '', description: '' };
 const IMG_BASE = '/uploads/products/';
 
-export default function ProductForm({ record, onSuccess, onCancel }: ProductFormProps) {
+export default function ProductForm({ record, onSuccess, onCancel, defaultProductTypeId = '' }: ProductFormProps) {
   const [form,         setForm]         = useState(EMPTY);
   const [mfList,       setMfList]       = useState<NamedOption[]>([]);
   const [errors,       setErrors]       = useState<Record<string, string>>({});
@@ -37,12 +38,12 @@ export default function ProductForm({ record, onSuccess, onCancel }: ProductForm
       });
       setSavedImages(Array.isArray(record.images) ? (record.images as string[]) : []);
     } else {
-      setForm(EMPTY);
+      setForm({ ...EMPTY, productTypeId: defaultProductTypeId });
       setSavedImages([]);
     }
     setPendingFiles([]);
     setErrors({});
-  }, [record]);
+  }, [record, defaultProductTypeId]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value } = e.target;
