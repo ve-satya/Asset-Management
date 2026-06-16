@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import Modal from '../components/common/Modal';
 import { useToast, ToastContainer } from '../components/common/Toast';
 import AssetCommonForm from '../components/asset/AssetCommonForm';
 import AssetDynamicFormRenderer from '../components/asset/AssetDynamicFormRenderer';
+import ProductForm from '../components/product/ProductForm';
+import VendorForm from '../components/vendor/VendorForm';
 import { createAsset, getAsset, getAssets, updateAsset } from '../services/assetService';
 import { getAllProducts } from '../services/productService';
 import { getAllProductTypes } from '../services/productTypeService';
@@ -66,6 +69,21 @@ function fmt(date: unknown) {
   return new Date(String(date)).toISOString().split('T')[0];
 }
 
+function normalizeStateName(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function getStateRules(assetState: string) {
+  const normalized = normalizeStateName(assetState);
+  if (normalized === 'in use') {
+    return { userDepartmentDisabled: false, associatedAssetsDisabled: false, requiresUserDepartment: true };
+  }
+  if (normalized === 'to be returned') {
+    return { userDepartmentDisabled: false, associatedAssetsDisabled: true, requiresUserDepartment: true };
+  }
+  return { userDepartmentDisabled: true, associatedAssetsDisabled: true, requiresUserDepartment: false };
+}
+
 export default function AssetFormPage() {
   const navigate       = useNavigate();
   const { id }         = useParams<{ id: string }>();
@@ -81,6 +99,8 @@ export default function AssetFormPage() {
   const [assetList, setAssetList] = useState<Asset[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [savingMode, setSavingMode] = useState<'save' | 'continue' | null>(null);
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [vendorModalOpen, setVendorModalOpen] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const { toasts, showToast, removeToast } = useToast();
   const savingRef = useRef(false);
@@ -98,8 +118,14 @@ export default function AssetFormPage() {
       setVendorList(vendors);
       setStateList(states);
       setAssetList(assets.data);
+      if (!isEdit) {
+        const inStore = states.find((state) => normalizeStateName(state.name) === 'in store');
+        if (inStore) {
+          setForm((prev) => prev.assetState ? prev : { ...prev, assetStateId: String(inStore.id), assetState: inStore.name });
+        }
+      }
     }).catch(console.error);
-  }, []);
+  }, [isEdit]);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -164,6 +190,39 @@ export default function AssetFormPage() {
     () => assetList.filter((asset) => String(asset.id) !== String(id || '')),
     [assetList, id],
   );
+  const stateRules = useMemo(() => getStateRules(form.assetState), [form.assetState]);
+
+  useEffect(() => {
+    setForm((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      if (stateRules.userDepartmentDisabled) {
+        if (next.user || next.assignedUserId || next.department || next.departmentId) {
+          next.user = '';
+          next.assignedUserId = '';
+          next.department = '';
+          next.departmentId = '';
+          changed = true;
+        }
+      }
+
+      if (stateRules.associatedAssetsDisabled) {
+        if (next.associatedAssetId || next.associatedToAssets) {
+          next.associatedAssetId = '';
+          next.associatedToAssets = '';
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+    setErrors((prev) => ({
+      ...prev,
+      ...(stateRules.userDepartmentDisabled ? { user: '', department: '' } : {}),
+      ...(stateRules.associatedAssetsDisabled ? { associatedAssetId: '' } : {}),
+    }));
+  }, [stateRules.userDepartmentDisabled, stateRules.associatedAssetsDisabled]);
 
   function setField(name: AssetFormField, value: string | boolean) {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -179,6 +238,10 @@ export default function AssetFormPage() {
   function handleProductChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const productId = e.target.value;
     const product = productList.find((item) => String(item.id) === productId);
+    selectProduct(productId, product);
+  }
+
+  function selectProduct(productId: string, product?: ProductOption) {
     setForm((prev) => ({
       ...prev,
       productId,
@@ -188,11 +251,43 @@ export default function AssetFormPage() {
     setErrors((prev) => ({ ...prev, productId: '', product: '', productTypeId: '' }));
   }
 
+  function selectVendor(vendorId: string, vendor?: NamedOption) {
+    setForm((prev) => ({ ...prev, vendorId, vendor: vendor?.name || '' }));
+    setErrors((prev) => ({ ...prev, vendorId: '', vendor: '' }));
+  }
+
+  async function handleProductCreated() {
+    try {
+      const previousIds = new Set(productList.map((product) => product.id));
+      const products = await getAllProducts();
+      setProductList(products);
+      const created = [...products].reverse().find((product) => !previousIds.has(product.id));
+      if (created) selectProduct(String(created.id), created);
+      setProductModalOpen(false);
+    } catch {
+      showToast('Product created, but the dropdown could not be refreshed.', 'error');
+    }
+  }
+
+  async function handleVendorCreated() {
+    try {
+      const previousIds = new Set(vendorList.map((vendor) => vendor.id));
+      const vendors = await getAllVendors();
+      setVendorList(vendors);
+      const created = [...vendors].reverse().find((vendor) => !previousIds.has(vendor.id));
+      if (created) selectVendor(String(created.id), created);
+      setVendorModalOpen(false);
+    } catch {
+      showToast('Vendor created, but the dropdown could not be refreshed.', 'error');
+    }
+  }
+
   function handleNamedSelect(fieldId: AssetFormField, fieldName: AssetFormField, options: NamedOption[]) {
     return (e: React.ChangeEvent<HTMLSelectElement>) => {
       const selectedId = e.target.value;
       const selected = options.find((item) => String(item.id) === selectedId);
       setForm((prev) => ({ ...prev, [fieldId]: selectedId, [fieldName]: selected?.name || '' }));
+      setErrors((prev) => ({ ...prev, [fieldId]: '', [fieldName]: '' }));
     };
   }
 
@@ -218,6 +313,8 @@ export default function AssetFormPage() {
     if (!form.name.trim()) e.name = 'Asset Name is required.';
     if (!form.productId && !form.product.trim()) e.productId = 'Product is required.';
     if (!form.productTypeId) e.productTypeId = 'Select a product linked to a product type.';
+    if (stateRules.requiresUserDepartment && !form.user.trim()) e.user = 'User is required.';
+    if (stateRules.requiresUserDepartment && !form.department.trim()) e.department = 'Department is required.';
     return e;
   }
 
@@ -228,9 +325,12 @@ export default function AssetFormPage() {
       productId: form.productId ? parseInt(form.productId, 10) : null,
       vendorId: form.vendorId ? parseInt(form.vendorId, 10) : null,
       assetStateId: form.assetStateId ? parseInt(form.assetStateId, 10) : null,
-      assignedUserId: form.assignedUserId ? parseInt(form.assignedUserId, 10) : null,
-      departmentId: form.departmentId ? parseInt(form.departmentId, 10) : null,
-      associatedAssetId: form.associatedAssetId ? parseInt(form.associatedAssetId, 10) : null,
+      assignedUserId: stateRules.userDepartmentDisabled || !form.assignedUserId ? null : parseInt(form.assignedUserId, 10),
+      user: stateRules.userDepartmentDisabled ? null : form.user,
+      departmentId: stateRules.userDepartmentDisabled || !form.departmentId ? null : parseInt(form.departmentId, 10),
+      department: stateRules.userDepartmentDisabled ? null : form.department,
+      associatedAssetId: stateRules.associatedAssetsDisabled || !form.associatedAssetId ? null : parseInt(form.associatedAssetId, 10),
+      associatedToAssets: stateRules.associatedAssetsDisabled ? null : form.associatedToAssets,
       siteId: form.siteId ? parseInt(form.siteId, 10) : null,
       purchaseCost: form.purchaseCost !== '' ? parseFloat(form.purchaseCost) : null,
       loanStart: form.loanStart || null,
@@ -285,7 +385,6 @@ export default function AssetFormPage() {
     : productList;
   const productTypeName = productTypeList.find((productType) => String(productType.id) === form.productTypeId)?.displayName;
   const pageTitle = isEdit ? `Edit ${form.name || productTypeName || 'Asset'}` : `Add New ${productTypeName || 'Asset'}`;
-  const userDepartmentDisabled = false;
   const loanDateDisabled = !form.isLoanable;
 
   return (
@@ -310,12 +409,15 @@ export default function AssetFormPage() {
             vendorList={vendorList}
             stateList={stateList}
             associatedAssets={associatedAssets}
-            userDepartmentDisabled={userDepartmentDisabled}
+            userDepartmentDisabled={stateRules.userDepartmentDisabled}
+            associatedAssetsDisabled={stateRules.associatedAssetsDisabled}
             loanDateDisabled={loanDateDisabled}
             onChange={ch}
             onProductChange={handleProductChange}
             onNamedSelect={handleNamedSelect}
             onAssociatedAssetChange={handleAssociatedAssetChange}
+            onAddProduct={() => setProductModalOpen(true)}
+            onAddVendor={() => setVendorModalOpen(true)}
           />
 
         <AssetDynamicFormRenderer
@@ -333,16 +435,18 @@ export default function AssetFormPage() {
           disabled={savingMode !== null}
           className="inline-flex h-8 min-w-[58px] items-center justify-center gap-1.5 rounded-full bg-sky-600 px-5 text-xs font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {savingMode === 'save' && <Loader2 size={13} className="animate-spin" />} Save
+          {savingMode === 'save' && <Loader2 size={13} className="animate-spin" />} {isEdit ? 'Update' : 'Save'}
         </button>
-        <button
-          type="button"
-          onClick={() => handleSave(true)}
-          disabled={savingMode !== null}
-          className="inline-flex h-8 min-w-[150px] items-center justify-center gap-1.5 rounded-full bg-sky-600 px-5 text-xs font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {savingMode === 'continue' && <Loader2 size={13} className="animate-spin" />} Save and Continue Edit
-        </button>
+        {!isEdit && (
+          <button
+            type="button"
+            onClick={() => handleSave(true)}
+            disabled={savingMode !== null}
+            className="inline-flex h-8 min-w-[150px] items-center justify-center gap-1.5 rounded-full bg-sky-600 px-5 text-xs font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {savingMode === 'continue' && <Loader2 size={13} className="animate-spin" />} Save and Continue Edit
+          </button>
+        )}
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -352,6 +456,23 @@ export default function AssetFormPage() {
           Cancel
         </button>
       </div>
+
+      <Modal open={productModalOpen} onClose={() => setProductModalOpen(false)} title="New Product" maxWidth="max-w-4xl">
+        <ProductForm
+          record={null}
+          defaultProductTypeId={form.productTypeId}
+          onSuccess={handleProductCreated}
+          onCancel={() => setProductModalOpen(false)}
+        />
+      </Modal>
+
+      <Modal open={vendorModalOpen} onClose={() => setVendorModalOpen(false)} title="New Vendor" maxWidth="max-w-5xl">
+        <VendorForm
+          record={null}
+          onSuccess={handleVendorCreated}
+          onCancel={() => setVendorModalOpen(false)}
+        />
+      </Modal>
     </div>
   );
 }

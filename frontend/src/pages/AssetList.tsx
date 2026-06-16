@@ -193,16 +193,74 @@ function TreeNodeComp({ node, depth, selectedNodeId, onSelect, openNodeIds, quer
   );
 }
 
-function ToolbarButton({ children, active, onClick, title }: { children: ReactNode; active?: boolean; onClick?: () => void; title?: string }) {
+function ToolbarButton({ children, active, disabled, onClick, title }: { children: ReactNode; active?: boolean; disabled?: boolean; onClick?: () => void; title?: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
       title={title}
-      className={`inline-flex h-8 items-center justify-center gap-1.5 border border-gray-200 bg-white px-3 text-xs text-gray-900 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800 ${active ? 'text-sky-600' : ''}`}
+      disabled={disabled}
+      className={`inline-flex h-8 items-center justify-center gap-1.5 border border-gray-200 bg-white px-3 text-xs text-gray-900 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800 dark:disabled:bg-gray-900/60 dark:disabled:text-gray-600 ${active ? 'text-sky-600' : ''}`}
     >
       {children}
     </button>
+  );
+}
+
+const ACTION_MENU_ITEMS = [
+  'Scan Now',
+  'Excluded from scan',
+  'Change Scan Credential',
+  'Assign To Site',
+  'Assign to Department',
+  'Modify State',
+  'Modify Type',
+  'Configure Depreciation',
+  'Add To Group',
+  'Reconcile',
+];
+
+function ActionsDropdown({ disabled }: { disabled: boolean }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <ToolbarButton
+        active={open}
+        disabled={disabled}
+        onClick={() => setOpen((value) => !value)}
+        title={disabled ? 'Select an asset to use actions' : 'Actions'}
+      >
+        Actions <ChevronDown size={13} />
+      </ToolbarButton>
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-1 min-w-44 overflow-hidden rounded border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+          {ACTION_MENU_ITEMS.map((item, index) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setOpen(false)}
+              className={`flex h-9 w-full items-center px-3 text-left text-xs text-gray-700 hover:bg-sky-50 hover:text-sky-700 dark:text-gray-200 dark:hover:bg-sky-900/30 dark:hover:text-sky-200 ${index === 0 ? 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-200' : ''}`}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -491,13 +549,11 @@ export default function AssetList() {
               New <ChevronDown size={13} />
             </ToolbarButton>
           )}
-          <ToolbarButton active={selected.length > 0} onClick={() => selected.length ? setDeleteTarget(selected) : undefined}>
-            Actions <ChevronDown size={13} />
-          </ToolbarButton>
+          <ActionsDropdown disabled={selected.length === 0} />
           <ToolbarButton title="List view"><List size={17} /></ToolbarButton>
           <ToolbarButton>New Scan</ToolbarButton>
           <ToolbarButton active={searchFiltersOpen || hasActiveFilters} onClick={() => setSearchFiltersOpen((value) => !value)}>Filters</ToolbarButton>
-          <ToolbarButton title="Delete selected" onClick={() => selected.length ? setDeleteTarget(selected) : undefined}><Trash2 size={16} /></ToolbarButton>
+          <ToolbarButton title="Delete selected" disabled={selected.length === 0} onClick={() => setDeleteTarget(selected)}><Trash2 size={16} /></ToolbarButton>
           <div className="flex items-center">
             <ToolbarButton active={searchFiltersOpen || Boolean(rawSearch)} onClick={() => setSearchFiltersOpen((value) => !value)} title="Search"><Search size={17} /></ToolbarButton>
             <SelectColumnsDropdown visible={visibleCols} onApply={setVisibleCols} />
@@ -507,7 +563,7 @@ export default function AssetList() {
             <select
               value={pagination.pageSize}
               onChange={(event) => setPagination((prev) => ({ ...prev, pageSize: Number(event.target.value), page: 1 }))}
-              className="h-8 border border-gray-200 bg-white px-2 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+              className="h-8 w-16 border border-gray-200 bg-white px-2 pr-6 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
             >
               {[10, 25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
             </select>
@@ -593,11 +649,16 @@ export default function AssetList() {
               ) : filteredAssets.length === 0 ? (
                 <tr><td colSpan={visibleDefs.length + 2} className="py-16 text-center text-gray-400 dark:text-gray-500">No records found.</td></tr>
               ) : filteredAssets.map((row) => (
-                <tr key={row.id} className="h-10 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <tr
+                  key={row.id}
+                  onClick={() => setSelected([row.id])}
+                  className={`h-10 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${selected.includes(row.id) ? 'bg-sky-50 dark:bg-sky-900/20' : ''}`}
+                >
                   <td className="border-r border-gray-100 px-2 text-center dark:border-gray-800">
                     <input
                       type="checkbox"
                       checked={selected.includes(row.id)}
+                      onClick={(event) => event.stopPropagation()}
                       onChange={() => toggleRow(row.id)}
                       className="rounded border-gray-300 text-sky-600 focus:ring-sky-500"
                     />
@@ -605,7 +666,7 @@ export default function AssetList() {
                   <td className="border-r border-gray-100 px-2 text-center dark:border-gray-800">
                     <button
                       type="button"
-                      onClick={() => navigate(`/assets/edit/${row.id}`)}
+                      onClick={(event) => { event.stopPropagation(); navigate(`/assets/edit/${row.id}`); }}
                       className="text-gray-400 hover:text-sky-600"
                       aria-label="Edit asset"
                     >

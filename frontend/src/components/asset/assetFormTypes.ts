@@ -64,9 +64,12 @@ export interface AssetCommonFormProps {
   stateList: NamedOption[];
   associatedAssets: Asset[];
   userDepartmentDisabled: boolean;
+  associatedAssetsDisabled: boolean;
   loanDateDisabled: boolean;
   onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   onProductChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   onNamedSelect: (fieldId: AssetFormField, fieldName: AssetFormField, options: NamedOption[]) => (event: React.ChangeEvent<HTMLSelectElement>) => void;
   onAssociatedAssetChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+  onAddProduct: () => void;
+  onAddVendor: () => void;
 }
