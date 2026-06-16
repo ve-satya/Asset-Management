@@ -673,15 +673,30 @@ export default function AssetList() {
                       <Pencil size={15} />
                     </button>
                   </td>
-                  {visibleDefs.map((column) => (
-                    <td
-                      key={column.key}
-                      onDoubleClick={() => navigate(`/assets/detail?asset-product-type-id=${row.productTypeId}&asset-id=${row.id}&tab=asset-detail`)}
-                      className="border-r border-gray-100 px-2 py-2 text-gray-900 dark:border-gray-800 dark:text-gray-200"
-                    >
-                      <span className={`block truncate ${column.key === 'name' ? 'font-medium' : ''}`}>{getCellValue(row, column.key)}</span>
-                    </td>
-                  ))}
+                  {visibleDefs.map((column) => {
+                    const value = getCellValue(row, column.key);
+                    return (
+                      <td
+                        key={column.key}
+                        className="border-r border-gray-100 px-2 py-2 text-gray-900 dark:border-gray-800 dark:text-gray-200"
+                      >
+                        {column.key === 'name' ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              navigate(`/assets/detail?asset-product-type-id=${row.productTypeId}&asset-id=${row.id}&tab=asset-detail`);
+                            }}
+                            className="block max-w-full truncate text-left font-medium text-sky-600 hover:text-sky-700 hover:underline focus:outline-none focus:underline dark:text-sky-300 dark:hover:text-sky-200"
+                          >
+                            {value}
+                          </button>
+                        ) : (
+                          <span className="block truncate">{value}</span>
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
