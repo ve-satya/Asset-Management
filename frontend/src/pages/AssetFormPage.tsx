@@ -76,12 +76,12 @@ function normalizeStateName(value: string) {
 function getStateRules(assetState: string) {
   const normalized = normalizeStateName(assetState);
   if (normalized === 'in use') {
-    return { userDepartmentDisabled: false, associatedAssetsDisabled: false, requiresUserDepartment: true };
+    return { userDepartmentDisabled: false, associatedAssetsDisabled: false, requiresUserDepartment: true, requiresAssociatedAsset: true };
   }
   if (normalized === 'to be returned') {
-    return { userDepartmentDisabled: false, associatedAssetsDisabled: true, requiresUserDepartment: true };
+    return { userDepartmentDisabled: false, associatedAssetsDisabled: true, requiresUserDepartment: true, requiresAssociatedAsset: false };
   }
-  return { userDepartmentDisabled: true, associatedAssetsDisabled: true, requiresUserDepartment: false };
+  return { userDepartmentDisabled: true, associatedAssetsDisabled: true, requiresUserDepartment: false, requiresAssociatedAsset: false };
 }
 
 export default function AssetFormPage() {
@@ -224,6 +224,15 @@ export default function AssetFormPage() {
     }));
   }, [stateRules.userDepartmentDisabled, stateRules.associatedAssetsDisabled]);
 
+  useEffect(() => {
+    if (form.isLoanable) return;
+    setForm((prev) => {
+      if (!prev.loanStart && !prev.loanEnd) return prev;
+      return { ...prev, loanStart: '', loanEnd: '' };
+    });
+    setErrors((prev) => ({ ...prev, loanStart: '', loanEnd: '' }));
+  }, [form.isLoanable]);
+
   function setField(name: AssetFormField, value: string | boolean) {
     setForm((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
@@ -299,6 +308,7 @@ export default function AssetFormPage() {
       associatedAssetId,
       associatedToAssets: selected ? `${selected.name}${selected.assetTag ? ` (${selected.assetTag})` : ''}` : '',
     }));
+    setErrors((prev) => ({ ...prev, associatedAssetId: '', associatedToAssets: '' }));
   }
 
   function handleDynamicFieldChange(fieldId: number, value: string | boolean) {
@@ -315,6 +325,9 @@ export default function AssetFormPage() {
     if (!form.productTypeId) e.productTypeId = 'Select a product linked to a product type.';
     if (stateRules.requiresUserDepartment && !form.user.trim()) e.user = 'User is required.';
     if (stateRules.requiresUserDepartment && !form.department.trim()) e.department = 'Department is required.';
+    if (stateRules.requiresAssociatedAsset && !form.associatedAssetId) e.associatedAssetId = 'Associated asset is required.';
+    if (form.isLoanable && !form.loanStart) e.loanStart = 'Loan Start is required.';
+    if (form.isLoanable && !form.loanEnd) e.loanEnd = 'Loan End is required.';
     return e;
   }
 
@@ -412,6 +425,9 @@ export default function AssetFormPage() {
             userDepartmentDisabled={stateRules.userDepartmentDisabled}
             associatedAssetsDisabled={stateRules.associatedAssetsDisabled}
             loanDateDisabled={loanDateDisabled}
+            userDepartmentRequired={stateRules.requiresUserDepartment}
+            associatedAssetsRequired={stateRules.requiresAssociatedAsset}
+            loanDateRequired={form.isLoanable}
             onChange={ch}
             onProductChange={handleProductChange}
             onNamedSelect={handleNamedSelect}

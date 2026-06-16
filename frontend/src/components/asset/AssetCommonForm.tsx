@@ -1,4 +1,4 @@
-import { Field, Section, inputClass } from './AssetFormLayout';
+import { Field, InfoTooltip, Section, inputClass } from './AssetFormLayout';
 import type { AssetCommonFormProps } from './assetFormTypes';
 
 const USERS       = ['nitin agarwal', 'praveen ranjan', 'rahul sharma', 'priya patel'];
@@ -22,6 +22,9 @@ export default function AssetCommonForm({
   userDepartmentDisabled,
   associatedAssetsDisabled,
   loanDateDisabled,
+  userDepartmentRequired,
+  associatedAssetsRequired,
+  loanDateRequired,
   onChange,
   onProductChange,
   onNamedSelect,
@@ -76,20 +79,20 @@ export default function AssetCommonForm({
               {stateList.map((state) => <option key={state.id} value={state.id}>{state.name}</option>)}
             </select>
           </Field>
-          <Field label="User">
-            <select name="user" value={form.user} onChange={onChange} disabled={userDepartmentDisabled} className={inputClass(false, userDepartmentDisabled)}>
+          <Field label="User" req={userDepartmentRequired} error={errors.user}>
+            <select name="user" value={form.user} onChange={onChange} disabled={userDepartmentDisabled} className={inputClass(!!errors.user, userDepartmentDisabled)}>
               <option value="">No, just select department</option>
               {USERS.map((user) => <option key={user} value={user}>{user}</option>)}
             </select>
           </Field>
-          <Field label="Department">
-            <select name="department" value={form.department} onChange={onChange} disabled={userDepartmentDisabled} className={inputClass(false, userDepartmentDisabled)}>
+          <Field label="Department" req={userDepartmentRequired} error={errors.department}>
+            <select name="department" value={form.department} onChange={onChange} disabled={userDepartmentDisabled} className={inputClass(!!errors.department, userDepartmentDisabled)}>
               <option value="">No, just select user</option>
               {DEPARTMENTS.map((department) => <option key={department} value={department}>{department}</option>)}
             </select>
           </Field>
-          <Field label="Associated to Assets">
-            <select name="associatedAssetId" value={form.associatedAssetId} onChange={onAssociatedAssetChange} disabled={associatedAssetsDisabled} className={inputClass(false, associatedAssetsDisabled)}>
+          <Field label="Associated to Assets" req={associatedAssetsRequired} error={errors.associatedAssetId}>
+            <select name="associatedAssetId" value={form.associatedAssetId} onChange={onAssociatedAssetChange} disabled={associatedAssetsDisabled} className={inputClass(!!errors.associatedAssetId, associatedAssetsDisabled)}>
               <option value="">--Select--</option>
               {associatedAssets.map((asset) => <option key={asset.id} value={asset.id}>{asset.name}{asset.assetTag ? ` (${asset.assetTag})` : ''}</option>)}
             </select>
@@ -104,11 +107,11 @@ export default function AssetCommonForm({
             </select>
           </Field>
           <Field label="Location"><input name="location" value={form.location} onChange={onChange} className={inputClass()} /></Field>
-          <Field label="Is Loanable">
+          <Field label={<><span>Is Loanable</span><InfoTooltip text="These assets are removed from the loanable assets list. User will not be able to loan the assets." /></>}>
             <input type="checkbox" name="isLoanable" checked={form.isLoanable} onChange={onChange} className="mt-2 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
           </Field>
-          <Field label="Loan Start"><input type="date" name="loanStart" value={form.loanStart} onChange={onChange} disabled={loanDateDisabled} className={inputClass(false, loanDateDisabled)} /></Field>
-          <Field label="Loan End"><input type="date" name="loanEnd" value={form.loanEnd} onChange={onChange} disabled={loanDateDisabled} className={inputClass(false, loanDateDisabled)} /></Field>
+          <Field label="Loan Start" req={loanDateRequired} error={errors.loanStart}><input type="date" name="loanStart" value={form.loanStart} onChange={onChange} disabled={loanDateDisabled} className={inputClass(!!errors.loanStart, loanDateDisabled)} /></Field>
+          <Field label="Loan End" req={loanDateRequired} error={errors.loanEnd}><input type="date" name="loanEnd" value={form.loanEnd} onChange={onChange} disabled={loanDateDisabled} className={inputClass(!!errors.loanEnd, loanDateDisabled)} /></Field>
           <Field label="Comments"><textarea name="comments" value={form.comments} onChange={onChange} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>
         </div>
       </Section>
@@ -126,7 +129,7 @@ export default function AssetCommonForm({
         </div>
       </Section>
 
-      <Section title="Asset Additional Fields Section">
+      <Section title={<><span>Asset Additional Fields Section</span><InfoTooltip text="Additional Field Section" /></>}>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-28 gap-y-3">
           <div className="space-y-3">
             <Field label="Impact details"><textarea name="impactDetails" value={form.impactDetails} onChange={onChange} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>

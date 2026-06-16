@@ -66,6 +66,9 @@ export interface AssetCommonFormProps {
   userDepartmentDisabled: boolean;
   associatedAssetsDisabled: boolean;
   loanDateDisabled: boolean;
+  userDepartmentRequired: boolean;
+  associatedAssetsRequired: boolean;
+  loanDateRequired: boolean;
   onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   onProductChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   onNamedSelect: (fieldId: AssetFormField, fieldName: AssetFormField, options: NamedOption[]) => (event: React.ChangeEvent<HTMLSelectElement>) => void;
