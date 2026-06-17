@@ -3,11 +3,12 @@ import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 
 const prisma = new PrismaClient();
+const PROTECTED_ASSET_STATE_NAMES = new Set(['In Store', 'In Repair', 'Disposed', 'Expired', 'In Use', 'To be returned']);
 
 export async function getAssetStates(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const {
-      page = '1', pageSize = '10', search = '', sortBy = 'id', sortOrder = 'asc', isActive = 'true',
+      page = '1', pageSize = '10', search = '', name = '', description = '', sortBy = 'id', sortOrder = 'asc', isActive = 'true',
     } = req.query as Record<string, string>;
 
     const pageNum      = Math.max(1, parseInt(page, 10));
@@ -24,6 +25,8 @@ export async function getAssetStates(req: Request, res: Response, next: NextFunc
           { description: { contains: search, mode: 'insensitive' } },
         ],
       } : {}),
+      ...(name.trim() ? { name: { contains: name, mode: 'insensitive' } } : {}),
+      ...(description.trim() ? { description: { contains: description, mode: 'insensitive' } } : {}),
     };
 
     const [total, items] = await Promise.all([
@@ -79,7 +82,14 @@ export async function updateAssetState(req: Request, res: Response, next: NextFu
 
 export async function deleteAssetState(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await prisma.assetState.update({ where: { id: parseInt(String(req.params.id), 10) }, data: { isActive: false } });
+    const id = parseInt(String(req.params.id), 10);
+    const item = await prisma.assetState.findUnique({ where: { id }, select: { name: true } });
+    if (!item) { res.status(404).json({ error: 'Asset State not found.' }); return; }
+    if (PROTECTED_ASSET_STATE_NAMES.has(item.name)) {
+      res.status(400).json({ error: 'This default Asset State cannot be deleted.' });
+      return;
+    }
+    await prisma.assetState.update({ where: { id }, data: { isActive: false } });
     res.json({ message: 'Asset State deactivated successfully.' });
   } catch (err) { next(err); }
 }
