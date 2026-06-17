@@ -47,13 +47,16 @@ function computeCompliance(
 ): string {
   if (!enableCompliance) return 'N/A';
   const totalAllowed = licenses.reduce((s, l) => s + l.installationsAllowed, 0);
-  return installationCount > totalAllowed ? 'Under Licensed' : 'Compliant';
+  if (installationCount > totalAllowed) return 'Under Licensed';
+  if (totalAllowed > installationCount) return 'Over Licensed';
+  return 'Compliant';
 }
 
 export async function getSoftwares(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const {
       page = '1', pageSize = '10', search = '', sortBy = 'id', sortOrder = 'asc', isActive = 'true',
+      manufacturerId, softwareTypeId,
     } = req.query as Record<string, string>;
 
     const pageNum      = Math.max(1, parseInt(page, 10));
@@ -64,6 +67,8 @@ export async function getSoftwares(req: Request, res: Response, next: NextFuncti
 
     const where = {
       ...(isActive !== 'all' ? { isActive: isActive === 'true' } : {}),
+      ...(manufacturerId ? { manufacturerId: parseInt(manufacturerId, 10) } : {}),
+      ...(softwareTypeId ? { softwareTypeId: parseInt(softwareTypeId, 10) } : {}),
       ...(search.trim() ? {
         OR: [
           { name:        { contains: search, mode: 'insensitive' as const } },
@@ -177,6 +182,22 @@ export async function updateSoftware(req: Request, res: Response, next: NextFunc
       data:  buildPayload(req.body),
       include: INCLUDE,
     });
+    res.json(item);
+  } catch (err) { next(err); }
+}
+
+export async function patchSoftware(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id   = parseInt(String(req.params.id), 10);
+    const body = req.body as Record<string, unknown>;
+    const data: Record<string, unknown> = {};
+    if (body.softwareTypeId     !== undefined) data.softwareTypeId     = parseInt(String(body.softwareTypeId),     10);
+    if (body.softwareCategoryId !== undefined) data.softwareCategoryId = parseInt(String(body.softwareCategoryId), 10);
+    if (body.manufacturerId     !== undefined) data.manufacturerId     = parseInt(String(body.manufacturerId),     10);
+    if (body.licenseTypeId      !== undefined) data.licenseTypeId      = body.licenseTypeId ? parseInt(String(body.licenseTypeId), 10) : null;
+    if (body.isActive           !== undefined) data.isActive           = Boolean(body.isActive);
+    if (Object.keys(data).length === 0) { res.status(400).json({ error: 'No updatable fields provided.' }); return; }
+    const item = await prisma.software.update({ where: { id }, data, include: INCLUDE });
     res.json(item);
   } catch (err) { next(err); }
 }

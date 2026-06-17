@@ -2,7 +2,7 @@ import express from 'express';
 import { body } from 'express-validator';
 import {
   getSoftwares, getSoftware, getAllSoftwares,
-  createSoftware, updateSoftware, deleteSoftware,
+  createSoftware, updateSoftware, patchSoftware, deleteSoftware,
   uploadImage, deleteImage, uploadMiddleware,
 } from '../controllers/softwareController';
 
@@ -20,6 +20,7 @@ router.get('/',                        getSoftwares);
 router.get('/:id',                     getSoftware);
 router.post('/',                       validators, createSoftware);
 router.put('/:id',                     validators, updateSoftware);
+router.patch('/:id',                   patchSoftware);
 router.delete('/:id',                  deleteSoftware);
 router.post('/:id/images',             uploadMiddleware, uploadImage);
 router.delete('/:id/images/:filename', deleteImage);

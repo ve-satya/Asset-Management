@@ -18,6 +18,9 @@ export const createSoftware = (data: unknown): Promise<Software> =>
 export const updateSoftware = (id: number | string, data: unknown): Promise<Software> =>
   axios.put(`${BASE}/${id}`, data).then((r) => r.data);
 
+export const patchSoftware = (id: number | string, data: Record<string, unknown>): Promise<Software> =>
+  axios.patch(`${BASE}/${id}`, data).then((r) => r.data);
+
 export const deleteSoftware = (id: number | string): Promise<{ message: string }> =>
   axios.delete(`${BASE}/${id}`).then((r) => r.data);
 
