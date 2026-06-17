@@ -61,14 +61,17 @@ async function main() {
   if (sltCount === 0) {
     await prisma.softwareLicenseType.createMany({
       data: [
-        { name: 'Volume License',      description: 'Licensed for multiple users or devices under one agreement.' },
-        { name: 'OEM License',         description: 'Pre-installed on hardware and tied to that device.'          },
-        { name: 'Retail License',      description: 'Purchased at retail and transferable between devices.'       },
-        { name: 'Subscription License',description: 'Recurring payment model granting access for a period.'      },
-        { name: 'Open Source License', description: 'Free to use, modify, and distribute under open-source terms.'},
-        { name: 'Enterprise License',  description: 'Organisation-wide licensing with extended rights.'          },
-        { name: 'Trial License',       description: 'Time-limited evaluation version.'                           },
-        { name: 'Perpetual License',   description: 'One-time purchase granting permanent usage rights.'         },
+        { name: 'Free License',            trackBy: 'Workstation', installationsAllowed: 'Unlimited', isPerpetual: true,  isFreeLicense: true  },
+        { name: 'Trial License',           trackBy: 'Workstation', installationsAllowed: 'Volume',    isPerpetual: false, isFreeLicense: false },
+        { name: 'Named User License',      trackBy: 'User',        installationsAllowed: 'Single',    isPerpetual: false, isFreeLicense: false },
+        { name: 'Node Locked',             trackBy: 'Workstation', installationsAllowed: 'Single',    isPerpetual: false, isFreeLicense: false },
+        { name: 'Concurrent License',      trackBy: 'User',        installationsAllowed: 'Single',    isPerpetual: false, isFreeLicense: false },
+        { name: 'Client Access License',   trackBy: 'CAL',         installationsAllowed: null,        isPerpetual: false, isFreeLicense: false },
+        { name: 'OEM',                     trackBy: 'Workstation', installationsAllowed: 'OEM',       isPerpetual: false, isFreeLicense: false },
+        { name: 'Enterprise Subscription', trackBy: 'Workstation', installationsAllowed: 'Unlimited', isPerpetual: false, isFreeLicense: false },
+        { name: 'Enterprise (Perpetual)',  trackBy: 'Workstation', installationsAllowed: 'Unlimited', isPerpetual: true,  isFreeLicense: false },
+        { name: 'Volume',                  trackBy: 'Workstation', installationsAllowed: 'Volume',    isPerpetual: false, isFreeLicense: false },
+        { name: 'Individual',              trackBy: 'Workstation', installationsAllowed: 'Single',    isPerpetual: false, isFreeLicense: false },
       ],
     });
     console.log('Software License Types seeded.');
