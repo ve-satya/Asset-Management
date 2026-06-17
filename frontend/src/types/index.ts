@@ -12,6 +12,18 @@ export interface PaginatedResponse<T> {
   pagination: PaginationMeta;
 }
 
+export interface AssetHistoryItem {
+  id: number;
+  assetId: number;
+  actionType: string;
+  changedBy: string | null;
+  changedOn: string;
+  fieldName: string | null;
+  oldValue: string | null;
+  newValue: string | null;
+  comments: string | null;
+}
+
 export interface NamedOption {
   id: number;
   name: string;

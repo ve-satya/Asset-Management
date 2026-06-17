@@ -240,8 +240,26 @@ model Asset {
   associatedAsset Asset?  @relation("AssociatedAsset", fields: [associatedAssetId], references: [id])
   associatedAssets Asset[] @relation("AssociatedAsset")
   dynamicFieldValues AssetDynamicFieldValue[]
+  history AssetHistory[]
 
   @@map("assets")
+}
+
+model AssetHistory {
+  id         Int      @id @default(autoincrement())
+  assetId    Int      @map("asset_id")
+  actionType String   @map("action_type")
+  changedBy  String?  @map("changed_by")
+  changedOn  DateTime @default(now()) @map("changed_on")
+  fieldName  String?  @map("field_name")
+  oldValue   String?  @map("old_value")
+  newValue   String?  @map("new_value")
+  comments   String?
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, changedOn])
+  @@map("asset_history")
 }
 
 model AssetDynamicFieldValue {
