@@ -43,8 +43,9 @@ export default function AssetStateForm({ record, onSuccess, onCancel }: AssetSta
     setSaving(true);
     try {
       const id = record && typeof record.id === 'number' ? record.id : null;
-      if (id) await updateAssetState(id, form);
-      else    await createAssetState(form);
+      const payload = { ...form, isActive: true };
+      if (id) await updateAssetState(id, payload);
+      else    await createAssetState(payload);
       onSuccess();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string; errors?: { msg: string }[] } } };
@@ -99,7 +100,6 @@ export default function AssetStateForm({ record, onSuccess, onCancel }: AssetSta
         <div className="space-y-3">
           <Toggle field="requiresOwnership" label="Requires Ownership" />
           <Toggle field="requiresScan"      label="Requires Scan"      />
-          <Toggle field="isActive"          label="Active"             />
         </div>
       </div>
       <div className="flex justify-end gap-3 px-5 py-4 border-t border-gray-200 dark:border-gray-700">
