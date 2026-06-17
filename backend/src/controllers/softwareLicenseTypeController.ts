@@ -5,6 +5,19 @@ import { validationResult } from 'express-validator';
 const prisma = new PrismaClient();
 
 const INCLUDE = { manufacturer: { select: { id: true, name: true } } };
+const PROTECTED_LICENSE_TYPE_NAMES = new Set([
+  'Free License',
+  'Trial License',
+  'Named User License',
+  'Node Locked',
+  'Concurrent License',
+  'Client Access License',
+  'OEM',
+  'Enterprise Subscription',
+  'Enterprise (Perpetual)',
+  'Volume',
+  'Individual',
+]);
 
 export async function getSoftwareLicenseTypes(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -78,8 +91,15 @@ export async function updateSoftwareLicenseType(req: Request, res: Response, nex
   const errors = validationResult(req);
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
   try {
+    const id = parseInt(String(req.params.id), 10);
+    const existing = await prisma.softwareLicenseType.findUnique({ where: { id }, select: { name: true } });
+    if (!existing) { res.status(404).json({ error: 'Software License Type not found.' }); return; }
+    if (PROTECTED_LICENSE_TYPE_NAMES.has(existing.name)) {
+      res.status(400).json({ error: 'This default Software License Type cannot be edited.' });
+      return;
+    }
     const item = await prisma.softwareLicenseType.update({
-      where: { id: parseInt(String(req.params.id), 10) },
+      where: { id },
       data: buildPayload(req.body),
       include: INCLUDE,
     });
@@ -89,7 +109,14 @@ export async function updateSoftwareLicenseType(req: Request, res: Response, nex
 
 export async function deleteSoftwareLicenseType(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await prisma.softwareLicenseType.update({ where: { id: parseInt(String(req.params.id), 10) }, data: { isActive: false } });
+    const id = parseInt(String(req.params.id), 10);
+    const existing = await prisma.softwareLicenseType.findUnique({ where: { id }, select: { name: true } });
+    if (!existing) { res.status(404).json({ error: 'Software License Type not found.' }); return; }
+    if (PROTECTED_LICENSE_TYPE_NAMES.has(existing.name)) {
+      res.status(400).json({ error: 'This default Software License Type cannot be deleted.' });
+      return;
+    }
+    await prisma.softwareLicenseType.update({ where: { id }, data: { isActive: false } });
     res.json({ message: 'Software License Type deactivated successfully.' });
   } catch (err) { next(err); }
 }
