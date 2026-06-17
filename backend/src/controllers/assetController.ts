@@ -8,21 +8,41 @@ async function getAssets(req: Request, res: Response, next: NextFunction): Promi
   try {
     const {
       page = '1', pageSize = '10',
-      search = '', sortBy = 'id', sortOrder = 'asc',
-      productTypeId, assetState, isActive = 'true', assetCategory,
+      search = '', sortBy = 'id', sortOrder = 'asc', sortDirection,
+      productTypeId, assetState, isActive = 'true', assetCategory, product, assetView,
     } = req.query as Record<string, string>;
 
     const pageNum     = Math.max(1, parseInt(page, 10));
     const pageSizeNum = Math.min(100, Math.max(1, parseInt(pageSize, 10)));
-    const SORTABLE    = ['id', 'name', 'product', 'user', 'department', 'assetState', 'location', 'createdAt'];
-    const safeSortBy  = SORTABLE.includes(sortBy) ? sortBy : 'id';
-    const safeSortOrder = sortOrder === 'desc' ? 'desc' : 'asc';
+    const requestedSortOrder = sortDirection || sortOrder;
+    const safeSortOrder = requestedSortOrder === 'desc' ? 'desc' : 'asc';
+    const SORTABLE: Record<string, unknown> = {
+      id: 'id',
+      name: 'name',
+      product: 'product',
+      productType: { productType: { displayName: safeSortOrder } },
+      assetState: 'assetState',
+      barcode: 'barcode',
+      user: 'user',
+      department: 'department',
+      associatedToAssets: 'associatedToAssets',
+      site: 'site',
+      purchaseCost: 'purchaseCost',
+      vendor: 'vendor',
+      location: 'location',
+      createdAt: 'createdAt',
+    };
+    const safeSortBy  = SORTABLE[sortBy] ?? 'id';
+    const orderBy = typeof safeSortBy === 'string' ? { [safeSortBy]: safeSortOrder } : safeSortBy;
 
     const where: Record<string, unknown> = {
       ...(isActive !== 'all' ? { isActive: isActive === 'true' } : {}),
       ...(productTypeId ? { productTypeId: parseInt(productTypeId, 10) } : {}),
       ...(assetState    ? { assetState } : {}),
+      ...(product       ? { product } : {}),
       ...(assetCategory ? { productType: { assetCategory: assetCategory } } : {}),
+      ...(assetView === 'disposed' ? { assetState: 'Disposed' } : {}),
+      ...(assetView === 'loaned' ? { isLoanable: true } : {}),
       ...(search.trim() ? {
         OR: [
           { name:        { contains: search, mode: 'insensitive' } },
@@ -36,6 +56,9 @@ async function getAssets(req: Request, res: Response, next: NextFunction): Promi
         ],
       } : {}),
     };
+    if (assetView === 'unassigned') {
+      where.AND = [{ OR: [{ user: null }, { user: '' }] }];
+    }
 
     const [total, items] = await Promise.all([
       prisma.asset.count({ where: where as Parameters<typeof prisma.asset.count>[0]['where'] }),
@@ -44,7 +67,7 @@ async function getAssets(req: Request, res: Response, next: NextFunction): Promi
         include: { productType: { select: { displayName: true, id: true } } },
         skip: (pageNum - 1) * pageSizeNum,
         take: pageSizeNum,
-        orderBy: { [safeSortBy]: safeSortOrder },
+        orderBy: orderBy as Parameters<typeof prisma.asset.findMany>[0]['orderBy'],
       }),
     ]);
 

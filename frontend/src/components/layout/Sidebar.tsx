@@ -37,18 +37,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         collapsed ? 'w-16' : 'w-56'
       } shrink-0 h-full`}
     >
-      <div className="flex items-center justify-center h-14 border-b border-gray-200 px-3 dark:border-gray-800">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-sm">A</span>
-          </div>
-          {!collapsed && (
-            <span className="text-sm font-semibold text-gray-900 truncate dark:text-white">AssetManager</span>
-          )}
-        </div>
-      </div>
-
-      <nav className="flex-1 py-3 px-0 text-sm">
+      <nav className="flex-1 py-2 px-0 text-sm">
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}

@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 're
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Archive,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Box,
   Camera,
   ChevronDown,
@@ -29,6 +32,7 @@ import {
 } from 'lucide-react';
 import { getAllProductTypes } from '../services/productTypeService';
 import { getAllAssetStates } from '../services/assetStateService';
+import { getAllProducts } from '../services/productService';
 import { getAssets, deleteAsset } from '../services/assetService';
 import useDebounce from '../hooks/useDebounce';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -40,25 +44,40 @@ interface TreeNode extends ProductTypeOption {
   isGroupNode: boolean;
   isCreatable: boolean;
 }
-interface ColumnDef { key: string; label: string; width: number; }
+type SortDirection = 'asc' | 'desc';
+interface ColumnDef { key: string; label: string; width: number; sortable?: boolean; sortKey?: string; }
+interface ProductFilterOption { id: number; name: string; productTypeId: number; }
+interface DropdownOption { value: string; label: string; group?: string; }
 
 const ALL_COLUMNS: ColumnDef[] = [
-  { key: 'name', label: 'Asset Name', width: 180 },
-  { key: 'productType', label: 'Product Type', width: 150 },
-  { key: 'product', label: 'Product', width: 150 },
+  { key: 'name', label: 'Asset Name', width: 180, sortable: true, sortKey: 'name' },
+  { key: 'productType', label: 'Product Type', width: 150, sortable: true, sortKey: 'productType' },
+  { key: 'product', label: 'Product', width: 150, sortable: true, sortKey: 'product' },
   { key: 'primaryIpAddress', label: 'Primary IP Addre...', width: 150 },
-  { key: 'assetState', label: 'Asset State', width: 150 },
-  { key: 'barcode', label: 'Barcode', width: 150 },
-  { key: 'user', label: 'User', width: 150 },
-  { key: 'department', label: 'Department', width: 150 },
-  { key: 'associatedToAssets', label: 'Associated to As...', width: 170 },
-  { key: 'site', label: 'Site', width: 150 },
-  { key: 'purchaseCost', label: 'Purchase Cost ($)', width: 150 },
-  { key: 'vendor', label: 'Vendor', width: 150 },
-  { key: 'location', label: 'Location', width: 150 },
+  { key: 'assetState', label: 'Asset State', width: 150, sortable: true, sortKey: 'assetState' },
+  { key: 'barcode', label: 'Barcode', width: 150, sortable: true, sortKey: 'barcode' },
+  { key: 'user', label: 'User', width: 150, sortable: true, sortKey: 'user' },
+  { key: 'department', label: 'Department', width: 150, sortable: true, sortKey: 'department' },
+  { key: 'associatedToAssets', label: 'Associated to As...', width: 170, sortable: true, sortKey: 'associatedToAssets' },
+  { key: 'site', label: 'Site', width: 150, sortable: true, sortKey: 'site' },
+  { key: 'purchaseCost', label: 'Purchase Cost ($)', width: 150, sortable: true, sortKey: 'purchaseCost' },
+  { key: 'vendor', label: 'Vendor', width: 150, sortable: true, sortKey: 'vendor' },
+  { key: 'location', label: 'Location', width: 150, sortable: true, sortKey: 'location' },
 ];
 const DEFAULT_VISIBLE = ALL_COLUMNS.map((column) => column.key);
 const LS_KEY = 'asset_list_columns';
+const ASSET_VIEW_LS_KEY = 'asset_list_view_filter';
+const PRODUCT_FILTER_LS_KEY = 'asset_list_product_filter';
+
+const ASSET_VIEW_OPTIONS: DropdownOption[] = [
+  { value: '', label: 'All Assets' },
+  { value: 'not-in-contract', label: 'Not in contract' },
+  { value: 'disposed', label: 'Disposed Assets' },
+  { value: 'loaned', label: 'Loaned Assets' },
+  { value: 'unassigned', label: 'Unassigned Assets' },
+  { value: 'depreciation-calculated', label: 'Calculated Assets', group: 'Depreciation' },
+  { value: 'depreciation-not-calculated', label: 'Not Calculated Assets', group: 'Depreciation' },
+];
 
 function buildTree(items: ProductTypeOption[]): TreeNode[] {
   const map: Record<number, TreeNode> = {};
@@ -336,6 +355,120 @@ function SelectColumnsDropdown({ visible, onApply }: { visible: string[]; onAppl
   );
 }
 
+function SearchableFilterDropdown({
+  value,
+  options,
+  placeholder,
+  widthClass = 'w-56',
+  onChange,
+}: {
+  value: string;
+  options: DropdownOption[];
+  placeholder: string;
+  widthClass?: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = options.find((option) => option.value === value);
+
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  useEffect(() => {
+    if (!open) setQuery('');
+  }, [open]);
+
+  const filtered = options.filter((option) => option.label.toLowerCase().includes(query.trim().toLowerCase()));
+  const renderedGroups = new Set<string>();
+
+  return (
+    <div className={`relative ${widthClass}`} ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex h-8 w-full items-center justify-between rounded border border-gray-300 bg-gray-50 px-2 text-left text-xs text-gray-500 outline-none hover:border-sky-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+      >
+        <span className="truncate">{selected?.label || placeholder}</span>
+        <ChevronDown size={14} className={`shrink-0 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-40 mt-0 w-full overflow-hidden border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
+          <div className="border-b border-gray-100 p-1 dark:border-gray-700">
+            <div className="relative">
+              <Search size={15} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="h-7 w-full border border-sky-400 bg-white px-2 pr-7 text-xs text-gray-900 outline-none dark:border-sky-500 dark:bg-gray-900 dark:text-gray-100"
+              />
+            </div>
+          </div>
+          <div className="max-h-72 overflow-y-auto py-2 scrollbar-thin">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-2 text-xs text-gray-400">No options found.</div>
+            ) : filtered.map((option) => {
+              const showGroup = option.group && !renderedGroups.has(option.group);
+              if (option.group) renderedGroups.add(option.group);
+              return (
+                <div key={`${option.group || 'root'}-${option.value}`}>
+                  {showGroup && <div className="px-3 pb-1 pt-2 text-xs font-semibold text-gray-900 dark:text-gray-100">{option.group}</div>}
+                  <button
+                    type="button"
+                    onClick={() => { onChange(option.value); setOpen(false); }}
+                    className={`flex h-8 w-full items-center text-left text-xs hover:bg-sky-50 hover:text-sky-700 dark:hover:bg-sky-900/30 dark:hover:text-sky-200 ${option.group ? 'px-6' : 'px-3'} ${value === option.value ? 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-200' : 'text-gray-900 dark:text-gray-200'}`}
+                  >
+                    {option.label}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SortableHeaderCell({
+  column,
+  activeSortKey,
+  activeDirection,
+  onSort,
+}: {
+  column: ColumnDef;
+  activeSortKey: string | null;
+  activeDirection: SortDirection | null;
+  onSort: (column: ColumnDef) => void;
+}) {
+  const sortKey = column.sortKey || column.key;
+  const isActive = column.sortable && activeSortKey === sortKey && activeDirection;
+  const Icon = !isActive ? ArrowUpDown : activeDirection === 'asc' ? ArrowUp : ArrowDown;
+
+  if (!column.sortable) {
+    return <span className="block truncate">{column.label}</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(column)}
+      className={`group flex w-full items-center justify-between gap-2 truncate text-left uppercase tracking-normal hover:text-sky-600 dark:hover:text-sky-300 ${isActive ? 'font-medium text-sky-600 dark:text-sky-300' : ''}`}
+      title={`Sort by ${column.label}`}
+    >
+      <span className="min-w-0 truncate">{column.label}</span>
+      <Icon size={13} className={`shrink-0 ${isActive ? 'text-sky-600 dark:text-sky-300' : 'text-gray-400 group-hover:text-sky-500'}`} />
+    </button>
+  );
+}
+
 function getCellValue(row: Asset, key: string) {
   if (key === 'productType') return row.productType?.displayName || '-';
   if (key === 'primaryIpAddress') return '-';
@@ -353,14 +486,18 @@ export default function AssetList() {
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<number>(selectedPtId || 0);
   const [stateList, setStateList] = useState<NamedOption[]>([]);
+  const [productList, setProductList] = useState<ProductFilterOption[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
   const [treeSearch, setTreeSearch] = useState('');
   const [rawSearch, setRawSearch] = useState('');
   const [stateFilter, setStateFilter] = useState('');
-  const [productFilter, setProductFilter] = useState('');
+  const [assetViewFilter, setAssetViewFilter] = useState(() => localStorage.getItem(ASSET_VIEW_LS_KEY) || '');
+  const [productFilter, setProductFilter] = useState(() => localStorage.getItem(PRODUCT_FILTER_LS_KEY) || '');
   const [searchFiltersOpen, setSearchFiltersOpen] = useState(false);
+  const [sortKey, setSortKey] = useState<string | null>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection | null>('asc');
   const [selected, setSelected] = useState<number[]>([]);
   const [visibleCols, setVisibleCols] = useState<string[]>(() => {
     try {
@@ -378,16 +515,19 @@ export default function AssetList() {
   const search = useDebounce(rawSearch, 300);
 
   useEffect(() => {
-    Promise.all([getAllProductTypes(), getAllAssetStates()])
-      .then(([types, states]) => {
+    Promise.all([getAllProductTypes(), getAllAssetStates(), getAllProducts()])
+      .then(([types, states, products]) => {
         setProductTypes(types);
         setTree(buildTree(types));
         setStateList(states);
+        setProductList(products);
       })
       .catch(console.error);
   }, []);
 
   useEffect(() => { localStorage.setItem(LS_KEY, JSON.stringify(visibleCols)); }, [visibleCols]);
+  useEffect(() => { localStorage.setItem(ASSET_VIEW_LS_KEY, assetViewFilter); }, [assetViewFilter]);
+  useEffect(() => { localStorage.setItem(PRODUCT_FILTER_LS_KEY, productFilter); }, [productFilter]);
   useEffect(() => {
     if (selectedPtId) setSelectedNodeId(selectedPtId);
     else if (!selectedCategory) setSelectedNodeId(0);
@@ -411,7 +551,17 @@ export default function AssetList() {
     return found;
   }, [tree, selectedNodeId]);
   const canCreateAsset = Boolean(selectedTreeNode?.isCreatable && selectedTreeNode.productTypeId && selectedPtId === selectedTreeNode.productTypeId);
-  const selectedProducts = useMemo(() => Array.from(new Set(assets.map((asset) => asset.product).filter(Boolean) as string[])).sort(), [assets]);
+  const productFilterLabel = selectedPtId && pageTitle !== 'All Assets' ? `--All ${pageTitle}--` : '--All Product--';
+  const productFilterOptions = useMemo<DropdownOption[]>(() => {
+    const products = selectedPtId
+      ? productList.filter((product) => product.productTypeId === selectedPtId)
+      : productList;
+    const uniqueNames = Array.from(new Set(products.map((product) => product.name).filter(Boolean))).sort();
+    return [
+      { value: '', label: productFilterLabel },
+      ...uniqueNames.map((name) => ({ value: name, label: name })),
+    ];
+  }, [productList, productFilterLabel, selectedPtId]);
 
   const openNodeIds = useMemo(() => {
     const set = new Set<number>([0, -3]);
@@ -432,6 +582,13 @@ export default function AssetList() {
       if (selectedPtId) params.productTypeId = selectedPtId;
       if (selectedCategory) params.assetCategory = selectedCategory;
       if (stateFilter) params.assetState = stateFilter;
+      if (assetViewFilter) params.assetView = assetViewFilter;
+      if (productFilter) params.product = productFilter;
+      if (sortKey && sortDirection) {
+        params.sortBy = sortKey;
+        params.sortOrder = sortDirection;
+        params.sortDirection = sortDirection;
+      }
       const res = await getAssets(params);
       setAssets(res.data);
       setPagination(res.pagination);
@@ -440,13 +597,13 @@ export default function AssetList() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize, search, selectedPtId, selectedCategory, stateFilter]);
+  }, [pagination.page, pagination.pageSize, search, selectedPtId, selectedCategory, stateFilter, assetViewFilter, productFilter, sortKey, sortDirection]);
 
   useEffect(() => { fetchAssets(); }, [fetchAssets]);
 
-  const filteredAssets = productFilter ? assets.filter((asset) => asset.product === productFilter) : assets;
+  const filteredAssets = assets;
   const visibleDefs = ALL_COLUMNS.filter((column) => visibleCols.includes(column.key));
-  const hasActiveFilters = Boolean(rawSearch || stateFilter || productFilter);
+  const hasActiveFilters = Boolean(rawSearch || stateFilter || assetViewFilter || productFilter);
   const rangeStart = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1;
   const rangeEnd = Math.min(pagination.page * pagination.pageSize, pagination.total);
 
@@ -455,15 +612,18 @@ export default function AssetList() {
     if (node.id === 0) {
       setSearchParams({});
       setPagination((prev) => ({ ...prev, page: 1 }));
+      setProductFilter('');
       setSelected([]);
       return;
     }
     if (node.isGroupNode || !node.isCreatable || !node.productTypeId) {
+      setProductFilter('');
       setSelected([]);
       return;
     } else {
       setSearchParams({ 'asset-product-type-id': String(node.productTypeId) });
       setPagination((prev) => ({ ...prev, page: 1 }));
+      setProductFilter('');
       setSelected([]);
     }
   }
@@ -495,8 +655,25 @@ export default function AssetList() {
   function clearFilters() {
     setRawSearch('');
     setStateFilter('');
+    setAssetViewFilter('');
     setProductFilter('');
     setPagination((prev) => ({ ...prev, page: 1 }));
+  }
+
+  function handleSort(column: ColumnDef) {
+    if (!column.sortable) return;
+    const nextSortKey = column.sortKey || column.key;
+    if (sortKey !== nextSortKey) {
+      setSortKey(nextSortKey);
+      setSortDirection('asc');
+      return;
+    }
+    if (sortDirection === 'asc') {
+      setSortDirection('desc');
+      return;
+    }
+    setSortKey(null);
+    setSortDirection(null);
   }
 
   return (
@@ -582,21 +759,18 @@ export default function AssetList() {
             <option value="">Select States</option>
             {stateList.map((state) => <option key={state.id} value={state.name}>{state.name}</option>)}
           </select>
-          <select
-            value=""
-            onChange={() => undefined}
-            className="h-8 w-56 rounded border border-gray-300 bg-white px-2 text-xs text-gray-400 outline-none dark:border-gray-700 dark:bg-gray-900"
-          >
-            <option value="">All Assets</option>
-          </select>
-          <select
+          <SearchableFilterDropdown
+            value={assetViewFilter}
+            options={ASSET_VIEW_OPTIONS}
+            placeholder="All Assets"
+            onChange={(value) => { setAssetViewFilter(value); setPagination((prev) => ({ ...prev, page: 1 })); }}
+          />
+          <SearchableFilterDropdown
             value={productFilter}
-            onChange={(event) => { setProductFilter(event.target.value); setPagination((prev) => ({ ...prev, page: 1 })); }}
-            className="h-8 w-56 rounded border border-gray-300 bg-white px-2 text-xs text-gray-700 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-          >
-            <option value="">--All {pageTitle}--</option>
-            {selectedProducts.map((product) => <option key={product} value={product}>{product}</option>)}
-          </select>
+            options={productFilterOptions}
+            placeholder={productFilterLabel}
+            onChange={(value) => { setProductFilter(value); setPagination((prev) => ({ ...prev, page: 1 })); }}
+          />
           {hasActiveFilters && (
             <button type="button" onClick={clearFilters} className="flex h-8 w-8 items-center justify-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100" aria-label="Clear filters">
               <X size={17} />
@@ -637,8 +811,13 @@ export default function AssetList() {
                 </th>
                 <th className="border-r border-gray-200 px-2 py-2 dark:border-gray-700" />
                 {visibleDefs.map((column) => (
-                  <th key={column.key} className="border-r border-gray-200 px-2 py-2 text-left font-normal uppercase tracking-normal text-gray-900 dark:border-gray-700 dark:text-gray-100">
-                    <span className="block truncate">{column.label}</span>
+                  <th key={column.key} className={`border-r border-gray-200 px-2 py-2 text-left font-normal uppercase tracking-normal text-gray-900 dark:border-gray-700 dark:text-gray-100 ${column.sortable ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/70' : ''} ${sortKey === (column.sortKey || column.key) && sortDirection ? 'bg-sky-50 dark:bg-sky-900/20' : ''}`}>
+                    <SortableHeaderCell
+                      column={column}
+                      activeSortKey={sortKey}
+                      activeDirection={sortDirection}
+                      onSort={handleSort}
+                    />
                   </th>
                 ))}
               </tr>
