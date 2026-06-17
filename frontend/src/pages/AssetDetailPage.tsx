@@ -1,13 +1,13 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Box, ChevronDown, Cpu, Info, Link, Loader2, Monitor, Pencil, Play, Router, UserCircle, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, Box, CalendarDays, ChevronDown, Cpu, Info, Link, Loader2, Monitor, Pencil, Play, Plus, RefreshCw, Router, Trash2, UserCircle, UserPlus, X } from 'lucide-react';
 import DynamicAssetDetailsSection from '../components/asset/DynamicAssetDetailsSection';
-import { getAsset, updateAsset } from '../services/assetService';
+import { getAsset, getAssetHistory, updateAsset } from '../services/assetService';
 import { getAllAssetStates } from '../services/assetStateService';
-import type { Asset, NamedOption } from '../types';
+import type { Asset, AssetHistoryItem, NamedOption } from '../types';
 
 const MAIN_TABS      = [{ key: 'asset-detail', label: 'Asset Details' }, { key: 'relationships', label: 'Relationships' }, { key: 'contracts', label: 'Contracts' }, { key: 'financials', label: 'Financials' }, { key: 'associations', label: 'Associations' }, { key: 'history', label: 'History' }];
-const HISTORY_SUBTABS = [{ key: 'history', label: 'History' }, { key: 'state-history', label: 'State History' }, { key: 'assign-history', label: 'Assign History' }];
+const HISTORY_SUBTABS = [{ key: 'ownership', label: 'Asset Ownership History' }, { key: 'asset', label: 'Asset History' }];
 const USERS = ['nitin agarwal', 'praveen ranjan', 'rahul sharma', 'priya patel'];
 const DEPARTMENTS = ['IT', 'HR', 'Finance', 'Operations', 'Administration', 'Marketing', 'Sales', 'Facilities'];
 const SITES = ['noida', 'NSEZ', 'nsez', 'delhi', 'mumbai'];
@@ -38,6 +38,21 @@ function fmt(d: string | null | undefined) {
   return date.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 function boolText(value: boolean | null | undefined) { return value == null ? null : value ? 'Yes' : 'No'; }
+function todayInputValue() { return new Date().toISOString().slice(0, 10); }
+function inputDateValue(value: string | null | undefined) {
+  if (!value) return todayInputValue();
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? todayInputValue() : date.toISOString().slice(0, 10);
+}
+function displayDate(value: string) {
+  const [year, month, day] = value.split('-');
+  return year && month && day ? `${year}.${month}.${day}` : value;
+}
+function displayTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
 
 interface AssignValues {
   assetStateId: string;
@@ -374,25 +389,129 @@ function AssetDetailContent({ asset, onAssetStateClick }: { asset: Asset; onAsse
   );
 }
 
-function HistoryContent() {
-  const [subTab, setSubTab] = useState('history');
+function HistoryContent({ asset }: { asset: Asset }) {
+  const [subTab, setSubTab] = useState<'ownership' | 'asset'>('asset');
+  const [selectedDate, setSelectedDate] = useState(todayInputValue());
+  const [items, setItems] = useState<AssetHistoryItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    getAssetHistory(asset.id, { date: selectedDate, type: subTab, page: 1, pageSize: 100 })
+      .then((response) => { if (active) setItems(response.data); })
+      .catch((error) => { console.error(error); if (active) setItems([]); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [asset.id, selectedDate, subTab]);
+
+  const grouped = items.reduce<Record<string, AssetHistoryItem[]>>((acc, item) => {
+    const key = inputDateValue(item.changedOn);
+    acc[key] = acc[key] || [];
+    acc[key].push(item);
+    return acc;
+  }, {});
+  const dates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
   return (
-    <div>
-      <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
-        <nav className="flex -mb-px">
+    <div className="bg-white dark:bg-gray-900">
+      <div className="border-b border-gray-200 px-3 dark:border-gray-700">
+        <nav className="flex gap-4">
           {HISTORY_SUBTABS.map(({ key, label }) => (
-            <button key={key} onClick={() => setSubTab(key)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${subTab === key ? 'border-brand-600 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>{label}</button>
+            <button
+              key={key}
+              onClick={() => setSubTab(key as 'ownership' | 'asset')}
+              className={`h-14 border-b-2 px-3 text-[12px] font-medium transition-colors ${subTab === key ? 'border-sky-500 text-sky-600 dark:text-sky-300' : 'border-transparent text-gray-700 hover:text-sky-600 dark:text-gray-300 dark:hover:text-sky-300'}`}
+            >
+              {label}
+            </button>
           ))}
         </nav>
       </div>
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead><tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"><th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-16">S.No.</th><th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Date</th><th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Time</th><th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Operation</th><th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Description</th></tr></thead>
-          <tbody><tr><td colSpan={5} className="px-4 py-10 text-center text-xs text-gray-400 dark:text-gray-500">No records found.</td></tr></tbody>
-        </table>
+
+      <div className="border-b border-gray-100 px-3 py-5 dark:border-gray-800">
+        <label className="relative inline-flex h-10 min-w-[170px] items-center gap-3 border border-gray-200 bg-gray-50 px-4 text-[12px] font-medium text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
+          <CalendarDays size={14} className="text-gray-500" />
+          <span>{displayDate(selectedDate)}</span>
+          <ChevronDown size={14} className="ml-auto text-gray-500" />
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(event) => setSelectedDate(event.target.value || todayInputValue())}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            aria-label="Filter history date"
+          />
+        </label>
+      </div>
+
+      <div className="min-h-[520px] px-3 py-2">
+        {loading ? (
+          <div className="flex h-40 items-center justify-center text-xs text-gray-500 dark:text-gray-400">
+            <Loader2 size={18} className="mr-2 animate-spin" /> Loading history...
+          </div>
+        ) : dates.length ? (
+          dates.map((date) => (
+            <div key={date}>
+              <div className="mb-2 mt-3 text-[12px] font-semibold text-gray-800 dark:text-gray-200">{displayDate(date)}</div>
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {grouped[date].map((item) => <TimelineItem key={item.id} item={item} />)}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="flex h-44 items-center justify-center border-t border-gray-100 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">
+            No history records found for {displayDate(selectedDate)}.
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+function TimelineItem({ item }: { item: AssetHistoryItem }) {
+  const Icon = historyIcon(item.actionType);
+  const details = historyDetails(item);
+  return (
+    <div className="grid grid-cols-[110px_58px_minmax(0,1fr)] py-5 text-[12px]">
+      <div className="pt-2 text-right font-medium text-gray-900 dark:text-gray-100">{displayTime(item.changedOn)}</div>
+      <div className="relative flex justify-center">
+        <span className="absolute bottom-[-20px] top-9 w-px bg-gray-200 dark:bg-gray-700" />
+        <span className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-400 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+          <Icon size={18} />
+        </span>
+      </div>
+      <div className="min-w-0 pl-1">
+        <p className="font-semibold text-gray-900 dark:text-gray-100">{item.actionType || 'Updated'}</p>
+        <p className="mt-1 text-gray-600 dark:text-gray-400">
+          by <span className="font-semibold text-sky-600 dark:text-sky-300">{item.changedBy || 'System'}</span>
+        </p>
+        <div className="mt-1 space-y-1 text-gray-600 dark:text-gray-400">
+          {details.map((detail, index) => <p key={`${item.id}-${index}`}>{detail}</p>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function historyIcon(actionType: string) {
+  const value = actionType.toLowerCase();
+  if (value.includes('create')) return Plus;
+  if (value.includes('delete')) return Trash2;
+  if (value.includes('assign') || value.includes('ownership')) return UserPlus;
+  if (value.includes('scan')) return RefreshCw;
+  return Pencil;
+}
+
+function historyDetails(item: AssetHistoryItem) {
+  const lines: string[] = [];
+  const field = item.fieldName || '';
+  const oldValue = item.oldValue ?? '';
+  const newValue = item.newValue ?? '';
+  if (field && oldValue && newValue) lines.push(`${field} changed from ${oldValue} to ${newValue}`);
+  else if (field && newValue) lines.push(`${field} : ${newValue}`);
+  else if (field && oldValue) lines.push(`${field} : ${oldValue}`);
+  if (item.comments) lines.push(`Comments : ${item.comments}`);
+  return lines.length ? lines : ['-'];
 }
 
 export default function AssetDetailPage() {
@@ -478,7 +597,7 @@ export default function AssetDetailPage() {
             {activeTab === 'contracts'     && <EmptyCard title="Contracts" />}
             {activeTab === 'financials'    && <EmptyCard title="Financials" />}
             {activeTab === 'associations'  && <EmptyCard title="Associations" />}
-            {activeTab === 'history'       && <HistoryContent />}
+            {activeTab === 'history'       && <HistoryContent asset={asset} />}
           </div>
         </main>
         <RightSidebar asset={asset} onAssetStateClick={() => { setAssignMode('state'); setAssignOpen(true); }} />

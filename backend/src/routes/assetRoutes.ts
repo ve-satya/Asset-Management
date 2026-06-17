@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { getAssets, getAsset, createAsset, updateAsset, deleteAsset } from '../controllers/assetController';
+import { getAssets, getAsset, createAsset, updateAsset, deleteAsset, getAssetHistory } from '../controllers/assetController';
 
 const router = express.Router();
 
@@ -14,6 +14,7 @@ const validators = [
 ];
 
 router.get('/',    getAssets);
+router.get('/:id/history', getAssetHistory);
 router.get('/:id', getAsset);
 router.post('/',   validators, createAsset);
 router.put('/:id', validators, updateAsset);

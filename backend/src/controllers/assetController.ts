@@ -1,8 +1,115 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 
 const prisma = new PrismaClient();
+
+const HISTORY_FIELDS: Array<{ key: string; label: string }> = [
+  { key: 'name', label: 'Asset Name' },
+  { key: 'assetTag', label: 'Asset Tag' },
+  { key: 'orgSerialNumber', label: 'Org Serial Number' },
+  { key: 'description', label: 'Description' },
+  { key: 'product', label: 'Product' },
+  { key: 'vendor', label: 'Vendor' },
+  { key: 'barcode', label: 'Barcode' },
+  { key: 'assetState', label: 'Asset State' },
+  { key: 'user', label: 'User' },
+  { key: 'department', label: 'Department' },
+  { key: 'associatedToAssets', label: 'Associated Asset' },
+  { key: 'site', label: 'Site' },
+  { key: 'location', label: 'Location' },
+  { key: 'isLoanable', label: 'Is Loanable' },
+  { key: 'loanStart', label: 'Loan Start' },
+  { key: 'loanEnd', label: 'Loan End' },
+  { key: 'purchaseCost', label: 'Purchase Cost' },
+  { key: 'acquisitionDate', label: 'Acquisition Date' },
+  { key: 'expiryDate', label: 'Expiry Date' },
+  { key: 'warrantyExpiryDate', label: 'Warranty Expiry Date' },
+  { key: 'impactDetails', label: 'Impact Details' },
+  { key: 'impact', label: 'Impact' },
+  { key: 'assetAudited', label: 'Asset Audited' },
+];
+
+const OWNERSHIP_FIELDS = new Set(['Asset State', 'User', 'Department', 'Associated Asset', 'Site', 'Location', 'Is Loanable', 'Loan Start', 'Loan End']);
+
+function changedBy(req: Request, body?: Record<string, unknown>) {
+  const user = (req as Request & { user?: { name?: string; email?: string; username?: string } }).user;
+  return String(body?.changedBy || body?.updatedBy || user?.name || user?.username || user?.email || req.header('x-user-name') || 'System');
+}
+
+function historyValue(value: unknown) {
+  if (value === undefined || value === null || value === '') return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  if (typeof value === 'boolean') return String(value);
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+function valuesEqual(left: unknown, right: unknown) {
+  return historyValue(left) === historyValue(right);
+}
+
+type HistoryAsset = Prisma.AssetGetPayload<{
+  include: {
+    dynamicFieldValues: {
+      include: { field: { select: { fieldName: true } } };
+    };
+  };
+}>;
+
+function buildHistoryChanges(before: HistoryAsset | null, after: HistoryAsset, actor: string) {
+  const rows: Prisma.AssetHistoryCreateManyInput[] = [];
+  if (!before) {
+    rows.push({
+      assetId: after.id,
+      actionType: 'Created',
+      changedBy: actor,
+      fieldName: 'Asset',
+      newValue: after.name,
+      comments: 'Asset Created',
+    });
+    return rows;
+  }
+
+  for (const field of HISTORY_FIELDS) {
+    const oldValue = before[field.key as keyof HistoryAsset];
+    const newValue = after[field.key as keyof HistoryAsset];
+    if (!valuesEqual(oldValue, newValue)) {
+      rows.push({
+        assetId: after.id,
+        actionType: 'Updated',
+        changedBy: actor,
+        fieldName: field.label,
+        oldValue: historyValue(oldValue),
+        newValue: historyValue(newValue),
+      });
+    }
+  }
+
+  const beforeDynamic = new Map(before.dynamicFieldValues.map((item) => [item.productTypeFieldId, item]));
+  for (const item of after.dynamicFieldValues) {
+    const oldItem = beforeDynamic.get(item.productTypeFieldId);
+    if (!valuesEqual(oldItem?.value, item.value)) {
+      rows.push({
+        assetId: after.id,
+        actionType: 'Updated',
+        changedBy: actor,
+        fieldName: item.field.fieldName,
+        oldValue: historyValue(oldItem?.value),
+        newValue: historyValue(item.value),
+        comments: 'Dynamic Field Updated',
+      });
+    }
+  }
+
+  return rows;
+}
+
+const historyInclude = {
+  dynamicFieldValues: {
+    include: { field: { select: { fieldName: true } } },
+  },
+} satisfies Prisma.AssetInclude;
 
 async function getAssets(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -113,9 +220,14 @@ async function createAsset(req: Request, res: Response, next: NextFunction): Pro
   const errors = validationResult(req);
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
   try {
+    const actor = changedBy(req, req.body);
     const item = await prisma.$transaction(async (tx) => {
       const created = await tx.asset.create({ data: buildPayload(req.body) });
       await saveDynamicFieldValues(tx, created.id, req.body);
+      const createdWithFields = await tx.asset.findUnique({ where: { id: created.id }, include: historyInclude });
+      if (createdWithFields) {
+        await tx.assetHistory.createMany({ data: buildHistoryChanges(null, createdWithFields as HistoryAsset, actor) });
+      }
       return tx.asset.findUnique({ where: { id: created.id } });
     });
     res.status(201).json(item);
@@ -127,12 +239,19 @@ async function updateAsset(req: Request, res: Response, next: NextFunction): Pro
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
   try {
     const id = parseInt(String(req.params.id), 10);
+    const actor = changedBy(req, req.body);
     const item = await prisma.$transaction(async (tx) => {
+      const before = await tx.asset.findUnique({ where: { id }, include: historyInclude });
       await tx.asset.update({
         where: { id },
         data: buildPayload(req.body),
       });
       await saveDynamicFieldValues(tx, id, req.body);
+      const after = await tx.asset.findUnique({ where: { id }, include: historyInclude });
+      if (after) {
+        const changes = buildHistoryChanges(before as HistoryAsset | null, after as HistoryAsset, actor);
+        if (changes.length) await tx.assetHistory.createMany({ data: changes });
+      }
       return tx.asset.findUnique({
         where: { id },
         include: { productType: { select: { displayName: true, id: true } } },
@@ -144,11 +263,69 @@ async function updateAsset(req: Request, res: Response, next: NextFunction): Pro
 
 async function deleteAsset(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await prisma.asset.update({
-      where: { id: parseInt(String(req.params.id), 10) },
-      data: { isActive: false },
+    const id = parseInt(String(req.params.id), 10);
+    const actor = changedBy(req);
+    await prisma.$transaction(async (tx) => {
+      await tx.asset.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      await tx.assetHistory.create({
+        data: {
+          assetId: id,
+          actionType: 'Deleted',
+          changedBy: actor,
+          fieldName: 'Asset',
+          oldValue: 'Active',
+          newValue: 'Inactive',
+          comments: 'Asset deactivated successfully.',
+        },
+      });
     });
     res.json({ message: 'Asset deactivated successfully.' });
+  } catch (err) { next(err); }
+}
+
+async function getAssetHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const assetId = parseInt(String(req.params.id), 10);
+    const {
+      date,
+      type = 'asset',
+      page = '1',
+      pageSize = '50',
+    } = req.query as Record<string, string>;
+    const pageNum = Math.max(1, parseInt(page, 10));
+    const pageSizeNum = Math.min(100, Math.max(1, parseInt(pageSize, 10)));
+    const where: Prisma.AssetHistoryWhereInput = { assetId };
+
+    if (date) {
+      const start = new Date(`${date}T00:00:00.000Z`);
+      const end = new Date(start);
+      end.setUTCDate(end.getUTCDate() + 1);
+      where.changedOn = { gte: start, lt: end };
+    }
+    if (type === 'ownership') {
+      where.OR = [
+        { fieldName: { in: Array.from(OWNERSHIP_FIELDS) } },
+        { actionType: { in: ['Assigned', 'Ownership Changed'] } },
+      ];
+    }
+
+    const [total, items] = await Promise.all([
+      prisma.assetHistory.count({ where }),
+      prisma.assetHistory.findMany({
+        where,
+        orderBy: { changedOn: 'desc' },
+        skip: (pageNum - 1) * pageSizeNum,
+        take: pageSizeNum,
+      }),
+    ]);
+
+    res.json({
+      data: items,
+      pagination: { page: pageNum, pageSize: pageSizeNum, total, totalPages: Math.ceil(total / pageSizeNum) },
+    });
   } catch (err) { next(err); }
 }
 
@@ -236,4 +413,4 @@ async function saveDynamicFieldValues(tx: TransactionClient, assetId: number, bo
   }
 }
 
-export { getAssets, getAsset, createAsset, updateAsset, deleteAsset };
+export { getAssets, getAsset, createAsset, updateAsset, deleteAsset, getAssetHistory };
