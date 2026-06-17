@@ -49,6 +49,24 @@ function valuesEqual(left: unknown, right: unknown) {
   return historyValue(left) === historyValue(right);
 }
 
+function toBoolean(value: unknown) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'off', ''].includes(normalized)) return false;
+  }
+  return Boolean(value);
+}
+
+function readBodyValue(body: Record<string, unknown>, ...keys: string[]) {
+  for (const key of keys) {
+    if (body[key] !== undefined) return body[key];
+  }
+  return undefined;
+}
+
 type HistoryAsset = Prisma.AssetGetPayload<{
   include: {
     dynamicFieldValues: {
@@ -57,13 +75,14 @@ type HistoryAsset = Prisma.AssetGetPayload<{
   };
 }>;
 
-function buildHistoryChanges(before: HistoryAsset | null, after: HistoryAsset, actor: string) {
+function buildHistoryChanges(before: HistoryAsset | null, after: HistoryAsset, actor: string, changedOn = new Date()) {
   const rows: Prisma.AssetHistoryCreateManyInput[] = [];
   if (!before) {
     rows.push({
       assetId: after.id,
       actionType: 'Created',
       changedBy: actor,
+      changedOn,
       fieldName: 'Asset',
       newValue: after.name,
       comments: 'Asset Created',
@@ -79,6 +98,7 @@ function buildHistoryChanges(before: HistoryAsset | null, after: HistoryAsset, a
         assetId: after.id,
         actionType: 'Updated',
         changedBy: actor,
+        changedOn,
         fieldName: field.label,
         oldValue: historyValue(oldValue),
         newValue: historyValue(newValue),
@@ -94,6 +114,7 @@ function buildHistoryChanges(before: HistoryAsset | null, after: HistoryAsset, a
         assetId: after.id,
         actionType: 'Updated',
         changedBy: actor,
+        changedOn,
         fieldName: item.field.fieldName,
         oldValue: historyValue(oldItem?.value),
         newValue: historyValue(item.value),
@@ -222,11 +243,12 @@ async function createAsset(req: Request, res: Response, next: NextFunction): Pro
   try {
     const actor = changedBy(req, req.body);
     const item = await prisma.$transaction(async (tx) => {
+      const changedOn = new Date();
       const created = await tx.asset.create({ data: buildPayload(req.body) });
       await saveDynamicFieldValues(tx, created.id, req.body);
       const createdWithFields = await tx.asset.findUnique({ where: { id: created.id }, include: historyInclude });
       if (createdWithFields) {
-        await tx.assetHistory.createMany({ data: buildHistoryChanges(null, createdWithFields as HistoryAsset, actor) });
+        await tx.assetHistory.createMany({ data: buildHistoryChanges(null, createdWithFields as HistoryAsset, actor, changedOn) });
       }
       return tx.asset.findUnique({ where: { id: created.id } });
     });
@@ -241,6 +263,7 @@ async function updateAsset(req: Request, res: Response, next: NextFunction): Pro
     const id = parseInt(String(req.params.id), 10);
     const actor = changedBy(req, req.body);
     const item = await prisma.$transaction(async (tx) => {
+      const changedOn = new Date();
       const before = await tx.asset.findUnique({ where: { id }, include: historyInclude });
       await tx.asset.update({
         where: { id },
@@ -249,7 +272,7 @@ async function updateAsset(req: Request, res: Response, next: NextFunction): Pro
       await saveDynamicFieldValues(tx, id, req.body);
       const after = await tx.asset.findUnique({ where: { id }, include: historyInclude });
       if (after) {
-        const changes = buildHistoryChanges(before as HistoryAsset | null, after as HistoryAsset, actor);
+        const changes = buildHistoryChanges(before as HistoryAsset | null, after as HistoryAsset, actor, changedOn);
         if (changes.length) await tx.assetHistory.createMany({ data: changes });
       }
       return tx.asset.findUnique({
@@ -266,6 +289,7 @@ async function deleteAsset(req: Request, res: Response, next: NextFunction): Pro
     const id = parseInt(String(req.params.id), 10);
     const actor = changedBy(req);
     await prisma.$transaction(async (tx) => {
+      const changedOn = new Date();
       await tx.asset.update({
         where: { id },
         data: { isActive: false },
@@ -275,6 +299,7 @@ async function deleteAsset(req: Request, res: Response, next: NextFunction): Pro
           assetId: id,
           actionType: 'Deleted',
           changedBy: actor,
+          changedOn,
           fieldName: 'Asset',
           oldValue: 'Active',
           newValue: 'Inactive',
@@ -316,7 +341,7 @@ async function getAssetHistory(req: Request, res: Response, next: NextFunction):
       prisma.assetHistory.count({ where }),
       prisma.assetHistory.findMany({
         where,
-        orderBy: { changedOn: 'desc' },
+        orderBy: [{ changedOn: 'desc' }, { id: 'asc' }],
         skip: (pageNum - 1) * pageSizeNum,
         take: pageSizeNum,
       }),
@@ -332,6 +357,7 @@ async function getAssetHistory(req: Request, res: Response, next: NextFunction):
 function buildPayload(body: Record<string, unknown>) {
   const toDate = (v: unknown) => (v ? new Date(String(v)) : null);
   const toInt = (v: unknown) => (v !== undefined && v !== null && String(v) !== '' ? parseInt(String(v), 10) : null);
+  const isLoanable = toBoolean(readBodyValue(body, 'isLoanable', 'IsLoanable', 'is_loanable'));
   return {
     productTypeId:      parseInt(String(body.productTypeId), 10),
     name:               String(body.name || '').trim(),
@@ -353,14 +379,14 @@ function buildPayload(body: Record<string, unknown>) {
     department:         String(body.department || '').trim()         || null,
     associatedAssetId:  toInt(body.associatedAssetId),
     associatedToAssets: String(body.associatedToAssets || '').trim() || null,
-    retainUserSiteAsAssetSite: Boolean(body.retainUserSiteAsAssetSite),
+    retainUserSiteAsAssetSite: toBoolean(readBodyValue(body, 'retainUserSiteAsAssetSite', 'retain_user_site_as_asset_site')),
     siteId:             toInt(body.siteId),
     site:               String(body.site || '').trim()               || null,
     region:             String(body.region || '').trim()             || null,
     location:           String(body.location || '').trim()           || null,
-    isLoanable:         Boolean(body.isLoanable),
-    loanStart:          toDate(body.loanStart),
-    loanEnd:            toDate(body.loanEnd),
+    isLoanable,
+    loanStart:          isLoanable ? toDate(readBodyValue(body, 'loanStart', 'LoanStart', 'loan_start')) : null,
+    loanEnd:            isLoanable ? toDate(readBodyValue(body, 'loanEnd', 'LoanEnd', 'loan_end')) : null,
     comments:           String(body.comments || '').trim()           || null,
     acquisitionDate:    toDate(body.acquisitionDate),
     expiryDate:         toDate(body.expiryDate),
