@@ -1,6 +1,6 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Box, CalendarDays, ChevronDown, Cpu, Info, Link, Loader2, Monitor, Pencil, Play, Plus, RefreshCw, Router, Trash2, UserCircle, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, Box, ChevronDown, Cpu, Info, Link, Loader2, Monitor, Pencil, Play, Plus, RefreshCw, Router, Trash2, UserCircle, UserPlus, X } from 'lucide-react';
 import DynamicAssetDetailsSection from '../components/asset/DynamicAssetDetailsSection';
 import { getAsset, getAssetHistory, updateAsset } from '../services/assetService';
 import { getAllAssetStates } from '../services/assetStateService';
@@ -38,11 +38,10 @@ function fmt(d: string | null | undefined) {
   return date.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 function boolText(value: boolean | null | undefined) { return value == null ? null : value ? 'Yes' : 'No'; }
-function todayInputValue() { return new Date().toISOString().slice(0, 10); }
 function inputDateValue(value: string | null | undefined) {
-  if (!value) return todayInputValue();
+  if (!value) return new Date().toISOString().slice(0, 10);
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? todayInputValue() : date.toISOString().slice(0, 10);
+  return Number.isNaN(date.getTime()) ? new Date().toISOString().slice(0, 10) : date.toISOString().slice(0, 10);
 }
 function displayDate(value: string) {
   const [year, month, day] = value.split('-');
@@ -52,6 +51,17 @@ function displayTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
   return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
+function displayHistoryValue(fieldName: string | null, value: string | null) {
+  if (value == null || value === '') return '-';
+  const normalized = String(fieldName || '').toLowerCase();
+  if (['loan start', 'loan end', 'acquisition date', 'expiry date', 'warranty expiry date'].includes(normalized)) {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+  }
+  return value;
 }
 
 interface AssignValues {
@@ -389,26 +399,29 @@ function AssetDetailContent({ asset, onAssetStateClick }: { asset: Asset; onAsse
   );
 }
 
-function HistoryContent({ asset }: { asset: Asset }) {
+function HistoryContent({ asset, refreshKey }: { asset: Asset; refreshKey: string }) {
   const [subTab, setSubTab] = useState<'ownership' | 'asset'>('asset');
-  const [selectedDate, setSelectedDate] = useState(todayInputValue());
+  const [collapsedDates, setCollapsedDates] = useState<Record<string, boolean>>({});
   const [items, setItems] = useState<AssetHistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    getAssetHistory(asset.id, { date: selectedDate, type: subTab, page: 1, pageSize: 100 })
+    getAssetHistory(asset.id, { type: subTab, page: 1, pageSize: 100 })
       .then((response) => { if (active) setItems(response.data); })
       .catch((error) => { console.error(error); if (active) setItems([]); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [asset.id, selectedDate, subTab]);
+  }, [asset.id, asset.updatedAt, refreshKey, subTab]);
 
-  const grouped = items.reduce<Record<string, AssetHistoryItem[]>>((acc, item) => {
+  const grouped = items.reduce<Record<string, TimelineEvent[]>>((acc, item) => {
     const key = inputDateValue(item.changedOn);
     acc[key] = acc[key] || [];
-    acc[key].push(item);
+    const last = acc[key][acc[key].length - 1];
+    const eventKey = timelineEventKey(item);
+    if (last?.key === eventKey) last.items.push(item);
+    else acc[key].push({ key: eventKey, anchor: item, items: [item] });
     return acc;
   }, {});
   const dates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
@@ -429,21 +442,6 @@ function HistoryContent({ asset }: { asset: Asset }) {
         </nav>
       </div>
 
-      <div className="border-b border-gray-100 px-3 py-5 dark:border-gray-800">
-        <label className="relative inline-flex h-10 min-w-[170px] items-center gap-3 border border-gray-200 bg-gray-50 px-4 text-[12px] font-medium text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
-          <CalendarDays size={14} className="text-gray-500" />
-          <span>{displayDate(selectedDate)}</span>
-          <ChevronDown size={14} className="ml-auto text-gray-500" />
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(event) => setSelectedDate(event.target.value || todayInputValue())}
-            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-            aria-label="Filter history date"
-          />
-        </label>
-      </div>
-
       <div className="min-h-[520px] px-3 py-2">
         {loading ? (
           <div className="flex h-40 items-center justify-center text-xs text-gray-500 dark:text-gray-400">
@@ -452,15 +450,25 @@ function HistoryContent({ asset }: { asset: Asset }) {
         ) : dates.length ? (
           dates.map((date) => (
             <div key={date}>
-              <div className="mb-2 mt-3 text-[12px] font-semibold text-gray-800 dark:text-gray-200">{displayDate(date)}</div>
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {grouped[date].map((item) => <TimelineItem key={item.id} item={item} />)}
-              </div>
+              <button
+                type="button"
+                onClick={() => setCollapsedDates((prev) => ({ ...prev, [date]: !prev[date] }))}
+                className="mb-3 mt-4 inline-flex h-10 min-w-[170px] items-center justify-between gap-4 border border-gray-200 bg-gray-50 px-4 text-left text-[12px] font-medium text-gray-900 shadow-sm hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                aria-expanded={!collapsedDates[date]}
+              >
+                <span>{displayDate(date)}</span>
+                <ChevronDown size={14} className={`text-gray-500 transition-transform ${collapsedDates[date] ? '' : 'rotate-180'}`} />
+              </button>
+              {!collapsedDates[date] && (
+                <div className="divide-y divide-gray-100 border-t border-gray-100 dark:divide-gray-800 dark:border-gray-800">
+                  {grouped[date].map((event) => <TimelineItem key={event.key} event={event} />)}
+                </div>
+              )}
             </div>
           ))
         ) : (
           <div className="flex h-44 items-center justify-center border-t border-gray-100 text-xs text-gray-400 dark:border-gray-800 dark:text-gray-500">
-            No history records found for {displayDate(selectedDate)}.
+            No history records found.
           </div>
         )}
       </div>
@@ -468,9 +476,20 @@ function HistoryContent({ asset }: { asset: Asset }) {
   );
 }
 
-function TimelineItem({ item }: { item: AssetHistoryItem }) {
+interface TimelineEvent {
+  key: string;
+  anchor: AssetHistoryItem;
+  items: AssetHistoryItem[];
+}
+
+function timelineEventKey(item: AssetHistoryItem) {
+  return [item.changedOn, item.actionType, item.changedBy || 'System'].join('|');
+}
+
+function TimelineItem({ event }: { event: TimelineEvent }) {
+  const item = event.anchor;
   const Icon = historyIcon(item.actionType);
-  const details = historyDetails(item);
+  const details = event.items.flatMap(historyDetails);
   return (
     <div className="grid grid-cols-[110px_58px_minmax(0,1fr)] py-5 text-[12px]">
       <div className="pt-2 text-right font-medium text-gray-900 dark:text-gray-100">{displayTime(item.changedOn)}</div>
@@ -505,11 +524,9 @@ function historyIcon(actionType: string) {
 function historyDetails(item: AssetHistoryItem) {
   const lines: string[] = [];
   const field = item.fieldName || '';
-  const oldValue = item.oldValue ?? '';
-  const newValue = item.newValue ?? '';
-  if (field && oldValue && newValue) lines.push(`${field} changed from ${oldValue} to ${newValue}`);
-  else if (field && newValue) lines.push(`${field} : ${newValue}`);
-  else if (field && oldValue) lines.push(`${field} : ${oldValue}`);
+  const oldValue = displayHistoryValue(field, item.oldValue);
+  const newValue = displayHistoryValue(field, item.newValue);
+  if (field && (item.oldValue != null || item.newValue != null)) lines.push(`${field} changed from ${oldValue} to ${newValue}`);
   if (item.comments) lines.push(`Comments : ${item.comments}`);
   return lines.length ? lines : ['-'];
 }
@@ -520,6 +537,7 @@ export default function AssetDetailPage() {
   const assetId   = searchParams.get('asset-id');
   const ptId      = searchParams.get('asset-product-type-id');
   const activeTab = searchParams.get('tab') || 'asset-detail';
+  const refreshKey = searchParams.get('refresh') || '';
 
   const [asset,        setAsset]        = useState<Asset | null>(null);
   const [loading,      setLoading]      = useState(true);
@@ -533,7 +551,7 @@ export default function AssetDetailPage() {
     setLoading(true);
     getAsset(assetId).then(setAsset).catch(console.error).finally(() => setLoading(false));
   }
-  useEffect(() => { if (assetId) load(); }, [assetId]);
+  useEffect(() => { if (assetId) load(); }, [assetId, refreshKey]);
   useEffect(() => { getAllAssetStates().then(setStateList).catch(console.error); }, []);
 
   async function handleAssignSave(values: AssignValues) {
@@ -597,7 +615,7 @@ export default function AssetDetailPage() {
             {activeTab === 'contracts'     && <EmptyCard title="Contracts" />}
             {activeTab === 'financials'    && <EmptyCard title="Financials" />}
             {activeTab === 'associations'  && <EmptyCard title="Associations" />}
-            {activeTab === 'history'       && <HistoryContent asset={asset} />}
+            {activeTab === 'history'       && <HistoryContent asset={asset} refreshKey={refreshKey} />}
           </div>
         </main>
         <RightSidebar asset={asset} onAssetStateClick={() => { setAssignMode('state'); setAssignOpen(true); }} />

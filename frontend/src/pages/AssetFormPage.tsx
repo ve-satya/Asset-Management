@@ -368,9 +368,13 @@ export default function AssetFormPage() {
     try {
       const payload = buildPayload();
       if (isEdit) {
-        await updateAsset(id!, payload);
+        const updated = await updateAsset(id!, payload);
         showToast('Asset updated successfully!', 'success');
-        if (!continueEdit) setTimeout(() => navigate(-1), 800);
+        if (!continueEdit) {
+          const detailProductTypeId = updated.productTypeId || form.productTypeId;
+          const refreshKey = Date.now();
+          setTimeout(() => navigate(`/assets/detail?asset-product-type-id=${detailProductTypeId}&asset-id=${updated.id}&tab=history&refresh=${refreshKey}`, { replace: true }), 800);
+        }
       } else {
         const created = await createAsset(payload);
         showToast('Asset created successfully!', 'success');
