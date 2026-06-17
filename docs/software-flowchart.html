@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Software Module – Visual Flowcharts</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f4f8;
+      color: #1e293b;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e40af, #0ea5e9);
+      color: white;
+      padding: 32px 40px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+    header p  { margin-top: 6px; font-size: 14px; opacity: 0.85; }
+
+    .toc {
+      background: white;
+      border-left: 5px solid #0ea5e9;
+      margin: 32px 40px 0;
+      padding: 20px 28px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .toc h2 { font-size: 15px; font-weight: 700; color: #1e40af; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .toc ol  { padding-left: 20px; }
+    .toc li  { margin: 4px 0; font-size: 14px; }
+    .toc a   { color: #0ea5e9; text-decoration: none; font-weight: 500; }
+    .toc a:hover { text-decoration: underline; }
+
+    .section {
+      margin: 32px 40px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 20px 28px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .badge {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700; color: white;
+      flex-shrink: 0;
+    }
+
+    .section-header h2 { font-size: 18px; font-weight: 700; }
+    .section-header p  { font-size: 13px; color: #64748b; margin-top: 2px; }
+
+    .note {
+      background: #f8fafc;
+      border-left: 4px solid #0ea5e9;
+      margin: 0 28px 0;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #475569;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .diagram-wrap {
+      padding: 24px 28px;
+      overflow-x: auto;
+    }
+
+    .diagram-wrap .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    footer {
+      text-align: center;
+      padding: 32px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    /* Badge colors per section */
+    .b1 { background: #1e40af; }
+    .b2 { background: #059669; }
+    .b3 { background: #7c3aed; }
+    .b4 { background: #dc2626; }
+    .b5 { background: #d97706; }
+    .b6 { background: #0891b2; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Software Module — Visual Flowcharts</h1>
+  <p>Asset Management System &nbsp;|&nbsp; 6 diagrams covering all major flows</p>
+</header>
+
+<!-- Table of Contents -->
+<div class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#fig1">Figure 1 — Software Module Overview (Where everything lives)</a></li>
+    <li><a href="#fig2">Figure 2 — Scanned Software: Add / Edit / Delete lifecycle</a></li>
+    <li><a href="#fig3">Figure 3 — Compliance Engine (Under / Over / Compliant / N/A)</a></li>
+    <li><a href="#fig4">Figure 4 — License Agreement + Popup Windows</a></li>
+    <li><a href="#fig5">Figure 5 — Software Licenses: Create, Allocate & Track</a></li>
+    <li><a href="#fig6">Figure 6 — Software Summary Dashboard data flow</a></li>
+  </ol>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ FIGURE 1 -->
+<div class="section" id="fig1">
+  <div class="section-header">
+    <div class="badge b1">1</div>
+    <div>
+      <h2>Software Module Overview</h2>
+      <p>The 5 pages in the sidebar and what each one is for</p>
+    </div>
+  </div>
+  <div class="note">
+    💡 Think of this as the map. Every page in the Software sidebar is shown here with its purpose and how they connect to each other.
+  </div>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+flowchart TD
+    MENU["🗂️ SOFTWARE SIDEBAR MENU"]:::menu
+
+    MENU --> SUM["📊 Software Summary\n/software/summary\n─────────────────\nDashboard with charts:\n• Compliance pie chart\n• License usage pie\n• Software usage bar chart\n• Expiry alerts"]:::page
+
+    MENU --> SCN["🖥️ Scanned Software\n/software/scanned\n─────────────────\nMaster list of all software:\n• Add / Edit / Delete\n• Change type, category, manufacturer\n• View compliance status per row"]:::page
+
+    MENU --> LIC["🔑 Software Licenses\n/software/licenses\n─────────────────\nManage license keys and counts:\n• Purchased / Allocated / Available\n• Link to an agreement\n• Track expiry dates"]:::page
+
+    MENU --> AGR["📄 License Agreements\n/software/license-agreements\n─────────────────\nPurchase contracts:\n• Manufacturer + Vendor\n• Add licenses via popup\n• Associate existing licenses"]:::page
+
+    MENU --> SVC["📦 Service Packs\n/software/service-packs\n─────────────────\nHotfixes & patches list:\n• Simple add / edit / delete\n• Link to software + manufacturer"]:::page
+
+    SCN -->|"compliance data"| SUM
+    LIC -->|"license counts"| SUM
+    AGR -->|"expiry dates"| SUM
+    AGR -->|"owns licenses"| LIC
+    SCN -->|"linked to"| LIC
+
+    classDef menu  fill:#1e40af,color:#fff,stroke:#1e3a8a,font-weight:bold,font-size:15px
+    classDef page  fill:#f0f9ff,stroke:#0ea5e9,stroke-width:2px,color:#0c4a6e,font-size:13px
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ FIGURE 2 -->
+<div class="section" id="fig2">
+  <div class="section-header">
+    <div class="badge b2">2</div>
+    <div>
+      <h2>Scanned Software — Add / Edit / Delete Lifecycle</h2>
+      <p>Full journey of a software record from creation to soft-delete</p>
+    </div>
+  </div>
+  <div class="note">
+    💡 Records are <strong>never physically deleted</strong>. Delete just sets <code>isActive = false</code> which hides it from lists. This preserves history.
+  </div>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+flowchart TD
+    START(["👤 User opens\nScanned Software page"]):::oval
+
+    START --> LOAD["API call:\nGET /api/softwares\n?page=1&pageSize=25\n&search=..."]:::api
+
+    LOAD --> LIST["📋 Software table shows:\nName | Version | Type\nManufacturer | Installed\nAllocated | Available\nCompliance badge"]:::box
+
+    LIST --> ACTION{"What does\nthe user do?"}:::decision
+
+    %% ADD path
+    ACTION -->|"Click ➕ New"| FORM["📝 Software Form\nRequired fields:\n• Name\n• Software Type\n• Software Category\n• Manufacturer\n\nOptional:\n• Version, Description\n• License Type, Cost"]:::box
+
+    FORM --> VALIDATE{"✅ All required\nfields filled?"}:::decision
+
+    VALIDATE -->|"❌ No"| ERR1["🔴 Red error shown\nunder empty fields\nSubmit blocked"]:::error
+
+    VALIDATE -->|"✅ Yes"| SAVE["API call:\nPOST /api/softwares\n→ 201 Created"]:::api
+
+    SAVE --> CONFLICT{"Name +\nManufacturer\nalready exists?"}:::decision
+
+    CONFLICT -->|"Yes → 409"| ERR2["🔴 'Duplicate entry'\nerror toast shown"]:::error
+    CONFLICT -->|"No → success"| SUCCESS1["✅ Toast: 'Software created'\nRedirect to /software/scanned\nNew row appears in table"]:::success
+
+    %% EDIT path
+    ACTION -->|"Click ✏️ Edit"| EDITFORM["📝 Same form\npre-filled with\nexisting values"]:::box
+
+    EDITFORM --> EDITCHOICE{"Change type?"}:::decision
+
+    EDITCHOICE -->|"Full Edit\n(all fields)"| PUTAPI["API call:\nPUT /api/softwares/:id\nAll 4 required fields\nmust be sent"]:::api
+
+    EDITCHOICE -->|"Quick change\n(1 field only)"| PATCHAPI["API call:\nPATCH /api/softwares/:id\nOnly changed field:\nsoftwareTypeId OR\nsoftwareCategoryId OR\nmanufacturerId"]:::api
+
+    PUTAPI --> SUCCESS2["✅ Toast: 'Software updated'\nRow refreshed in table"]:::success
+    PATCHAPI --> SUCCESS2
+
+    %% DELETE path
+    ACTION -->|"Click 🗑️ Delete"| CONFIRM{"⚠️ Confirm\ndialog shown\nAre you sure?"}:::decision
+
+    CONFIRM -->|"Cancel"| LIST
+    CONFIRM -->|"Yes, Delete"| DELAPI["API call:\nDELETE /api/softwares/:id\n→ Sets isActive = false\n(NOT physically deleted)"]:::api
+
+    DELAPI --> SUCCESS3["✅ Toast: 'Software deleted'\nRow disappears from list\n(still in database)"]:::success
+
+    SUCCESS1 & SUCCESS2 & SUCCESS3 --> LIST
+
+    classDef oval     fill:#1e40af,color:#fff,stroke:#1e3a8a,rx:20
+    classDef api      fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e,font-weight:bold
+    classDef box      fill:#f0fdf4,stroke:#16a34a,stroke-width:1.5px,color:#14532d
+    classDef decision fill:#fdf4ff,stroke:#9333ea,stroke-width:2px,color:#581c87
+    classDef error    fill:#fef2f2,stroke:#dc2626,stroke-width:2px,color:#991b1b
+    classDef success  fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#064e3b
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ FIGURE 3 -->
+<div class="section" id="fig3">
+  <div class="section-header">
+    <div class="badge b3">3</div>
+    <div>
+      <h2>Compliance Engine</h2>
+      <p>How the system decides if you are Under Licensed, Over Licensed, Compliant, or N/A</p>
+    </div>
+  </div>
+  <div class="note">
+    💡 Compliance is <strong>computed live</strong> — not stored. Every time you load the software list the system counts active installations vs total allowed licenses and applies this logic.
+  </div>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+flowchart TD
+    TRIGGER(["GET /api/softwares\n→ for each software row"]):::oval
+
+    TRIGGER --> STEP1["Count active installations\ninstallCount = active\ninstallation records\nfor this software"]:::box
+
+    STEP1 --> STEP2["Sum license allowances\ntotalAllowed = SUM of\ninstallationsAllowed\nacross all active licenses"]:::box
+
+    STEP2 --> CHECK1{"Software Type:\nenableCompliance\n= true?"}:::decision
+
+    CHECK1 -->|"❌ No\n(Freeware, Excluded,\nUnidentified...)"|  NA["⚪ N/A\nCompliance tracking\ndisabled for this type\nNo action needed"]:::na
+
+    CHECK1 -->|"✅ Yes\n(Managed, Prohibited...)"| CHECK2{"installCount\nvs\ntotalAllowed"}:::decision
+
+    CHECK2 -->|"Installed > Allowed\nEg: 8 installs, 5 allowed"| UNDER["🔴 Under Licensed\nYou have more installations\nthan you have licenses for.\nRisk: Non-compliant!"]:::under
+
+    CHECK2 -->|"Allowed > Installed\nEg: 5 installs, 8 allowed"| OVER["🟠 Over Licensed\nYou bought more licenses\nthan you are using.\nWaste: reduce next renewal"]:::over
+
+    CHECK2 -->|"Installed = Allowed\nEg: 5 installs, 5 allowed"| COMP["🟢 Compliant\nPerfect match.\nAll good!"]:::comp
+
+    UNDER & OVER & COMP & NA --> BADGE["Shown as colored badge\nin the software table row\n\nAlso feeds the\n📊 Software Summary\nDashboard pie chart"]:::output
+
+    classDef oval     fill:#7c3aed,color:#fff,stroke:#5b21b6
+    classDef box      fill:#f5f3ff,stroke:#7c3aed,stroke-width:1.5px,color:#3b0764
+    classDef decision fill:#fdf4ff,stroke:#9333ea,stroke-width:2px,color:#581c87
+    classDef na       fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px,color:#475569
+    classDef under    fill:#fef2f2,stroke:#dc2626,stroke-width:2px,color:#991b1b,font-weight:bold
+    classDef over     fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#7c2d12,font-weight:bold
+    classDef comp     fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold
+    classDef output   fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e3a8a
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ FIGURE 4 -->
+<div class="section" id="fig4">
+  <div class="section-header">
+    <div class="badge b4">4</div>
+    <div>
+      <h2>License Agreement + Popup Windows</h2>
+      <p>How a purchase agreement is created and linked to license keys</p>
+    </div>
+  </div>
+  <div class="note">
+    💡 The <strong>popup windows</strong> are a unique feature — clicking the license buttons opens a separate browser popup that communicates back to the parent page when done, automatically refreshing the license grid.
+  </div>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+flowchart TD
+    START(["👤 User opens\nLicense Agreements"]):::oval
+
+    START --> LIST2["📋 Agreement list\nAgreement # | Manufacturer\nVendor | From | Expiry\nStatus: Active / Expiring / Expired"]:::box
+
+    LIST2 --> ACT2{"Action?"}:::decision
+
+    ACT2 -->|"Click ➕ New"| FORM2["📝 Agreement Form\n4 sections:\n1. Agreement Details\n   (Name required, Mfr, Vendor)\n2. Purchase Details\n   (PO, Invoice, Total Cost)\n3. Purchased Licenses\n   (grid — populated via popup)\n4. Expiry Notification\n   (who to notify, how many days before)"]:::box
+
+    FORM2 --> LICBTN{"User clicks\nlicense button"}:::decision
+
+    LICBTN -->|"➕ Add New Licenses\nand Associate"| NEWMODE{"Is this a\nNEW agreement\n(not saved yet)?"}:::decision
+
+    NEWMODE -->|"YES — Create mode"| AUTOSAVE["⚡ Auto-save first!\n1. Validate form\n2. POST /api/license-agreements\n3. Get new agreement ID\n4. Navigate to edit/:id URL\n5. THEN open popup\n   (now has a real ID)"]:::special
+
+    NEWMODE -->|"NO — Edit mode"| POPUP1["🪟 window.open()\n/software/popup/add-license\n?agreementId=X&manufacturerId=Y\n\nOpens as a small browser popup\n960×500px — no sidebar/navbar"]:::popup
+
+    AUTOSAVE --> POPUP1
+
+    POPUP1 --> POPFORM["📝 Inside popup:\nAdd one or more license rows\nEach row needs:\n• Software (required)\n• License Type (required)\n• License Option (required)\n• Installations Allowed (required)\n• License Key (optional)\n• Cost (optional)"]:::box
+
+    POPFORM --> POPSAVE["POST /api/global-software-licenses\nfor each row\nagreementId = X auto-attached"]:::api
+
+    POPSAVE --> POPMSG["✅ Popup sends message:\nwindow.opener.postMessage(\n  type: 'license-added'\n)\nThen window.close()"]:::success
+
+    LICBTN -->|"🔗 Associate\nExisting Licenses"| POPUP2["🪟 window.open()\n/software/popup/associate-licenses\n?agreementId=X&manufacturerId=Y\n\nOpens as 1100×620px popup\nShows UNATTACHED licenses only\n(agreementId = null in DB)"]:::popup
+
+    POPUP2 --> ASSOCLIST["Filter + select licenses:\n• Filter by Software\n• Checkbox multi-select\n• Pagination (10/25/50/100)\nClick ✅ Associate Selected"]:::box
+
+    ASSOCLIST --> ASSOCAPI["PATCH /api/global-software-licenses/:id\n{ agreementId: X }\nfor each selected license"]:::api
+
+    ASSOCAPI --> ASSOCMSG["✅ Popup sends message:\nwindow.opener.postMessage(\n  type: 'licenses-associated'\n)\nThen window.close()"]:::success
+
+    POPMSG & ASSOCMSG --> REFRESH["🔄 Parent page listener receives message\n→ Re-fetches agreement data\n→ License grid refreshes\n→ Unassociated count updates"]:::output
+
+    classDef oval     fill:#dc2626,color:#fff,stroke:#b91c1c
+    classDef box      fill:#fff1f2,stroke:#f43f5e,stroke-width:1.5px,color:#881337
+    classDef decision fill:#fdf4ff,stroke:#9333ea,stroke-width:2px,color:#581c87
+    classDef api      fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e,font-weight:bold
+    classDef popup    fill:#1e40af,color:#fff,stroke:#1e3a8a,font-weight:bold
+    classDef special  fill:#7c3aed,color:#fff,stroke:#5b21b6,font-weight:bold
+    classDef success  fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#064e3b
+    classDef output   fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e3a8a
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ FIGURE 5 -->
+<div class="section" id="fig5">
+  <div class="section-header">
+    <div class="badge b5">5</div>
+    <div>
+      <h2>Software Licenses — Create, Allocate &amp; Track</h2>
+      <p>How license counts work and how Available is calculated</p>
+    </div>
+  </div>
+  <div class="note">
+    💡 <strong>Available = installationsAllowed − allocated</strong>. This number tells you how many more installations you can assign before running out of licenses.
+  </div>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+flowchart LR
+    subgraph CREATE["➕ Creating a License"]
+        direction TB
+        CF["License Form fields:\n• Software (required)\n• License Type\n• License Option\n• Purchased count\n• Installations Allowed\n• License Key\n• Cost, Vendor\n• Agreement (optional)\n• Expiry Date"]
+
+        CF --> CAPI["POST /api/global-software-licenses\n→ 201 Created"]
+
+        CAPI --> CALC["System stores:\npurchased = X\ninstallationsAllowed = Y\nallocated = 0\navailable = Y - 0 = Y"]
+    end
+
+    subgraph ASSIGN["🔗 Assigning a License\nto an Installation"]
+        direction TB
+        IA["Software Installation\nrecord created:\nPUT /api/software-installations/:id\n{ licenseId: X }"]
+
+        IA --> RECALC["allocated count increases\navailable = allowed - allocated\nNew available = Y - 1"]
+
+        RECALC --> LIMIT{"available\n= 0 ?"}
+
+        LIMIT -->|"No seats left"| WARN["⚠️ Warning shown:\n'No available licenses'\nCannot assign more"]
+
+        LIMIT -->|"Still seats"| OK["✅ Assignment recorded\nInstallation linked to license"]
+    end
+
+    subgraph TRACK["📊 Tracking Columns in Table"]
+        direction TB
+        TC["Columns visible per row:\n\nPurchased — how many you bought\nInstalled  — actual install count\nAllocated  — assigned to licenses\nAvailable  — remaining to assign\nExpiry     — days until expiry\n\nExpiry label:\n• 'X days ago' → expired\n• 'Today' → expiring now\n• 'X Days' → future"]
+    end
+
+    subgraph SOFTDELETE["🗑️ Soft Delete a License"]
+        direction TB
+        SD["DELETE /api/global-software-licenses/:id\nSets isActive = false\nLicense hidden from lists\nHistory preserved in DB"]
+    end
+
+    CREATE --> ASSIGN
+    ASSIGN --> TRACK
+    TRACK --> SOFTDELETE
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════ FIGURE 6 -->
+<div class="section" id="fig6">
+  <div class="section-header">
+    <div class="badge b6">6</div>
+    <div>
+      <h2>Software Summary Dashboard — Data Flow</h2>
+      <p>How the dashboard reads data and what each chart shows</p>
+    </div>
+  </div>
+  <div class="note">
+    💡 The dashboard makes <strong>one API call</strong> that does all the number-crunching on the server. Changing the Manufacturer filter re-runs the call and all charts update together.
+  </div>
+  <div class="diagram-wrap">
+    <div class="mermaid">
+flowchart TD
+    PAGE(["📊 User opens\nSoftware Summary"]):::oval
+
+    PAGE --> FILTER["Top-right filters:\n🏭 Manufacturer dropdown\n(All / specific manufacturer)\n🏢 Site dropdown\n(All Sites — UI only)"]:::box
+
+    FILTER --> CALL["API call:\nGET /api/software-summary\n?manufacturerId=X"]:::api
+
+    CALL --> SERVER["Server runs 3 DB queries\nin parallel:\n\n1. All softwares + types + license counts\n2. All active licenses\n3. All active agreements"]:::server
+
+    SERVER --> CRUNCH["Server computes:\n✅ Compliance per software\n✅ Usage bucket per software\n✅ Unused license count\n✅ Agreement expiry dates\n✅ Totals by software type"]:::server
+
+    CRUNCH --> RESPONSE["JSON response:\n{\n  compliance: { underLicensed, overLicensed, compliant, na }\n  software:   { total, byType[] }\n  licenses:   { total, unused, purchased, allocated, available }\n  agreements: { expired, expiringIn7Days, expiringIn30Days }\n  usage:      { frequent, occasional, rarely, never }\n}"]:::api
+
+    RESPONSE --> CHARTS
+
+    subgraph CHARTS["Dashboard Widgets (no external chart library — pure SVG/CSS)"]
+        direction LR
+
+        subgraph LEFT["Left Column (55%)"]
+            PIE1["🥧 Am I Compliant?\nPie chart — 3 segments:\n🟠 Under Licensed\n🔵 Over Licensed\n🟢 Compliant\n\nClick → Scanned Software\nfiltered by compliance"]
+
+            PIE2["🥧 License Usage\nPie chart — 2 segments:\n🟠 In Use (allocated)\n🔵 Not In Use (available)\n\nClick → Software Licenses"]
+
+            BAR["📊 Software Usage\nBar chart — 4 bars:\n▇ Frequently Used (>15 installs)\n▇ Occasionally Used (4-15)\n▇ Rarely Used (1-3)\n▇ Never Used (0)"]
+        end
+
+        subgraph RIGHT["Right Column (45%)"]
+            STAT1["📦 Software Stats\nTotal count\nBy type: Managed, Freeware...\nClick any → filtered list"]
+
+            STAT2["🔑 Unused Licenses\nLicenses where available > 0\nClick → Software Licenses"]
+
+            STAT3["💤 Rarely Used\nSoftware used 1-3 times\nClick → Software Licenses"]
+
+            STAT4["📅 License Agreement Expiry\nExpired: X\nNext 7 days: X\nNext 30 days: X\nClick → License Agreements"]
+        end
+    end
+
+    classDef oval   fill:#0891b2,color:#fff,stroke:#0e7490
+    classDef box    fill:#ecfeff,stroke:#0891b2,stroke-width:1.5px,color:#164e63
+    classDef api    fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e,font-weight:bold
+    classDef server fill:#f5f3ff,stroke:#7c3aed,stroke-width:2px,color:#3b0764
+    </div>
+  </div>
+</div>
+
+<footer>
+  Asset Management System — Software Module Documentation &nbsp;|&nbsp; Generated 2026-06-16
+</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      fontSize: '13px',
+      fontFamily: 'Segoe UI, Arial, sans-serif',
+    },
+    flowchart: {
+      htmlLabels: true,
+      curve: 'basis',
+      padding: 20,
+      nodeSpacing: 40,
+      rankSpacing: 50,
+    }
+  });
+</script>
+</body>
+</html>

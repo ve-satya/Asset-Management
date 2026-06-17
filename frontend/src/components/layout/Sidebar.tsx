@@ -1,16 +1,21 @@
+import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Settings2, Monitor, LucideIcon } from 'lucide-react';
+import {
+  LayoutDashboard, Package, Settings2, Monitor, LucideIcon,
+  ChevronDown, ChevronRight, BarChart2, FileText, Key, Cpu,
+} from 'lucide-react';
 
 interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
+  children?: Array<{ to: string; label: string; icon: LucideIcon }>;
 }
 
 const navItems: NavItem[] = [
-  { to: '/dashboard',   label: 'Dashboard',       icon: LayoutDashboard },
-  { to: '/assets/list', label: 'All Assets',            icon: Package         },
-  { to: '/assets',      label: 'Asset Management', icon: Settings2       },
+  { to: '/dashboard',   label: 'Dashboard',    icon: LayoutDashboard },
+  { to: '/assets',      label: 'Master Assets', icon: Settings2       },
+  { to: '/assets/list', label: 'Assets',        icon: Package         },
   { to: '/software/list', label: 'Software',    icon: Monitor         },
 ];
 
@@ -20,16 +25,30 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed }: SidebarProps) {
   const location = useLocation();
+  const [softwareOpen, setSoftwareOpen] = useState(
+    () => location.pathname.startsWith('/software'),
+  );
 
-  function isActive(to: string): boolean {
-    if (to === '/assets/list') return (
+  function isTopActive(item: NavItem): boolean {
+    if (item.to === '/assets/list') return (
       location.pathname.startsWith('/assets/list') ||
       location.pathname.startsWith('/assets/create') ||
       location.pathname.startsWith('/assets/edit') ||
       location.pathname.startsWith('/assets/detail')
     );
-    if (to === '/assets') return location.pathname === '/assets';
-    if (to === '/software/list') return location.pathname.startsWith('/software');
+    if (item.to === '/assets') return location.pathname === '/assets';
+    if (item.to === '/software') return location.pathname.startsWith('/software');
+    return location.pathname === item.to || location.pathname.startsWith(item.to + '/');
+  }
+
+  function isSubActive(to: string): boolean {
+    if (to === '/software/scanned') return (
+      location.pathname === '/software/scanned' ||
+      location.pathname === '/software/list' ||
+      location.pathname.startsWith('/software/create') ||
+      location.pathname.startsWith('/software/edit') ||
+      location.pathname.startsWith('/software/detail')
+    );
     return location.pathname === to || location.pathname.startsWith(to + '/');
   }
 
@@ -39,17 +58,28 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         collapsed ? 'w-16' : 'w-56'
       } shrink-0 h-full`}
     >
-      <nav className="flex-1 py-2 px-0 text-sm">
+      <div className="flex items-center justify-center h-14 border-b border-gray-800 px-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
+            <span className="text-white font-bold text-sm">A</span>
+          </div>
+          {!collapsed && (
+            <span className="text-sm font-semibold text-white truncate">AssetManager</span>
+          )}
+        </div>
+      </div>
+
+      <nav className="flex-1 py-3 space-y-0.5 px-2">
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/assets'}
             className={() =>
-              `flex h-12 items-center gap-3 border-b border-gray-100 px-5 font-medium transition-colors dark:border-gray-800 ${
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive(to)
-                  ? 'bg-sky-600 text-white'
-                  : 'text-gray-900 hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-gray-800'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
               }`
             }
           >
