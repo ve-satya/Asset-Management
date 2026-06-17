@@ -15,6 +15,22 @@ type SoftwareCategoryFormState = {
   description: string;
 };
 
+const PROTECTED_SOFTWARE_CATEGORY_NAMES = new Set([
+  'Others',
+  'Accounting',
+  'Multimedia',
+  'Internet',
+  'Graphics',
+  'Game',
+  'Operating System',
+  'Development',
+  'Database',
+]);
+
+function isProtectedSoftwareCategory(row: SoftwareCategory) {
+  return PROTECTED_SOFTWARE_CATEGORY_NAMES.has(row.name);
+}
+
 function RowMenu({ row, onEdit, onDelete }: {
   row: SoftwareCategory;
   onEdit: (row: SoftwareCategory) => void;
@@ -24,6 +40,7 @@ function RowMenu({ row, onEdit, onDelete }: {
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const isProtected = isProtectedSoftwareCategory(row);
 
   useEffect(() => {
     if (!open) return;
@@ -70,14 +87,24 @@ function RowMenu({ row, onEdit, onDelete }: {
           className="w-28 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-1"
         >
           <button
-            onClick={() => { onEdit(row); setOpen(false); }}
-            className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            onClick={() => { if (!isProtected) { onEdit(row); setOpen(false); } }}
+            disabled={isProtected}
+            className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm ${
+              isProtected
+                ? 'cursor-not-allowed text-gray-300 dark:text-gray-600'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
           >
-            <Pencil size={13} className="text-gray-400" /> Edit
+            <Pencil size={13} className={isProtected ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400'} /> Edit
           </button>
           <button
-            onClick={() => { onDelete(row); setOpen(false); }}
-            className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+            onClick={() => { if (!isProtected) { onDelete(row); setOpen(false); } }}
+            disabled={isProtected}
+            className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm ${
+              isProtected
+                ? 'cursor-not-allowed text-gray-300 dark:text-gray-600'
+                : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+            }`}
           >
             <Trash2 size={13} /> Delete
           </button>

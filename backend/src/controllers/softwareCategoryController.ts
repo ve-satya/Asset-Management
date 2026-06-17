@@ -3,6 +3,17 @@ import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 
 const prisma = new PrismaClient();
+const PROTECTED_SOFTWARE_CATEGORY_NAMES = new Set([
+  'Others',
+  'Accounting',
+  'Multimedia',
+  'Internet',
+  'Graphics',
+  'Game',
+  'Operating System',
+  'Development',
+  'Database',
+]);
 
 export async function getSoftwareCategories(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -72,14 +83,28 @@ export async function updateSoftwareCategory(req: Request, res: Response, next: 
   const errors = validationResult(req);
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
   try {
-    const item = await prisma.softwareCategory.update({ where: { id: parseInt(String(req.params.id), 10) }, data: buildPayload(req.body) });
+    const id = parseInt(String(req.params.id), 10);
+    const existing = await prisma.softwareCategory.findUnique({ where: { id }, select: { name: true } });
+    if (!existing) { res.status(404).json({ error: 'Software Category not found.' }); return; }
+    if (PROTECTED_SOFTWARE_CATEGORY_NAMES.has(existing.name)) {
+      res.status(400).json({ error: 'This default Software Category cannot be edited.' });
+      return;
+    }
+    const item = await prisma.softwareCategory.update({ where: { id }, data: buildPayload(req.body) });
     res.json(item);
   } catch (err) { next(err); }
 }
 
 export async function deleteSoftwareCategory(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await prisma.softwareCategory.update({ where: { id: parseInt(String(req.params.id), 10) }, data: { isActive: false } });
+    const id = parseInt(String(req.params.id), 10);
+    const existing = await prisma.softwareCategory.findUnique({ where: { id }, select: { name: true } });
+    if (!existing) { res.status(404).json({ error: 'Software Category not found.' }); return; }
+    if (PROTECTED_SOFTWARE_CATEGORY_NAMES.has(existing.name)) {
+      res.status(400).json({ error: 'This default Software Category cannot be deleted.' });
+      return;
+    }
+    await prisma.softwareCategory.update({ where: { id }, data: { isActive: false } });
     res.json({ message: 'Software Category deactivated successfully.' });
   } catch (err) { next(err); }
 }
