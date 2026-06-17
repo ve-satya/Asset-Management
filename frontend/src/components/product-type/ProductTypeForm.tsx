@@ -84,6 +84,7 @@ export default function ProductTypeForm({ record, editingId, onSuccess, onCancel
   const [saving,               setSaving]               = useState(false);
   const [apiNameTouched,       setApiNameTouched]       = useState(false);
   const [apiPluralNameTouched, setApiPluralNameTouched] = useState(false);
+  const isEditing = Boolean(editingId);
 
   useEffect(() => {
     getAllProductTypes().then((data) => {
@@ -147,7 +148,7 @@ export default function ProductTypeForm({ record, editingId, onSuccess, onCancel
     } finally { setSaving(false); }
   }
 
-  const cls = (f: string) => `w-full px-3 py-2 text-sm rounded-lg border ${errors[f] ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 dark:border-gray-600 focus:ring-brand-500'} bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 transition`;
+  const cls = (f: string, disabled = false) => `w-full px-3 py-2 text-sm rounded-lg border ${errors[f] ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 dark:border-gray-600 focus:ring-brand-500'} ${disabled ? 'cursor-not-allowed bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'} focus:outline-none focus:ring-2 transition`;
   const lbl = (txt: string, req?: boolean) => <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{req && <span className="text-red-500 mr-0.5">*</span>}{txt}</label>;
 
   return (
@@ -157,26 +158,26 @@ export default function ProductTypeForm({ record, editingId, onSuccess, onCancel
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>{lbl('Display Name', true)}<input name="displayName" value={form.displayName} onChange={handleChange} className={cls('displayName')} placeholder="e.g. Smart Phone" />{errors.displayName && <p className="mt-1 text-xs text-red-500">{errors.displayName}</p>}</div>
-          <div>{lbl('API Name', true)}<input name="apiName" value={form.apiName} onChange={(e) => { setApiNameTouched(true); handleChange(e); }} className={cls('apiName')} placeholder="e.g. custom_asset_smart-phone" />{errors.apiName ? <p className="mt-1 text-xs text-red-500">{errors.apiName}</p> : <p className="mt-1 text-xs text-gray-400">Auto-filled from Display Name</p>}</div>
+          <div>{lbl('API Name', true)}<input name="apiName" value={form.apiName} onChange={(e) => { setApiNameTouched(true); handleChange(e); }} disabled={isEditing} className={cls('apiName', isEditing)} placeholder="e.g. custom_asset_smart-phone" />{errors.apiName ? <p className="mt-1 text-xs text-red-500">{errors.apiName}</p> : <p className="mt-1 text-xs text-gray-400">Auto-filled from Display Name</p>}</div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>{lbl('Display Plural Name', true)}<input name="displayPluralName" value={form.displayPluralName} onChange={handleChange} className={cls('displayPluralName')} placeholder="e.g. Smart Phones" />{errors.displayPluralName && <p className="mt-1 text-xs text-red-500">{errors.displayPluralName}</p>}</div>
-          <div>{lbl('API Plural Name', true)}<input name="apiPluralName" value={form.apiPluralName} onChange={(e) => { setApiPluralNameTouched(true); handleChange(e); }} className={cls('apiPluralName')} placeholder="e.g. custom_asset_smart-phones" />{errors.apiPluralName ? <p className="mt-1 text-xs text-red-500">{errors.apiPluralName}</p> : <p className="mt-1 text-xs text-gray-400">Auto-filled from API Name</p>}</div>
+          <div>{lbl('API Plural Name', true)}<input name="apiPluralName" value={form.apiPluralName} onChange={(e) => { setApiPluralNameTouched(true); handleChange(e); }} disabled={isEditing} className={cls('apiPluralName', isEditing)} placeholder="e.g. custom_asset_smart-phones" />{errors.apiPluralName ? <p className="mt-1 text-xs text-red-500">{errors.apiPluralName}</p> : <p className="mt-1 text-xs text-gray-400">Auto-filled from API Name</p>}</div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>{lbl('Category', true)}<select name="category" value={form.category} onChange={handleChange} className={cls('category')}><option value="">-- Select Category --</option>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select>{errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}</div>
+          <div>{lbl('Category', true)}<select name="category" value={form.category} onChange={handleChange} disabled={isEditing} className={cls('category', isEditing)}><option value="">-- Select Category --</option>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select>{errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}</div>
           <div>{lbl('Parent Product Type')}<ParentTreeDropdown value={form.parentId} displayLabel={form.parentLabel} treeRoots={treeRoots} onSelect={handleParentSelect} hasError={false} /></div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>{lbl('Asset Type', true)}<select name="assetType" value={form.assetType} onChange={handleChange} className={cls('assetType')}><option value="">-- Select Asset Type --</option>{ASSET_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select>{errors.assetType && <p className="mt-1 text-xs text-red-500">{errors.assetType}</p>}</div>
+          <div>{lbl('Asset Type', true)}<select name="assetType" value={form.assetType} onChange={handleChange} disabled={isEditing} className={cls('assetType', isEditing)}><option value="">-- Select Asset Type --</option>{ASSET_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select>{errors.assetType && <p className="mt-1 text-xs text-red-500">{errors.assetType}</p>}</div>
           <div>{lbl('Description')}<textarea name="description" value={form.description} onChange={handleChange} rows={3} className={`${cls('description')} resize-none`} placeholder="Optional description…" /></div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>{lbl('Asset Category Type', true)}<select name="assetCategory" value={form.assetCategory} onChange={handleChange} className={cls('assetCategory')}><option value="">-- Select Asset Category --</option>{ASSET_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select>{errors.assetCategory && <p className="mt-1 text-xs text-red-500">{errors.assetCategory}</p>}</div>
+          <div>{lbl('Asset Category Type', true)}<select name="assetCategory" value={form.assetCategory} onChange={handleChange} disabled={isEditing} className={cls('assetCategory', isEditing)}><option value="">-- Select Asset Category --</option>{ASSET_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select>{errors.assetCategory && <p className="mt-1 text-xs text-red-500">{errors.assetCategory}</p>}</div>
           <div />
         </div>
       </div>
