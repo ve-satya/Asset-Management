@@ -2,6 +2,7 @@ import { useState, useEffect, ReactNode } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Box, ChevronDown, Cpu, Info, Link, Loader2, Monitor, Pencil, Play, Plus, RefreshCw, Router, Trash2, UserCircle, UserPlus, X } from 'lucide-react';
 import DynamicAssetDetailsSection from '../components/asset/DynamicAssetDetailsSection';
+import RelationshipsTab from '../components/asset/RelationshipsTab';
 import { getAsset, getAssetHistory, updateAsset } from '../services/assetService';
 import { getAllAssetStates } from '../services/assetStateService';
 import type { Asset, AssetHistoryItem, NamedOption } from '../types';
@@ -611,7 +612,7 @@ export default function AssetDetailPage() {
 
           <div>
             {activeTab === 'asset-detail'  && <AssetDetailContent asset={asset} onAssetStateClick={() => { setAssignMode('state'); setAssignOpen(true); }} />}
-            {activeTab === 'relationships' && <EmptyCard title="Relationships" />}
+            {activeTab === 'relationships' && <RelationshipsTab asset={asset} onAssign={() => { setAssignMode('assign'); setAssignOpen(true); }} />}
             {activeTab === 'contracts'     && <EmptyCard title="Contracts" />}
             {activeTab === 'financials'    && <EmptyCard title="Financials" />}
             {activeTab === 'associations'  && <EmptyCard title="Associations" />}

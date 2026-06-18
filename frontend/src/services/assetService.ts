@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Asset, AssetHistoryItem, PaginatedResponse } from '../types';
+import type { Asset, AssetHistoryItem, AssetRelationshipsResponse, PaginatedResponse } from '../types';
 
 const BASE = '/api/assets';
 
@@ -11,6 +11,15 @@ export const getAsset    = (id: number | string): Promise<Asset> =>
 
 export const getAssetHistory = (id: number | string, params: Record<string, unknown>): Promise<PaginatedResponse<AssetHistoryItem>> =>
   axios.get(`${BASE}/${id}/history`, { params }).then((r) => r.data);
+
+export const getAssetRelationships = (id: number | string): Promise<AssetRelationshipsResponse> =>
+  axios.get(`${BASE}/${id}/relationships`).then((r) => r.data);
+
+export const createAssetRelationship = (id: number | string, data: unknown): Promise<AssetRelationshipsResponse> =>
+  axios.post(`${BASE}/${id}/relationships`, data).then((r) => r.data);
+
+export const deleteAssetRelationship = (id: number | string, relationshipId: number | string, relationshipType: string): Promise<{ message: string }> =>
+  axios.delete(`${BASE}/${id}/relationships/${relationshipId}`, { params: { relationshipType } }).then((r) => r.data);
 
 export const createAsset = (data: unknown): Promise<Asset> =>
   axios.post(BASE, data).then((r) => r.data);

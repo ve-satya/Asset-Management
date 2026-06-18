@@ -24,6 +24,42 @@ export interface AssetHistoryItem {
   comments: string | null;
 }
 
+export type AssetRelationshipType = 'AssignedTo' | 'ConnectedAsset' | 'ConnectedService' | 'AttachedComponent' | 'AttachedAsset';
+
+export interface AssetRelationshipAssetRow {
+  id: number;
+  parentAssetId: number;
+  relatedAssetId: number;
+  relationshipType: 'ConnectedAsset' | 'AttachedAsset';
+  createdBy: string | null;
+  createdOn: string;
+  relatedAsset: {
+    id: number;
+    name: string;
+    assetTag: string | null;
+    product: string | null;
+    productType?: { id: number; displayName: string };
+  };
+}
+
+export interface AssetRelationshipServiceRow {
+  id: number;
+  assetId: number;
+  serviceId: number | null;
+  serviceName: string | null;
+  relationshipType: 'ConnectedService' | 'AttachedComponent';
+  createdBy: string | null;
+  createdOn: string;
+}
+
+export interface AssetRelationshipsResponse {
+  assignedUser: { id: number | null; name: string; department: string | null } | null;
+  connectedAssets: AssetRelationshipAssetRow[];
+  connectedServices: AssetRelationshipServiceRow[];
+  attachedComponents: AssetRelationshipServiceRow[];
+  attachedAssets: AssetRelationshipAssetRow[];
+}
+
 export interface NamedOption {
   id: number;
   name: string;
