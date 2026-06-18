@@ -241,8 +241,41 @@ model Asset {
   associatedAssets Asset[] @relation("AssociatedAsset")
   dynamicFieldValues AssetDynamicFieldValue[]
   history AssetHistory[]
+  parentRelationships AssetRelationship[] @relation("ParentAssetRelationship")
+  relatedRelationships AssetRelationship[] @relation("RelatedAssetRelationship")
+  serviceRelationships AssetServiceRelationship[]
 
   @@map("assets")
+}
+
+model AssetRelationship {
+  id               Int      @id @default(autoincrement())
+  parentAssetId    Int      @map("parent_asset_id")
+  relatedAssetId   Int      @map("related_asset_id")
+  relationshipType String   @map("relationship_type")
+  createdBy        String?  @map("created_by")
+  createdOn        DateTime @default(now()) @map("created_on")
+
+  parentAsset  Asset @relation("ParentAssetRelationship", fields: [parentAssetId], references: [id], onDelete: Cascade)
+  relatedAsset Asset @relation("RelatedAssetRelationship", fields: [relatedAssetId], references: [id], onDelete: Cascade)
+
+  @@index([parentAssetId, relationshipType])
+  @@map("asset_relationships")
+}
+
+model AssetServiceRelationship {
+  id               Int      @id @default(autoincrement())
+  assetId          Int      @map("asset_id")
+  serviceId        Int?     @map("service_id")
+  serviceName      String?  @map("service_name")
+  relationshipType String   @map("relationship_type")
+  createdBy        String?  @map("created_by")
+  createdOn        DateTime @default(now()) @map("created_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, relationshipType])
+  @@map("asset_service_relationships")
 }
 
 model AssetHistory {

@@ -31,6 +31,8 @@ const HISTORY_FIELDS: Array<{ key: string; label: string }> = [
 ];
 
 const OWNERSHIP_FIELDS = new Set(['Asset State', 'User', 'Department', 'Associated Asset', 'Site', 'Location', 'Is Loanable', 'Loan Start', 'Loan End']);
+const ASSET_RELATIONSHIP_TYPES = new Set(['ConnectedAsset', 'AttachedAsset']);
+const SERVICE_RELATIONSHIP_TYPES = new Set(['ConnectedService', 'AttachedComponent']);
 
 function changedBy(req: Request, body?: Record<string, unknown>) {
   const user = (req as Request & { user?: { name?: string; email?: string; username?: string } }).user;
@@ -354,6 +356,121 @@ async function getAssetHistory(req: Request, res: Response, next: NextFunction):
   } catch (err) { next(err); }
 }
 
+async function getAssetRelationships(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const assetId = parseInt(String(req.params.id), 10);
+    const asset = await prisma.asset.findUnique({
+      where: { id: assetId },
+      select: { id: true, user: true, assignedUserId: true, department: true },
+    });
+    if (!asset) { res.status(404).json({ error: 'Asset not found.' }); return; }
+
+    const [assetRows, serviceRows] = await Promise.all([
+      prisma.assetRelationship.findMany({
+        where: { parentAssetId: assetId },
+        include: {
+          relatedAsset: {
+            select: {
+              id: true,
+              name: true,
+              assetTag: true,
+              product: true,
+              productType: { select: { id: true, displayName: true } },
+            },
+          },
+        },
+        orderBy: { createdOn: 'desc' },
+      }),
+      prisma.assetServiceRelationship.findMany({
+        where: { assetId },
+        orderBy: { createdOn: 'desc' },
+      }),
+    ]);
+
+    res.json({
+      assignedUser: asset.user ? { id: asset.assignedUserId, name: asset.user, department: asset.department } : null,
+      connectedAssets: assetRows.filter((item) => item.relationshipType === 'ConnectedAsset'),
+      attachedAssets: assetRows.filter((item) => item.relationshipType === 'AttachedAsset'),
+      connectedServices: serviceRows.filter((item) => item.relationshipType === 'ConnectedService'),
+      attachedComponents: serviceRows.filter((item) => item.relationshipType === 'AttachedComponent'),
+    });
+  } catch (err) { next(err); }
+}
+
+async function createAssetRelationship(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const assetId = parseInt(String(req.params.id), 10);
+    const relationshipType = String(req.body.relationshipType || '');
+    const actor = changedBy(req, req.body);
+
+    if (relationshipType === 'AssignedTo') {
+      const user = String(req.body.user || req.body.name || '').trim();
+      if (!user) { res.status(400).json({ error: 'User is required.' }); return; }
+      await prisma.asset.update({ where: { id: assetId }, data: { user } });
+      await recordSimpleHistory(assetId, 'Assigned', actor, 'User', null, user);
+      await getAssetRelationships(req, res, next);
+      return;
+    }
+
+    if (ASSET_RELATIONSHIP_TYPES.has(relationshipType)) {
+      const relatedAssetId = parseInt(String(req.body.relatedAssetId || ''), 10);
+      if (!relatedAssetId || relatedAssetId === assetId) { res.status(400).json({ error: 'Related asset is required.' }); return; }
+      await prisma.assetRelationship.create({
+        data: { parentAssetId: assetId, relatedAssetId, relationshipType, createdBy: actor },
+      });
+      await getAssetRelationships(req, res, next);
+      return;
+    }
+
+    if (SERVICE_RELATIONSHIP_TYPES.has(relationshipType)) {
+      const serviceId = req.body.serviceId ? parseInt(String(req.body.serviceId), 10) : null;
+      const serviceName = String(req.body.serviceName || req.body.name || '').trim() || null;
+      if (!serviceId && !serviceName) { res.status(400).json({ error: 'Record name is required.' }); return; }
+      await prisma.assetServiceRelationship.create({
+        data: { assetId, serviceId, serviceName, relationshipType, createdBy: actor },
+      });
+      await getAssetRelationships(req, res, next);
+      return;
+    }
+
+    res.status(400).json({ error: 'Unsupported relationship type.' });
+  } catch (err) { next(err); }
+}
+
+async function deleteAssetRelationship(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const assetId = parseInt(String(req.params.id), 10);
+    const relationshipId = parseInt(String(req.params.relationshipId), 10);
+    const relationshipType = String(req.query.relationshipType || '');
+
+    if (ASSET_RELATIONSHIP_TYPES.has(relationshipType)) {
+      await prisma.assetRelationship.deleteMany({ where: { id: relationshipId, parentAssetId: assetId, relationshipType } });
+      res.json({ message: 'Relationship removed successfully.' });
+      return;
+    }
+    if (SERVICE_RELATIONSHIP_TYPES.has(relationshipType)) {
+      await prisma.assetServiceRelationship.deleteMany({ where: { id: relationshipId, assetId, relationshipType } });
+      res.json({ message: 'Relationship removed successfully.' });
+      return;
+    }
+    res.status(400).json({ error: 'Relationship type is required.' });
+  } catch (err) { next(err); }
+}
+
+async function recordSimpleHistory(assetId: number, actionType: string, changedByValue: string, fieldName: string, oldValue: string | null, newValue: string | null) {
+  await prisma.assetHistory.create({
+    data: {
+      assetId,
+      actionType,
+      changedBy: changedByValue,
+      changedOn: new Date(),
+      fieldName,
+      oldValue,
+      newValue,
+    },
+  });
+}
+
 function buildPayload(body: Record<string, unknown>) {
   const toDate = (v: unknown) => (v ? new Date(String(v)) : null);
   const toInt = (v: unknown) => (v !== undefined && v !== null && String(v) !== '' ? parseInt(String(v), 10) : null);
@@ -439,4 +556,4 @@ async function saveDynamicFieldValues(tx: TransactionClient, assetId: number, bo
   }
 }
 
-export { getAssets, getAsset, createAsset, updateAsset, deleteAsset, getAssetHistory };
+export { getAssets, getAsset, createAsset, updateAsset, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, deleteAssetRelationship };
