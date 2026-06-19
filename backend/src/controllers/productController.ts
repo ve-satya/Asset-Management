@@ -8,9 +8,13 @@ import { validationResult } from 'express-validator';
 const prisma = new PrismaClient();
 
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'products');
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+  destination: (_req, _file, cb) => {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    cb(null, UPLOAD_DIR);
+  },
   filename:    (_req, file, cb) => {
     const ext  = path.extname(file.originalname);
     const name = `${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`;
