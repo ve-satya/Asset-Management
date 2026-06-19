@@ -4,9 +4,8 @@ import {
   Plus, X, ChevronDown, ChevronLeft, ChevronRight,
   Pencil, Trash2, AlignJustify, Loader2, Search, Columns3,
 } from 'lucide-react';
-import { getProducts, deleteProduct } from '../../services/productService';
+import { getProduct, getProducts, deleteProduct } from '../../services/productService';
 import useDebounce from '../../hooks/useDebounce';
-import Modal from '../common/Modal';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ProductForm from './ProductForm';
 import type { Product, PaginationMeta } from '../../types';
@@ -231,6 +230,17 @@ export default function ProductTable() {
     finally { setDeleting(false); }
   }
 
+  async function handleEdit(record: Product) {
+    try {
+      const fresh = await getProduct(record.id);
+      setEditRecord(fresh);
+    } catch (error) {
+      console.error(error);
+      setEditRecord(record);
+    }
+    setFormOpen(true);
+  }
+
   const visibleDefs = ALL_COLUMNS.filter((col) => visibleCols.includes(col.key));
   const hasFilters = rawSearch || Object.values(colFilters).some(Boolean);
   return (
@@ -239,10 +249,11 @@ export default function ProductTable() {
         <div className="flex items-center gap-0">
           <button
             onClick={() => { setEditRecord(null); setFormOpen(true); }}
-            className="inline-flex h-7 w-10 items-center justify-center border border-gray-300 bg-white text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            className="inline-flex h-7 items-center justify-center gap-1.5 border border-gray-300 bg-white px-3 text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             title="New product"
           >
             <Plus size={16} />
+            <span className="text-sm">New</span>
           </button>
           <div className="flex items-center gap-0">
             <button type="button" onClick={() => setShowFilters((value) => !value)} className={`-ml-px inline-flex h-7 w-10 items-center justify-center border border-gray-300 transition dark:border-gray-600 ${showFilters ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`} title="Show column filters">
@@ -301,7 +312,7 @@ export default function ProductTable() {
               <tr><td colSpan={visibleDefs.length + 1} className="py-16 text-center text-gray-400 dark:text-gray-500">No products found.</td></tr>
             ) : data.map((row) => (
               <tr key={row.id} className="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                <td className="px-2 py-2.5 w-8"><RowMenu row={row} onEdit={(r) => { setEditRecord(r); setFormOpen(true); }} onDelete={(r) => setDeleteTarget(r)} /></td>
+                <td className="px-2 py-2.5 w-8"><RowMenu row={row} onEdit={handleEdit} onDelete={(r) => setDeleteTarget(r)} /></td>
                 {visibleDefs.map((col) => (
                   <td key={col.key} className="px-3 py-2.5 text-gray-700 dark:text-gray-300">
                     {col.key === 'name' ? <span className="font-medium text-gray-800 dark:text-gray-200">{row.name}</span>
@@ -319,9 +330,35 @@ export default function ProductTable() {
         </table>
       </div>
 
-      <Modal open={formOpen} onClose={() => { setFormOpen(false); setEditRecord(null); }} title={editRecord ? 'Edit Asset Product' : 'Add Asset Product'} maxWidth="max-w-2xl">
-        <ProductForm record={editRecord} onSuccess={() => { setFormOpen(false); setEditRecord(null); fetchData(); }} onCancel={() => { setFormOpen(false); setEditRecord(null); }} />
-      </Modal>
+      {formOpen && createPortal(
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setFormOpen(false); setEditRecord(null); }} aria-hidden="true" />
+          <div
+            className="relative z-10 flex h-full w-full max-w-3xl flex-col border-l border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900"
+            role="dialog"
+            aria-modal="true"
+            aria-label={editRecord ? 'Edit Asset Product' : 'Add Asset Product'}
+          >
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+              <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">{editRecord ? 'Edit Asset Product' : 'Add Asset Product'}</h2>
+              <button
+                onClick={() => { setFormOpen(false); setEditRecord(null); }}
+                className="p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto scrollbar-thin">
+              <ProductForm
+                record={editRecord}
+                onSuccess={() => { setFormOpen(false); setEditRecord(null); fetchData(); }}
+                onCancel={() => { setFormOpen(false); setEditRecord(null); }}
+              />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       <ConfirmDialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} onConfirm={handleConfirmDelete} loading={deleting} title="Delete Product" message={`Are you sure you want to deactivate "${deleteTarget?.name}"?`} />
     </div>
