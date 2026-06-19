@@ -5,7 +5,7 @@ import type { ProductTypeOption } from '../../types';
 
 const ASSET_TYPES      = ['Asset', 'Consumable', 'Component'];
 const ASSET_CATEGORIES = ['IT', 'Non IT'];
-const CATEGORIES       = ['Hardware', 'Software', 'Network', 'Peripheral', 'Furniture', 'Vehicle', 'Other'];
+const CATEGORIES       = ['Asset', 'Consumable'];
 
 function toApiName(displayName: string) {
   return 'custom_asset_' + displayName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
@@ -111,6 +111,12 @@ export default function ProductTypeForm({ record, editingId, onSuccess, onCancel
       if (name === 'displayName' && !apiNameTouched) { next.apiName = toApiName(value); if (!apiPluralNameTouched) next.apiPluralName = toApiPluralName(next.apiName); }
       if (name === 'displayName' && !prev.displayPluralName) next.displayPluralName = value.trim() ? value.trim() + 's' : '';
       if (name === 'apiName' && !apiPluralNameTouched) next.apiPluralName = toApiPluralName(value);
+      if (name === 'category' && !value) {
+        next.assetType = '';
+        next.assetCategory = '';
+      }
+      if (name === 'category' && value === 'Consumable') next.assetType = 'Consumable';
+      if (name === 'category' && value === 'Asset' && next.assetType === 'Consumable') next.assetType = '';
       return next;
     });
     setErrors((prev) => ({ ...prev, [name]: '' }));
@@ -150,6 +156,9 @@ export default function ProductTypeForm({ record, editingId, onSuccess, onCancel
 
   const cls = (f: string, disabled = false) => `w-full px-3 py-2 text-sm rounded-lg border ${errors[f] ? 'border-red-400 focus:ring-red-400' : 'border-gray-300 dark:border-gray-600 focus:ring-brand-500'} ${disabled ? 'cursor-not-allowed bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100'} focus:outline-none focus:ring-2 transition`;
   const lbl = (txt: string, req?: boolean) => <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{req && <span className="text-red-500 mr-0.5">*</span>}{txt}</label>;
+  const assetTypeOptions = form.category === 'Asset'
+    ? ASSET_TYPES.filter((type) => type !== 'Consumable')
+    : ASSET_TYPES;
 
   return (
     <form onSubmit={handleSubmit} noValidate>
@@ -172,12 +181,12 @@ export default function ProductTypeForm({ record, editingId, onSuccess, onCancel
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>{lbl('Asset Type', true)}<select name="assetType" value={form.assetType} onChange={handleChange} disabled={isEditing} className={cls('assetType', isEditing)}><option value="">-- Select Asset Type --</option>{ASSET_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select>{errors.assetType && <p className="mt-1 text-xs text-red-500">{errors.assetType}</p>}</div>
+          <div>{lbl('Asset Type', true)}<select name="assetType" value={form.assetType} onChange={handleChange} disabled={isEditing || !form.category || form.category === 'Consumable'} className={cls('assetType', isEditing || !form.category || form.category === 'Consumable')}><option value="">-- Select Asset Type --</option>{assetTypeOptions.map((t) => <option key={t} value={t}>{t}</option>)}</select>{errors.assetType && <p className="mt-1 text-xs text-red-500">{errors.assetType}</p>}</div>
           <div>{lbl('Description')}<textarea name="description" value={form.description} onChange={handleChange} rows={3} className={`${cls('description')} resize-none`} placeholder="Optional description…" /></div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>{lbl('Asset Category Type', true)}<select name="assetCategory" value={form.assetCategory} onChange={handleChange} disabled={isEditing} className={cls('assetCategory', isEditing)}><option value="">-- Select Asset Category --</option>{ASSET_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select>{errors.assetCategory && <p className="mt-1 text-xs text-red-500">{errors.assetCategory}</p>}</div>
+          <div>{lbl('Asset Category', true)}<select name="assetCategory" value={form.assetCategory} onChange={handleChange} disabled={isEditing || !form.category} className={cls('assetCategory', isEditing || !form.category)}><option value="">-- Select Asset Category --</option>{ASSET_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select>{errors.assetCategory && <p className="mt-1 text-xs text-red-500">{errors.assetCategory}</p>}</div>
           <div />
         </div>
       </div>

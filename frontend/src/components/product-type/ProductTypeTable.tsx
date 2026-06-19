@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlignJustify,
+  ArrowLeft,
   Box,
   Camera,
   ChevronDown,
@@ -27,7 +28,6 @@ import {
 } from 'lucide-react';
 import { getProductTypes, deleteProductType } from '../../services/productTypeService';
 import useDebounce from '../../hooks/useDebounce';
-import Modal from '../common/Modal';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ProductTypeForm from './ProductTypeForm';
 import type { ProductType, PaginationMeta } from '../../types';
@@ -39,9 +39,13 @@ interface ColDef {
 
 const ALL_COLUMNS: ColDef[] = [
   { key: 'fullPath', label: 'Display Name' },
+  { key: 'displayPluralName', label: 'Display Plural Name' },
   { key: 'apiName', label: 'API Name' },
+  { key: 'apiPluralName', label: 'API Plural Name' },
+  { key: 'category', label: 'Category' },
   { key: 'assetType', label: 'Asset Type' },
   { key: 'assetCategory', label: 'Asset Category' },
+  { key: 'description', label: 'Description' },
 ];
 
 const DEFAULT_VISIBLE = ['fullPath', 'apiName', 'assetType', 'assetCategory'];
@@ -49,9 +53,12 @@ const LS_KEY = 'asset_pt_columns';
 const DEFAULT_COL_WIDTHS: Record<string, number> = {
   fullPath: 430,
   apiName: 260,
+  apiPluralName: 260,
+  category: 180,
   assetType: 260,
   assetCategory: 260,
   displayPluralName: 260,
+  description: 260,
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -93,7 +100,10 @@ function SelectColumnsDropdown({ visible, onApply }: { visible: string[]; onAppl
   }, []);
 
   useEffect(() => {
-    if (open) setDraft(visible);
+    if (open) {
+      setDraft(visible);
+      setQuery('');
+    }
   }, [open, visible]);
 
   const filteredColumns = ALL_COLUMNS.filter((column) =>
@@ -127,7 +137,7 @@ function SelectColumnsDropdown({ visible, onApply }: { visible: string[]; onAppl
             </div>
           </div>
 
-          <div className="max-h-[360px] overflow-y-auto px-4 scrollbar-thin">
+          <div className="max-h-64 overflow-y-auto px-4 scrollbar-thin">
             {filteredColumns.map((column) => (
               <label key={column.key} className="flex h-11 cursor-pointer items-center gap-3 border-b border-gray-100 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700">
                 <input
@@ -355,9 +365,35 @@ export default function ProductTypeTable() {
   const statusOptions = [
     { value: 'true', label: 'Active Product Types' },
     { value: 'false', label: 'Inactive Product Types' },
-    { value: 'all', label: 'All Product Types' },
   ];
   const currentStatus = statusOptions.find((option) => option.value === statusFilter) || statusOptions[0];
+
+  if (formOpen) {
+    return (
+      <div className="flex flex-col bg-white dark:bg-gray-900">
+        <div className="flex h-11 items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 dark:border-gray-700 dark:bg-gray-800">
+          <button
+            type="button"
+            onClick={() => { setFormOpen(false); setEditRecord(null); }}
+            className="inline-flex h-7 w-8 items-center justify-center border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-700"
+            title="Back"
+          >
+            <ArrowLeft size={16} />
+          </button>
+          <h2 className="text-base font-medium text-gray-900 dark:text-gray-100">
+            {editRecord ? 'Edit Product Type' : 'Add Product Type'}
+          </h2>
+        </div>
+
+        <ProductTypeForm
+          record={editRecord as Record<string, unknown> | null}
+          editingId={editRecord?.id}
+          onSuccess={() => { setFormOpen(false); setEditRecord(null); fetchData(); }}
+          onCancel={() => { setFormOpen(false); setEditRecord(null); }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col bg-white dark:bg-gray-900">
@@ -532,20 +568,6 @@ export default function ProductTypeTable() {
           </tbody>
         </table>
       </div>
-
-      <Modal
-        open={formOpen}
-        onClose={() => { setFormOpen(false); setEditRecord(null); }}
-        title={editRecord ? 'Edit Product Type' : 'Add Product Type'}
-        maxWidth="max-w-3xl"
-      >
-        <ProductTypeForm
-          record={editRecord as Record<string, unknown> | null}
-          editingId={editRecord?.id}
-          onSuccess={() => { setFormOpen(false); setEditRecord(null); fetchData(); }}
-          onCancel={() => { setFormOpen(false); setEditRecord(null); }}
-        />
-      </Modal>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
