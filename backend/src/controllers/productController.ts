@@ -7,7 +7,8 @@ import { validationResult } from 'express-validator';
 
 const prisma = new PrismaClient();
 
-const UPLOAD_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'products');
+const UPLOAD_ROOT = process.env.UPLOAD_ROOT || path.join(__dirname, '..', '..', 'public', 'uploads');
+const UPLOAD_DIR = path.join(UPLOAD_ROOT, 'products');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const storage = multer.diskStorage({
