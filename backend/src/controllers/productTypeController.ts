@@ -28,7 +28,7 @@ function getDescendantIds(id: number, childrenMap: Record<number, number[]>): nu
 }
 
 async function buildLookup(): Promise<Lookup> {
-  const all = await prisma.productType.findMany({ where: { isActive: true } });
+  const all = await prisma.productType.findMany();
   return Object.fromEntries(all.map((r) => [r.id, r])) as Lookup;
 }
 
@@ -47,7 +47,7 @@ async function getProductTypes(req: Request, res: Response, next: NextFunction):
     const safeSortOrder = sortOrder === 'desc' ? 'desc' : 'asc';
 
     const where: Record<string, unknown> = {
-      isActive: isActive === 'true',
+      ...(isActive !== 'all' ? { isActive: isActive === 'true' } : {}),
       ...(search.trim() ? {
         OR: [
           { displayName:       { contains: search, mode: 'insensitive' } },

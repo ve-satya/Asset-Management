@@ -6,7 +6,7 @@ const router = express.Router();
 
 const ASSET_TYPES      = ['Asset', 'Consumable', 'Component'];
 const ASSET_CATEGORIES = ['IT', 'Non IT'];
-const CATEGORIES       = ['Hardware', 'Software', 'Network', 'Peripheral', 'Furniture', 'Vehicle', 'Other'];
+const CATEGORIES       = ['Asset', 'Consumable'];
 
 const validators = [
   body('displayName').trim().notEmpty().withMessage('Display Name is required.'),
