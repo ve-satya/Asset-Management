@@ -13,6 +13,14 @@ import softwareCategoryRoutes from './routes/softwareCategoryRoutes';
 import softwareLicenseTypeRoutes from './routes/softwareLicenseTypeRoutes';
 import assetStateRoutes from './routes/assetStateRoutes';
 import manufacturerRoutes from './routes/manufacturerRoutes';
+import softwareRoutes from './routes/softwareRoutes';
+import softwareLicenseRoutes from './routes/softwareLicenseRoutes';
+import softwareInstallationRoutes from './routes/softwareInstallationRoutes';
+import softwareLicenseAgreementRoutes from './routes/softwareLicenseAgreementRoutes';
+import licenseAgreementRoutes from './routes/licenseAgreementRoutes';
+import globalSoftwareLicenseRoutes from './routes/globalSoftwareLicenseRoutes';
+import servicePackRoutes from './routes/servicePackRoutes';
+import softwareSummaryRoutes from './routes/softwareSummaryRoutes';
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -46,7 +54,15 @@ app.use('/api/software-types',          softwareTypeRoutes);
 app.use('/api/software-categories',     softwareCategoryRoutes);
 app.use('/api/software-license-types',  softwareLicenseTypeRoutes);
 app.use('/api/asset-states',            assetStateRoutes);
-app.use('/api/manufacturers',           manufacturerRoutes);
+app.use('/api/manufacturers',                                  manufacturerRoutes);
+app.use('/api/softwares',                                      softwareRoutes);
+app.use('/api/softwares/:softwareId/licenses',                 softwareLicenseRoutes);
+app.use('/api/softwares/:softwareId/installations',            softwareInstallationRoutes);
+app.use('/api/softwares/:softwareId/agreements',               softwareLicenseAgreementRoutes);
+app.use('/api/license-agreements',                             licenseAgreementRoutes);
+app.use('/api/global-software-licenses',                       globalSoftwareLicenseRoutes);
+app.use('/api/service-packs',                                  servicePackRoutes);
+app.use('/api/software-summary',                               softwareSummaryRoutes);
 
 app.use(errorHandler);
 

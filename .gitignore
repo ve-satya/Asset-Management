@@ -47,3 +47,8 @@ backend/public/uploads/
 Thumbs.db
 .vscode/
 .idea/
+package-lock.json
+docs/software-module/er-diagram.md
+docs/software-module/README.md
+docs/software-module/workflow-flowchart.md
+docs/software-module/technical-documentation.md

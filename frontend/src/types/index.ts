@@ -277,6 +277,158 @@ export interface SoftwareLicenseType {
   manufacturer?: { id: number; name: string } | null;
 }
 
+export interface Software {
+  id: number;
+  name: string;
+  version: string | null;
+  softwareTypeId: number;
+  softwareCategoryId: number;
+  manufacturerId: number;
+  licenseTypeId: number | null;
+  description: string | null;
+  images: string[];
+  isSoftwareSuite: boolean;
+  cost: number | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  softwareType?: { id: number; name: string; enableCompliance: boolean };
+  softwareCategory?: { id: number; name: string };
+  manufacturer?: { id: number; name: string };
+  licenseType?: { id: number; name: string } | null;
+  installationsCount?: number;
+  installationsAllowed?: number;
+  licensedInstallations?: number;
+  availableForAllocation?: number;
+  complianceType?: string;
+  purchased?: number;
+  allocated?: number;
+  available?: number;
+  licenses?: SoftwareLicense[];
+  installations?: SoftwareInstallation[];
+  licenseAgreements?: SoftwareLicenseAgreement[];
+}
+
+export interface SoftwareLicense {
+  id: number;
+  softwareId: number;
+  licenseKey: string | null;
+  licenseType: string | null;
+  licenseOption: string | null;
+  purchased: number;
+  installationsAllowed: number;
+  allocated: number;
+  available: number;
+  purchaseCost: number | null;
+  acquiredDate: string | null;
+  expiryDate: string | null;
+  purchasedFor: string | null;
+  allocatedSite: string | null;
+  isCritical: boolean;
+  vendorId: number | null;
+  agreementId: number | null;
+  downgradeRights: Array<{ softwareName: string; licenseKey: string }>;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  software?: { id: number; name: string; manufacturer?: { id: number; name: string } } | null;
+  vendor?: { id: number; name: string } | null;
+  agreement?: { id: number; agreementName: string } | null;
+  expiresInLabel?: string;
+}
+
+export interface SoftwareInstallation {
+  id: number;
+  softwareId: number;
+  computerName: string | null;
+  userName: string | null;
+  version: string | null;
+  licenseId: number | null;
+  installedOn: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  license?: { id: number; licenseKey: string | null; licenseType: string | null } | null;
+}
+
+export interface SoftwareLicenseAgreement {
+  id: number;
+  softwareId: number | null;
+  manufacturerId: number | null;
+  agreementName: string;
+  authorizationNumber: string | null;
+  vendorId: number | null;
+  startDate: string | null;
+  endDate: string | null;
+  documentUrl: string | null;
+  poNumber: string | null;
+  poName: string | null;
+  purchaseDate: string | null;
+  purchaseDescription: string | null;
+  invoiceNumber: string | null;
+  invoiceDate: string | null;
+  totalCost: number | null;
+  terms: string | null;
+  notifyBeforeDays: number | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  manufacturer?: { id: number; name: string } | null;
+  vendor?: { id: number; name: string } | null;
+  software?: { id: number; name: string } | null;
+  licenses?: SoftwareLicense[];
+  status?: string;
+  expiresInDays?: number | null;
+}
+
+export interface ServicePack {
+  id: number;
+  name: string;
+  description: string | null;
+  isInstalled: boolean;
+  softwareId: number | null;
+  manufacturerId: number | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  software?: { id: number; name: string } | null;
+  manufacturer?: { id: number; name: string } | null;
+}
+
+export interface SoftwareSummary {
+  compliance: {
+    underLicensed: number;
+    overLicensed: number;
+    compliant: number;
+    na: number;
+    total: number;
+  };
+  software: {
+    total: number;
+    byType: Array<{ name: string; count: number }>;
+  };
+  licenses: {
+    total: number;
+    unused: number;
+    purchased: number;
+    allocated: number;
+    available: number;
+  };
+  agreements: {
+    total: number;
+    expired: number;
+    expiringIn7Days: number;
+    expiringIn30Days: number;
+  };
+  usage: {
+    frequent: number;
+    occasional: number;
+    rarely: number;
+    never: number;
+    total: number;
+  };
+}
+
 export interface TableColumn<T = Record<string, unknown>> {
   key: string;
   label: string;

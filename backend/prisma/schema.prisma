@@ -74,6 +74,9 @@ model Vendor {
 
   assets Asset[]
 
+  licenseAgreements SoftwareLicenseAgreement[]
+  licenses          SoftwareLicense[]
+
   @@map("vendors")
 }
 
@@ -99,43 +102,48 @@ model ProductTypeField {
 }
 
 model SoftwareType {
-  id               Int      @id @default(autoincrement())
+  id               Int        @id @default(autoincrement())
   name             String
   description      String?
-  enableCompliance Boolean  @default(false) @map("enable_compliance")
-  isActive         Boolean  @default(true) @map("is_active")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  enableCompliance Boolean    @default(false) @map("enable_compliance")
+  isActive         Boolean    @default(true) @map("is_active")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  softwares Software[]
 
   @@map("software_types")
 }
 
 model SoftwareCategory {
-  id          Int      @id @default(autoincrement())
+  id          Int        @id @default(autoincrement())
   name        String
   description String?
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  isActive    Boolean    @default(true) @map("is_active")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  softwares Software[]
 
   @@map("software_categories")
 }
 
 model SoftwareLicenseType {
-  id                   Int      @id @default(autoincrement())
+  id                   Int        @id @default(autoincrement())
   name                 String
-  manufacturerId       Int?     @map("manufacturer_id")
-  trackBy              String?  @map("track_by")
-  installationsAllowed String?  @map("installations_allowed")
-  isPerpetual          Boolean  @default(false) @map("is_perpetual")
-  isFreeLicense        Boolean  @default(false) @map("is_free_license")
-  licenseOption        String?  @map("license_option")
+  manufacturerId       Int?       @map("manufacturer_id")
+  trackBy              String?    @map("track_by")
+  installationsAllowed String?    @map("installations_allowed")
+  isPerpetual          Boolean    @default(false) @map("is_perpetual")
+  isFreeLicense        Boolean    @default(false) @map("is_free_license")
+  licenseOption        String?    @map("license_option")
   description          String?
-  isActive             Boolean  @default(true) @map("is_active")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  isActive             Boolean    @default(true) @map("is_active")
+  createdAt            DateTime   @default(now()) @map("created_at")
+  updatedAt            DateTime   @updatedAt @map("updated_at")
 
   manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
+  softwares    Software[]
 
   @@map("software_license_types")
 }
@@ -165,6 +173,9 @@ model Manufacturer {
 
   products             Product[]
   softwareLicenseTypes SoftwareLicenseType[]
+  softwares            Software[]
+  licenseAgreements    SoftwareLicenseAgreement[]
+  servicePacks         ServicePack[]
 
   @@map("manufacturers")
 }
@@ -248,6 +259,131 @@ model Asset {
   @@map("assets")
 }
 
+model Software {
+  id                 Int      @id @default(autoincrement())
+  name               String   @map("software_name")
+  version            String?
+  softwareTypeId     Int      @map("software_type_id")
+  softwareCategoryId Int      @map("software_category_id")
+  manufacturerId     Int      @map("manufacturer_id")
+  licenseTypeId      Int?     @map("license_type_id")
+  description        String?
+  images             Json     @default("[]")
+  isSoftwareSuite    Boolean  @default(false) @map("is_software_suite")
+  cost               Float?
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  softwareType      SoftwareType               @relation(fields: [softwareTypeId], references: [id])
+  softwareCategory  SoftwareCategory           @relation(fields: [softwareCategoryId], references: [id])
+  manufacturer      Manufacturer               @relation(fields: [manufacturerId], references: [id])
+  licenseType       SoftwareLicenseType?       @relation(fields: [licenseTypeId], references: [id])
+  licenses          SoftwareLicense[]
+  installations     SoftwareInstallation[]
+  licenseAgreements SoftwareLicenseAgreement[]
+  servicePacks      ServicePack[]
+
+  @@map("softwares")
+}
+
+model SoftwareLicense {
+  id                   Int       @id @default(autoincrement())
+  softwareId           Int       @map("software_id")
+  licenseKey           String?   @map("license_key")
+  licenseType          String?   @map("license_type")
+  licenseOption        String?   @map("license_option")
+  purchased            Int       @default(0)
+  installationsAllowed Int       @default(0) @map("installations_allowed")
+  allocated            Int       @default(0)
+  available            Int       @default(0)
+  purchaseCost         Float?    @map("purchase_cost")
+  acquiredDate         DateTime? @map("acquired_date")
+  expiryDate           DateTime? @map("expiry_date")
+  purchasedFor         String?   @map("purchased_for")
+  allocatedSite        String?   @map("allocated_site")
+  isCritical           Boolean   @default(false) @map("is_critical")
+  vendorId             Int?      @map("vendor_id")
+  agreementId          Int?      @map("agreement_id")
+  downgradeRights      Json      @default("[]") @map("downgrade_rights")
+  isActive             Boolean   @default(true) @map("is_active")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  software      Software                  @relation(fields: [softwareId], references: [id])
+  installations SoftwareInstallation[]
+  vendor        Vendor?                   @relation(fields: [vendorId], references: [id])
+  agreement     SoftwareLicenseAgreement? @relation(fields: [agreementId], references: [id])
+
+  @@map("software_licenses")
+}
+
+model SoftwareInstallation {
+  id           Int       @id @default(autoincrement())
+  softwareId   Int       @map("software_id")
+  computerName String?   @map("computer_name")
+  userName     String?   @map("user_name")
+  version      String?
+  licenseId    Int?      @map("license_id")
+  installedOn  DateTime? @map("installed_on")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  software Software          @relation(fields: [softwareId], references: [id])
+  license  SoftwareLicense?  @relation(fields: [licenseId], references: [id])
+
+  @@map("software_installations")
+}
+
+model SoftwareLicenseAgreement {
+  id                  Int       @id @default(autoincrement())
+  softwareId          Int?      @map("software_id")
+  manufacturerId      Int?      @map("manufacturer_id")
+  agreementName       String    @map("agreement_name")
+  authorizationNumber String?   @map("authorization_number")
+  vendorId            Int?      @map("vendor_id")
+  startDate           DateTime? @map("start_date")
+  endDate             DateTime? @map("end_date")
+  documentUrl         String?   @map("document_url")
+  poNumber            String?   @map("po_number")
+  poName              String?   @map("po_name")
+  purchaseDate        DateTime? @map("purchase_date")
+  purchaseDescription String?   @map("purchase_description")
+  invoiceNumber       String?   @map("invoice_number")
+  invoiceDate         DateTime? @map("invoice_date")
+  totalCost           Float?    @map("total_cost")
+  terms               String?
+  notifyBeforeDays    Int?      @map("notify_before_days")
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  software     Software?      @relation(fields: [softwareId], references: [id])
+  manufacturer Manufacturer?  @relation(fields: [manufacturerId], references: [id])
+  vendor       Vendor?        @relation(fields: [vendorId], references: [id])
+  licenses     SoftwareLicense[]
+
+  @@map("software_license_agreements")
+}
+
+model ServicePack {
+  id             Int      @id @default(autoincrement())
+  name           String
+  description    String?
+  isInstalled    Boolean  @default(false) @map("is_installed")
+  softwareId     Int?     @map("software_id")
+  manufacturerId Int?     @map("manufacturer_id")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  software     Software?     @relation(fields: [softwareId], references: [id])
+  manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
+
+  @@map("service_packs")
+}
+
 model AssetRelationship {
   id               Int      @id @default(autoincrement())
   parentAssetId    Int      @map("parent_asset_id")
@@ -309,3 +445,4 @@ model AssetDynamicFieldValue {
   @@unique([assetId, productTypeFieldId])
   @@map("asset_dynamic_field_values")
 }
+
