@@ -13,10 +13,23 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { to: '/dashboard',   label: 'Dashboard',    icon: LayoutDashboard },
-  { to: '/assets',      label: 'Master Assets', icon: Settings2       },
-  { to: '/assets/list', label: 'Assets',        icon: Package         },
-  { to: '/software/list', label: 'Software',    icon: Monitor         },
+
+  { to: '/dashboard',    label: 'Dashboard',     icon: LayoutDashboard },
+  { to: '/assets',       label: 'Master Assets', icon: Settings2       },
+  { to: '/assets/list',  label: 'Assets',        icon: Package         },
+  {
+    to: '/software',
+    label: 'Software',
+    icon: Monitor,
+    children: [
+      { to: '/software/scanned',           label: 'Scanned Software',   icon: Monitor    },
+      { to: '/software/summary',           label: 'Software Summary',   icon: BarChart2  },
+      { to: '/software/license-agreements',label: 'License Agreements', icon: FileText   },
+      { to: '/software/licenses',          label: 'Software Licenses',  icon: Key        },
+      { to: '/software/service-packs',     label: 'Service Packs',      icon: Cpu        },
+    ],
+  },
+
 ];
 
 interface SidebarProps {
@@ -69,24 +82,83 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         </div>
       </div>
 
-      <nav className="flex-1 py-3 space-y-0.5 px-2">
-        {navItems.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/assets'}
-            className={() =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive(to)
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
-              }`
-            }
-          >
-            <Icon size={18} className="shrink-0" />
-            {!collapsed && <span>{label}</span>}
-          </NavLink>
-        ))}
+      <nav className="flex-1 py-3 space-y-0.5 px-2 overflow-y-auto">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+
+          if (!item.children) {
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/assets'}
+                className={() =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isTopActive(item)
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+                  }`
+                }
+              >
+                <Icon size={18} className="shrink-0" />
+                {!collapsed && <span>{item.label}</span>}
+              </NavLink>
+            );
+          }
+
+          const parentActive = isTopActive(item);
+
+          return (
+            <div key={item.to}>
+              <button
+                onClick={() => { if (!collapsed) setSoftwareOpen((v) => !v); }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  parentActive && collapsed
+                    ? 'bg-blue-600 text-white'
+                    : parentActive
+                    ? 'text-white bg-gray-800'
+                    : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+                }`}
+              >
+                <Icon size={18} className="shrink-0" />
+                {!collapsed && (
+                  <>
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {softwareOpen
+                      ? <ChevronDown size={14} className="shrink-0 opacity-70" />
+                      : <ChevronRight size={14} className="shrink-0 opacity-70" />
+                    }
+                  </>
+                )}
+              </button>
+
+              {!collapsed && softwareOpen && (
+                <div className="ml-4 mt-0.5 space-y-0.5 border-l border-gray-700 pl-2">
+                  {item.children.map((child) => {
+                    const ChildIcon = child.icon;
+                    const active = isSubActive(child.to);
+                    return (
+                      <NavLink
+                        key={child.to}
+                        to={child.to}
+                        className={() =>
+                          `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${
+                            active
+                              ? 'bg-blue-600 text-white'
+                              : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                          }`
+                        }
+                      >
+                        <ChildIcon size={14} className="shrink-0" />
+                        <span>{child.label}</span>
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </nav>
     </aside>
   );

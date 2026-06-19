@@ -259,68 +259,6 @@ model Asset {
   @@map("assets")
 }
 
-model AssetRelationship {
-  id               Int      @id @default(autoincrement())
-  parentAssetId    Int      @map("parent_asset_id")
-  relatedAssetId   Int      @map("related_asset_id")
-  relationshipType String   @map("relationship_type")
-  createdBy        String?  @map("created_by")
-  createdOn        DateTime @default(now()) @map("created_on")
-
-  parentAsset  Asset @relation("ParentAssetRelationship", fields: [parentAssetId], references: [id], onDelete: Cascade)
-  relatedAsset Asset @relation("RelatedAssetRelationship", fields: [relatedAssetId], references: [id], onDelete: Cascade)
-
-  @@index([parentAssetId, relationshipType])
-  @@map("asset_relationships")
-}
-
-model AssetServiceRelationship {
-  id               Int      @id @default(autoincrement())
-  assetId          Int      @map("asset_id")
-  serviceId        Int?     @map("service_id")
-  serviceName      String?  @map("service_name")
-  relationshipType String   @map("relationship_type")
-  createdBy        String?  @map("created_by")
-  createdOn        DateTime @default(now()) @map("created_on")
-
-  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  @@index([assetId, relationshipType])
-  @@map("asset_service_relationships")
-}
-
-model AssetHistory {
-  id         Int      @id @default(autoincrement())
-  assetId    Int      @map("asset_id")
-  actionType String   @map("action_type")
-  changedBy  String?  @map("changed_by")
-  changedOn  DateTime @default(now()) @map("changed_on")
-  fieldName  String?  @map("field_name")
-  oldValue   String?  @map("old_value")
-  newValue   String?  @map("new_value")
-  comments   String?
-
-  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  @@index([assetId, changedOn])
-  @@map("asset_history")
-}
-
-model AssetDynamicFieldValue {
-  id                 Int      @id @default(autoincrement())
-  assetId            Int      @map("asset_id")
-  productTypeFieldId Int      @map("product_type_field_id")
-  value              String?
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
-
-  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  field ProductTypeField @relation(fields: [productTypeFieldId], references: [id])
-
-  @@unique([assetId, productTypeFieldId])
-  @@map("asset_dynamic_field_values")
-}
-
 model Software {
   id                 Int      @id @default(autoincrement())
   name               String   @map("software_name")
@@ -445,3 +383,66 @@ model ServicePack {
 
   @@map("service_packs")
 }
+
+model AssetRelationship {
+  id               Int      @id @default(autoincrement())
+  parentAssetId    Int      @map("parent_asset_id")
+  relatedAssetId   Int      @map("related_asset_id")
+  relationshipType String   @map("relationship_type")
+  createdBy        String?  @map("created_by")
+  createdOn        DateTime @default(now()) @map("created_on")
+
+  parentAsset  Asset @relation("ParentAssetRelationship", fields: [parentAssetId], references: [id], onDelete: Cascade)
+  relatedAsset Asset @relation("RelatedAssetRelationship", fields: [relatedAssetId], references: [id], onDelete: Cascade)
+
+  @@index([parentAssetId, relationshipType])
+  @@map("asset_relationships")
+}
+
+model AssetServiceRelationship {
+  id               Int      @id @default(autoincrement())
+  assetId          Int      @map("asset_id")
+  serviceId        Int?     @map("service_id")
+  serviceName      String?  @map("service_name")
+  relationshipType String   @map("relationship_type")
+  createdBy        String?  @map("created_by")
+  createdOn        DateTime @default(now()) @map("created_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, relationshipType])
+  @@map("asset_service_relationships")
+}
+
+model AssetHistory {
+  id         Int      @id @default(autoincrement())
+  assetId    Int      @map("asset_id")
+  actionType String   @map("action_type")
+  changedBy  String?  @map("changed_by")
+  changedOn  DateTime @default(now()) @map("changed_on")
+  fieldName  String?  @map("field_name")
+  oldValue   String?  @map("old_value")
+  newValue   String?  @map("new_value")
+  comments   String?
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, changedOn])
+  @@map("asset_history")
+}
+
+model AssetDynamicFieldValue {
+  id                 Int      @id @default(autoincrement())
+  assetId            Int      @map("asset_id")
+  productTypeFieldId Int      @map("product_type_field_id")
+  value              String?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  field ProductTypeField @relation(fields: [productTypeFieldId], references: [id])
+
+  @@unique([assetId, productTypeFieldId])
+  @@map("asset_dynamic_field_values")
+}
+
