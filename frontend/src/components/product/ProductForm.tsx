@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
 import { getAllManufacturers } from '../../services/manufacturerService';
 import { createProduct, updateProduct, uploadProductImage, deleteProductImage } from '../../services/productService';
@@ -14,6 +15,12 @@ interface ProductFormProps {
 
 const EMPTY = { name: '', productTypeId: '', manufacturerId: '', partNo: '', cost: '', description: '' };
 const IMG_BASE = '/uploads/products/';
+
+function productImageUrl(filename: string) {
+  const baseURL = axios.defaults.baseURL || '';
+  if (!baseURL) return `${IMG_BASE}${filename}`;
+  return `${String(baseURL).replace(/\/$/, '')}${IMG_BASE}${filename}`;
+}
 
 export default function ProductForm({ record, onSuccess, onCancel, defaultProductTypeId = '' }: ProductFormProps) {
   const [form,         setForm]         = useState(EMPTY);
@@ -165,7 +172,7 @@ export default function ProductForm({ record, onSuccess, onCancel, defaultProduc
           <div className="flex flex-wrap gap-3">
             {savedImages.map((filename) => (
               <div key={filename} className="relative w-20 h-20 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden group">
-                <img src={`${IMG_BASE}${filename}`} alt={filename} className="w-full h-full object-cover" />
+                <img src={productImageUrl(filename)} alt={filename} className="w-full h-full object-cover" />
                 <button type="button" onClick={() => removeSaved(filename)}
                   className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity" title="Remove">
                   <X size={10} />
