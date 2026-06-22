@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlignJustify, ChevronDown, ChevronLeft, ChevronRight,
-  Columns3, Loader2, Pencil, Plus, Search, X,
+  Columns3, Loader2, Pencil, Plus, Search, Trash2, X,
 } from 'lucide-react';
-import { getVendors } from '../../services/vendorService';
+import { deleteVendor, getVendors } from '../../services/vendorService';
 import useDebounce from '../../hooks/useDebounce';
+import ConfirmDialog from '../common/ConfirmDialog';
 import VendorForm from './VendorForm';
 import type { PaginationMeta, Vendor } from '../../types';
 
@@ -34,11 +35,25 @@ const DEFAULT_COL_WIDTHS: Record<string, number> = {
   isActive: 100,
 };
 
-function RowMenu({ row, onEdit }: { row: Vendor; onEdit: (r: Vendor) => void }) {
+const PROTECTED_VENDOR_NAMES = new Set([
+  'ABC Vendor',
+  'DS Vendor',
+  'Sam Vendor',
+  'AV Vendor',
+  'Ubiquiti',
+  'Dell',
+]);
+
+function isProtectedVendor(row: Vendor) {
+  return PROTECTED_VENDOR_NAMES.has(row.name);
+}
+
+function RowMenu({ row, onEdit, onDelete }: { row: Vendor; onEdit: (r: Vendor) => void; onDelete: (r: Vendor) => void }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const isProtected = isProtectedVendor(row);
 
   useEffect(() => {
     if (!open) return;
@@ -89,6 +104,17 @@ function RowMenu({ row, onEdit }: { row: Vendor; onEdit: (r: Vendor) => void }) 
             className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <Pencil size={13} className="text-gray-400" /> Edit
+          </button>
+          <button
+            onClick={() => { if (!isProtected) { onDelete(row); setOpen(false); } }}
+            disabled={isProtected}
+            className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm ${
+              isProtected
+                ? 'cursor-not-allowed text-gray-300 dark:text-gray-600'
+                : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+            }`}
+          >
+            <Trash2 size={13} /> Delete
           </button>
         </div>,
         document.body
@@ -305,6 +331,8 @@ export default function VendorTable() {
   const [statusFilter, setStatusFilter] = useState('true');
   const [formOpen, setFormOpen] = useState(false);
   const [editRecord, setEditRecord] = useState<Vendor | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Vendor | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [colWidths, setColWidths] = useState<Record<string, number>>(() => {
     try {
@@ -372,6 +400,20 @@ export default function VendorTable() {
       return <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${row.isActive ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{row.isActive ? 'Yes' : 'No'}</span>;
     }
     return <span>{String(value ?? '-')}</span>;
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteVendor(deleteTarget.id);
+      setDeleteTarget(null);
+      fetchData();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -471,7 +513,11 @@ export default function VendorTable() {
             ) : data.map((row) => (
               <tr key={row.id} className="group transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50">
                 <td className="w-8 px-2 py-2.5">
-                  <RowMenu row={row} onEdit={(record) => { setEditRecord(record); setFormOpen(true); }} />
+                  <RowMenu
+                    row={row}
+                    onEdit={(record) => { setEditRecord(record); setFormOpen(true); }}
+                    onDelete={(record) => setDeleteTarget(record)}
+                  />
                 </td>
                 {visibleDefs.map((col) => (
                   <td key={col.key} className="px-3 py-2.5 text-gray-700 dark:text-gray-300">
@@ -513,6 +559,15 @@ export default function VendorTable() {
         </div>,
         document.body
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        loading={deleting}
+        title="Delete Vendor"
+        message={`Are you sure you want to deactivate "${deleteTarget?.name}"?`}
+      />
     </div>
   );
 }

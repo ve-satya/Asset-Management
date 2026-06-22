@@ -4,6 +4,15 @@ import { validationResult } from 'express-validator';
 
 const prisma = new PrismaClient();
 
+const PROTECTED_VENDOR_NAMES = new Set([
+  'ABC Vendor',
+  'DS Vendor',
+  'Sam Vendor',
+  'AV Vendor',
+  'Ubiquiti',
+  'Dell',
+]);
+
 export async function getVendors(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const {
@@ -93,7 +102,14 @@ export async function updateVendor(req: Request, res: Response, next: NextFuncti
 
 export async function deleteVendor(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await prisma.vendor.update({ where: { id: parseInt(String(req.params.id), 10) }, data: { isActive: false } });
+    const id = parseInt(String(req.params.id), 10);
+    const existing = await prisma.vendor.findUnique({ where: { id }, select: { name: true } });
+    if (!existing) { res.status(404).json({ error: 'Vendor not found.' }); return; }
+    if (PROTECTED_VENDOR_NAMES.has(existing.name)) {
+      res.status(400).json({ error: 'This default Vendor cannot be deleted.' });
+      return;
+    }
+    await prisma.vendor.update({ where: { id }, data: { isActive: false } });
     res.json({ message: 'Vendor deactivated successfully.' });
   } catch (err) { next(err); }
 }
