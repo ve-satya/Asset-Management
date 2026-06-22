@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { getVendors } from '../../services/vendorService';
 import useDebounce from '../../hooks/useDebounce';
-import Modal from '../common/Modal';
 import VendorForm from './VendorForm';
 import type { PaginationMeta, Vendor } from '../../types';
 
@@ -485,13 +484,35 @@ export default function VendorTable() {
         </table>
       </div>
 
-      <Modal open={formOpen} onClose={() => { setFormOpen(false); setEditRecord(null); }} title={editRecord ? 'Edit Vendor' : 'Add Vendor'}>
-        <VendorForm
-          record={editRecord}
-          onSuccess={() => { setFormOpen(false); setEditRecord(null); fetchData(); }}
-          onCancel={() => { setFormOpen(false); setEditRecord(null); }}
-        />
-      </Modal>
+      {formOpen && createPortal(
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setFormOpen(false); setEditRecord(null); }} aria-hidden="true" />
+          <div
+            className="relative z-10 flex h-full w-full max-w-3xl flex-col border-l border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900"
+            role="dialog"
+            aria-modal="true"
+            aria-label={editRecord ? 'Edit Vendor' : 'Add Vendor'}
+          >
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+              <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">{editRecord ? 'Edit Vendor' : 'Add Vendor'}</h2>
+              <button
+                onClick={() => { setFormOpen(false); setEditRecord(null); }}
+                className="p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto scrollbar-thin">
+              <VendorForm
+                record={editRecord}
+                onSuccess={() => { setFormOpen(false); setEditRecord(null); fetchData(); }}
+                onCancel={() => { setFormOpen(false); setEditRecord(null); }}
+              />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

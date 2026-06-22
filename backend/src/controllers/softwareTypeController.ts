@@ -4,6 +4,15 @@ import { validationResult } from 'express-validator';
 
 const prisma = new PrismaClient();
 
+const PROTECTED_SOFTWARE_TYPE_NAMES = new Set([
+  'Managed',
+  'Freeware',
+  'Excluded',
+  'Prohibited',
+  'Shareware',
+  'UnIdentified',
+]);
+
 export async function getSoftwareTypes(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const {
@@ -79,7 +88,14 @@ export async function updateSoftwareType(req: Request, res: Response, next: Next
 
 export async function deleteSoftwareType(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await prisma.softwareType.update({ where: { id: parseInt(String(req.params.id), 10) }, data: { isActive: false } });
+    const id = parseInt(String(req.params.id), 10);
+    const existing = await prisma.softwareType.findUnique({ where: { id }, select: { name: true } });
+    if (!existing) { res.status(404).json({ error: 'Software Type not found.' }); return; }
+    if (PROTECTED_SOFTWARE_TYPE_NAMES.has(existing.name)) {
+      res.status(400).json({ error: 'This default Software Type cannot be deleted.' });
+      return;
+    }
+    await prisma.softwareType.update({ where: { id }, data: { isActive: false } });
     res.json({ message: 'Software Type deactivated successfully.' });
   } catch (err) { next(err); }
 }

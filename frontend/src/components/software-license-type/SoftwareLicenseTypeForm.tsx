@@ -21,7 +21,7 @@ interface SoftwareLicenseTypeFormProps {
   onCancel: () => void;
 }
 
-const TRACK_BY_OPTIONS = ['Workstation', 'User', 'CAL', 'Volume', 'Device', 'Site'];
+const TRACK_BY_OPTIONS = ['Workstation', 'User'];
 const INSTALLATIONS_OPTIONS = ['Single', 'Volume', 'Unlimited', 'OEM'];
 
 const EMPTY: SoftwareLicenseTypeFormState = {
