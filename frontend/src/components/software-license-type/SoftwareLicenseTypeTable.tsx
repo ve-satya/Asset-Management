@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlignJustify, ChevronDown, ChevronLeft, ChevronRight,
-  Loader2, Pencil, Plus, Trash2,
+  Columns3, Loader2, Pencil, Plus, Search, Trash2,
 } from 'lucide-react';
 import { deleteSoftwareLicenseType, getSoftwareLicenseTypes } from '../../services/softwareLicenseTypeService';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -10,6 +10,8 @@ import SoftwareLicenseTypeForm from './SoftwareLicenseTypeForm';
 import type { PaginationMeta, SoftwareLicenseType } from '../../types';
 
 const DEFAULT_PAGE_SIZES = [10, 25, 50, 100];
+type LicenseTypeColumnKey = 'name' | 'trackBy' | 'installationsAllowed' | 'isPerpetual' | 'isFreeLicense' | 'licenseOption' | 'manufacturer';
+
 const PROTECTED_LICENSE_TYPE_NAMES = new Set([
   'Free License',
   'Trial License',
@@ -32,15 +34,17 @@ function TextBadge({ value }: { value: boolean }) {
   return <span className={value ? 'text-gray-800 dark:text-gray-200 font-medium' : 'text-red-500 font-medium'}>{value ? 'Yes' : 'No'}</span>;
 }
 
-const COLUMNS = [
-  { key: 'name', label: 'License Type' },
-  { key: 'trackBy', label: 'Track By' },
-  { key: 'installationsAllowed', label: 'Installation Allowed' },
-  { key: 'isPerpetual', label: 'Is Perpetual' },
-  { key: 'isFreeLicense', label: 'Is Free License' },
-  { key: 'licenseOption', label: 'License Option' },
-  { key: 'manufacturer', label: 'Manufacturer' },
+const COLUMNS: { key: LicenseTypeColumnKey; label: string; width: number }[] = [
+  { key: 'name', label: 'License Type', width: 180 },
+  { key: 'trackBy', label: 'Track By', width: 120 },
+  { key: 'installationsAllowed', label: 'Installation Allowed', width: 150 },
+  { key: 'isPerpetual', label: 'Is Perpetual', width: 120 },
+  { key: 'isFreeLicense', label: 'Is Free License', width: 120 },
+  { key: 'licenseOption', label: 'License Option', width: 160 },
+  { key: 'manufacturer', label: 'Manufacturer', width: 180 },
 ];
+const DEFAULT_VISIBLE_COLUMNS: LicenseTypeColumnKey[] = COLUMNS.map((column) => column.key);
+const LS_KEY = 'asset_software_license_type_columns';
 
 function RowMenu({
   row,
@@ -130,6 +134,85 @@ function RowMenu({
   );
 }
 
+function SelectColsDropdown({
+  visible,
+  onApply,
+}: {
+  visible: LicenseTypeColumnKey[];
+  onApply: (columns: LicenseTypeColumnKey[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [draft, setDraft] = useState<LicenseTypeColumnKey[]>(visible);
+  const ref = useRef<HTMLDivElement>(null);
+  const filteredColumns = COLUMNS.filter((column) => column.label.toLowerCase().includes(query.toLowerCase()));
+
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      setDraft(visible);
+      setQuery('');
+    }
+  }, [open, visible]);
+
+  function toggleColumn(key: LicenseTypeColumnKey) {
+    setDraft((prev) => prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]);
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className={`-ml-px inline-flex h-7 w-10 items-center justify-center border border-gray-300 transition dark:border-gray-600 ${open ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100' : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'}`}
+        title="Add/remove columns"
+      >
+        <Columns3 size={16} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-1 w-60 border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
+          <div className="border-b border-gray-100 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+              <input
+                autoFocus
+                type="text"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="h-7 w-full rounded-[3px] border border-gray-300 bg-white pl-8 pr-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
+              />
+            </div>
+          </div>
+          <div className="max-h-64 overflow-y-auto bg-white dark:bg-gray-800">
+            {filteredColumns.map((column) => (
+              <label key={column.key} className="flex h-8 cursor-pointer items-center gap-2.5 border-b border-gray-100 px-3 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700">
+                <input
+                  type="checkbox"
+                  checked={draft.includes(column.key)}
+                  onChange={() => toggleColumn(column.key)}
+                  className="h-3.5 w-3.5 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                />
+                {column.label}
+              </label>
+            ))}
+          </div>
+          <div className="flex items-center justify-end gap-2 border-t border-gray-100 bg-white px-2 py-2 dark:border-gray-700 dark:bg-gray-800">
+            <button type="button" onClick={() => { setDraft(visible); setOpen(false); }} className="h-7 border border-gray-300 bg-white px-3 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
+            <button type="button" onClick={() => { onApply(draft); setOpen(false); }} className="h-7 bg-blue-500 px-3 text-sm font-medium text-white hover:bg-blue-600">Save</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ToolbarPagination({
   pagination,
   onPageChange,
@@ -212,6 +295,21 @@ export default function SoftwareLicenseTypeTable() {
   const [editRecord, setEditRecord] = useState<SoftwareLicenseType | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SoftwareLicenseType | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<LicenseTypeColumnKey[]>(() => {
+    try {
+      const stored = localStorage.getItem(LS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as LicenseTypeColumnKey[];
+        const valid = parsed.filter((key) => COLUMNS.some((column) => column.key === key));
+        if (valid.length) return valid;
+      }
+    } catch {}
+    return DEFAULT_VISIBLE_COLUMNS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(LS_KEY, JSON.stringify(visibleColumns));
+  }, [visibleColumns]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -250,7 +348,10 @@ export default function SoftwareLicenseTypeTable() {
     }
   }
 
-  function renderCell(row: SoftwareLicenseType, key: string) {
+  const visibleColumnDefs = COLUMNS.filter((column) => visibleColumns.includes(column.key));
+  const tableColSpan = visibleColumnDefs.length + 1;
+
+  function renderCell(row: SoftwareLicenseType, key: LicenseTypeColumnKey) {
     if (key === 'name') return <span className="font-medium text-gray-800 dark:text-gray-200">{row.name}</span>;
     if (key === 'trackBy') return row.trackBy ? <span className={['User', 'CAL'].includes(String(row.trackBy)) ? 'text-brand-600 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300'}>{row.trackBy}</span> : '-';
     if (key === 'installationsAllowed') return <span className="text-gray-700 dark:text-gray-300">{row.installationsAllowed || '-'}</span>;
@@ -272,6 +373,7 @@ export default function SoftwareLicenseTypeTable() {
           >
             <Plus size={15} /> New
           </button>
+          <SelectColsDropdown visible={visibleColumns} onApply={setVisibleColumns} />
           <ToolbarPagination
             pagination={pagination}
             onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
@@ -292,36 +394,28 @@ export default function SoftwareLicenseTypeTable() {
         <table className="w-full border-collapse text-sm" style={{ tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: 32 }} />
-            <col style={{ width: 180 }} />
-            <col style={{ width: 120 }} />
-            <col style={{ width: 150 }} />
-            <col style={{ width: 120 }} />
-            <col style={{ width: 120 }} />
-            <col style={{ width: 160 }} />
-            <col style={{ width: 180 }} />
+            {visibleColumnDefs.map((column) => (
+              <col key={column.key} style={{ width: column.width }} />
+            ))}
           </colgroup>
           <thead className="sticky top-0 z-10">
             <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/80">
               <th className="h-8 w-8 px-2 py-1" />
-              <th className="h-8 px-3 py-1.5 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">License Type</th>
-              <th className="h-8 px-3 py-1.5 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Track By</th>
-              <th className="h-8 px-3 py-1.5 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Installation Allowed</th>
-              <th className="h-8 px-3 py-1.5 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Is Perpetual</th>
-              <th className="h-8 px-3 py-1.5 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Is Free License</th>
-              <th className="h-8 px-3 py-1.5 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">License Option</th>
-              <th className="h-8 px-3 py-1.5 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Manufacturer</th>
+              {visibleColumnDefs.map((column) => (
+                <th key={column.key} className="h-8 px-3 py-1.5 text-left text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">{column.label}</th>
+              ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
               <tr>
-                <td colSpan={8} className="py-16 text-center">
+                <td colSpan={tableColSpan} className="py-16 text-center">
                   <Loader2 size={28} className="mx-auto animate-spin text-brand-500" />
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-16 text-center text-gray-400 dark:text-gray-500">
+                <td colSpan={tableColSpan} className="py-16 text-center text-gray-400 dark:text-gray-500">
                   No software license types found.
                 </td>
               </tr>
@@ -334,7 +428,7 @@ export default function SoftwareLicenseTypeTable() {
                     onDelete={(record) => setDeleteTarget(record)}
                   />
                 </td>
-                {COLUMNS.map((col) => (
+                {visibleColumnDefs.map((col) => (
                   <td key={col.key} className="px-3 py-2.5 text-gray-700 dark:text-gray-300">
                     {renderCell(row, col.key)}
                   </td>

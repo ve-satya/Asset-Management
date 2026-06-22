@@ -79,8 +79,8 @@ export default function VendorForm({ record, onSuccess, onCancel }: VendorFormPr
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
-      <div className="px-5 py-4 space-y-4 max-h-[65vh] overflow-y-auto">
+    <form onSubmit={handleSubmit} noValidate className="flex h-full flex-col">
+      <div className="min-h-0 flex-1 px-5 py-4 space-y-4 overflow-y-auto">
         {errors.submit && (
           <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded text-sm text-red-700 dark:text-red-400">
             {errors.submit}
@@ -118,7 +118,8 @@ export default function VendorForm({ record, onSuccess, onCancel }: VendorFormPr
           <div><Label text="Country" /><input name="country" value={form.country} onChange={ch} className={inp(false)} /></div>
         </div>
       </div>
-      <div className="flex justify-end gap-3 px-5 py-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="shrink-0 border-t border-gray-200 bg-white py-3 dark:border-gray-700 dark:bg-gray-900">
+        <div className="mx-auto flex w-fit justify-center gap-4 px-5">
         <button type="button" onClick={onCancel} disabled={saving}
           className="px-5 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition">
           Close
@@ -128,6 +129,7 @@ export default function VendorForm({ record, onSuccess, onCancel }: VendorFormPr
           {saving && <Loader2 size={14} className="animate-spin" />}
           Save
         </button>
+        </div>
       </div>
     </form>
   );
