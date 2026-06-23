@@ -8,6 +8,7 @@ import { validationResult } from 'express-validator';
 const prisma = new PrismaClient();
 
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'softwares');
+const NO_SITE_VALUE = '__no_site__';
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -56,7 +57,7 @@ export async function getSoftwares(req: Request, res: Response, next: NextFuncti
   try {
     const {
       page = '1', pageSize = '10', search = '', sortBy = 'id', sortOrder = 'asc', isActive = 'true',
-      manufacturerId, softwareTypeId,
+      manufacturerId, softwareTypeId, site,
     } = req.query as Record<string, string>;
 
     const pageNum      = Math.max(1, parseInt(page, 10));
@@ -69,6 +70,24 @@ export async function getSoftwares(req: Request, res: Response, next: NextFuncti
       ...(isActive !== 'all' ? { isActive: isActive === 'true' } : {}),
       ...(manufacturerId ? { manufacturerId: parseInt(manufacturerId, 10) } : {}),
       ...(softwareTypeId ? { softwareTypeId: parseInt(softwareTypeId, 10) } : {}),
+      ...(site === NO_SITE_VALUE ? {
+        licenses: {
+          none: {
+            isActive: true,
+            AND: [
+              { allocatedSite: { not: null } },
+              { allocatedSite: { not: '' } },
+            ],
+          },
+        },
+      } : site ? {
+        licenses: {
+          some: {
+            isActive: true,
+            allocatedSite: { contains: site, mode: 'insensitive' as const },
+          },
+        },
+      } : {}),
       ...(search.trim() ? {
         OR: [
           { name:        { contains: search, mode: 'insensitive' as const } },

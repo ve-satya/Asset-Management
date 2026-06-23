@@ -22,6 +22,7 @@ const COMPLIANCE_COLORS: Record<string, string> = {
 };
 
 const PAGE_SIZES = [10, 25, 50, 100];
+const NO_SITE_VALUE = '__no_site__';
 const SITES      = ['Head Office', 'Branch Office', 'Data Center', 'Remote Site'];
 
 interface ColDef { key: string; label: string; sortable: boolean; center?: boolean; }
@@ -177,7 +178,7 @@ export default function ScannedSoftwarePage() {
       axios.get('/api/softwares/all').then((r) => r.data),
     ]).then(([m, t, c, s]) => {
       setManufacturers(Array.isArray(m) ? m : []);
-      setSoftwareTypes(Array.isArray(t) ? t : []);
+      setSoftwareTypes(Array.isArray(t) ? [...t].sort((a, b) => String(a.name).localeCompare(String(b.name))) : []);
       setCategories(Array.isArray(c) ? c : []);
       const allSw: NamedOption[] = Array.isArray(s) ? s : [];
       setSoftwares(allSw);
@@ -198,6 +199,7 @@ export default function ScannedSoftwarePage() {
         search,
         sortBy:    serverSort,
         sortOrder: serverOrder,
+        ...(siteFilter         ? { site: siteFilter }                 : {}),
         ...(manufacturerFilter ? { manufacturerId: manufacturerFilter } : {}),
         ...(softwareFilter     ? { softwareTypeId: softwareFilter }     : {}),
       });
@@ -205,7 +207,7 @@ export default function ScannedSoftwarePage() {
       setPagination(res.pagination);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [pagination.page, pagination.pageSize, search, sortBy, sortOrder, manufacturerFilter, softwareFilter]);
+  }, [pagination.page, pagination.pageSize, search, sortBy, sortOrder, siteFilter, manufacturerFilter, softwareFilter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -270,6 +272,10 @@ export default function ScannedSoftwarePage() {
 
   function applyManufacturerFilter(val: string) {
     setManufacturerFilter(val);
+    setPagination((p) => ({ ...p, page: 1 }));
+  }
+  function applySiteFilter(val: string) {
+    setSiteFilter(val);
     setPagination((p) => ({ ...p, page: 1 }));
   }
   function applySoftwareFilter(val: string) {
@@ -443,10 +449,11 @@ export default function ScannedSoftwarePage() {
 
             <select
               value={siteFilter}
-              onChange={(e) => setSiteFilter(e.target.value)}
+              onChange={(e) => applySiteFilter(e.target.value)}
               className="h-8 pl-2.5 pr-6 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="">All Sites</option>
+              <option value={NO_SITE_VALUE}>Not associated to any site</option>
               {SITES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
 
@@ -465,12 +472,12 @@ export default function ScannedSoftwarePage() {
               className="h-8 pl-2.5 pr-6 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="">--All Software--</option>
-              {softwares.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {softwareTypes.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
 
-            {(manufacturerFilter || softwareFilter) && (
+            {(siteFilter || manufacturerFilter || softwareFilter) && (
               <button
-                onClick={() => { applyManufacturerFilter(''); setSoftwareFilter(''); setPagination((p) => ({ ...p, page: 1 })); }}
+                onClick={() => { setSiteFilter(''); setManufacturerFilter(''); setSoftwareFilter(''); setPagination((p) => ({ ...p, page: 1 })); }}
                 className="flex items-center gap-1 px-2 h-8 text-xs text-red-500 border border-red-200 dark:border-red-700 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition"
               >
                 <X size={10} /> Clear
