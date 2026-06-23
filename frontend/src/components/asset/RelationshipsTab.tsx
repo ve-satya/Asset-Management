@@ -45,11 +45,21 @@ export default function RelationshipsTab({ asset, onAssign }: { asset: Asset; on
   async function saveRelationship(payload: Record<string, unknown>) {
     setSaving(true);
     try {
+      if (payload.relationshipType === 'ConnectedAsset' && Array.isArray(payload.relatedAssetIds)) {
+        let latest: AssetRelationshipsResponse | null = null;
+        for (const relatedAssetId of payload.relatedAssetIds) {
+          latest = await createAssetRelationship(asset.id, { relationshipType: 'ConnectedAsset', relatedAssetId });
+        }
+        if (latest) setRelationships(latest);
+        return true;
+      }
       const updated = await createAssetRelationship(asset.id, payload);
       setRelationships(updated);
       setModalOpen(false);
+      return true;
     } catch (error) {
       console.error(error);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -84,6 +94,7 @@ export default function RelationshipsTab({ asset, onAssign }: { asset: Asset; on
         type={modalType}
         currentAssetId={asset.id}
         assets={assetOptions}
+        excludedAssetIds={relationships.connectedAssets.map((row) => row.relatedAssetId)}
         saving={saving}
         onClose={() => setModalOpen(false)}
         onSave={saveRelationship}

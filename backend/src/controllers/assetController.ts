@@ -415,9 +415,14 @@ async function createAssetRelationship(req: Request, res: Response, next: NextFu
     if (ASSET_RELATIONSHIP_TYPES.has(relationshipType)) {
       const relatedAssetId = parseInt(String(req.body.relatedAssetId || ''), 10);
       if (!relatedAssetId || relatedAssetId === assetId) { res.status(400).json({ error: 'Related asset is required.' }); return; }
-      await prisma.assetRelationship.create({
-        data: { parentAssetId: assetId, relatedAssetId, relationshipType, createdBy: actor },
+      const existing = await prisma.assetRelationship.findFirst({
+        where: { parentAssetId: assetId, relatedAssetId, relationshipType },
       });
+      if (!existing) {
+        await prisma.assetRelationship.create({
+          data: { parentAssetId: assetId, relatedAssetId, relationshipType, createdBy: actor },
+        });
+      }
       await getAssetRelationships(req, res, next);
       return;
     }
