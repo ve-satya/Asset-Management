@@ -1,4 +1,4 @@
-import { Plus, X } from 'lucide-react';
+import { Plus, PlusCircle, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 interface RelationshipCardProps {
@@ -8,9 +8,10 @@ interface RelationshipCardProps {
   actionLabel: 'Connect' | 'Attach';
   children?: ReactNode;
   onAction: () => void;
+  hideFooterAction?: boolean;
 }
 
-export default function RelationshipCard({ title, count, emptyText, actionLabel, children, onAction }: RelationshipCardProps) {
+export default function RelationshipCard({ title, count, emptyText, actionLabel, children, onAction, hideFooterAction }: RelationshipCardProps) {
   return (
     <div className="min-h-[270px] border border-gray-300 bg-white text-[11px] dark:border-gray-700 dark:bg-gray-900">
       <div className="flex h-8 items-center justify-between border-b border-gray-300 bg-gray-50 px-2 dark:border-gray-700 dark:bg-gray-800">
@@ -25,11 +26,13 @@ export default function RelationshipCard({ title, count, emptyText, actionLabel,
         ) : (
           <div className="flex flex-1 items-center justify-center px-4 text-center text-sm font-medium text-gray-900 dark:text-gray-100">{emptyText}</div>
         )}
-        <div className="flex justify-center pb-5">
-          <button type="button" onClick={onAction} className="inline-flex h-7 items-center gap-1 border border-gray-300 bg-white px-3 text-[11px] text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800">
-            <Plus size={13} className="fill-gray-500 text-white" /> {actionLabel}
-          </button>
-        </div>
+        {!hideFooterAction && (
+          <div className="flex justify-center pb-5">
+            <button type="button" onClick={onAction} className="inline-flex h-7 items-center gap-1 border border-gray-300 bg-white px-3 text-[11px] text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800">
+              <PlusCircle size={14} className="text-gray-600 dark:text-gray-300" /> {actionLabel}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

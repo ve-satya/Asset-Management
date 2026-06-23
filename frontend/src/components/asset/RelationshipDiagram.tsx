@@ -80,7 +80,7 @@ export default function RelationshipDiagram({ asset, relationships, onAdd, onAss
           </div>
 
           <div className="absolute inset-x-0 bottom-0 grid grid-cols-1 gap-3 lg:grid-cols-4">
-            <RelationshipCard title="Assets" count={relationships.connectedAssets.length} emptyText="No assets connected yet" actionLabel="Connect" onAction={() => onAdd('ConnectedAsset')}>
+            <RelationshipCard title="Assets" count={relationships.connectedAssets.length} emptyText="No assets connected yet" actionLabel="Connect" onAction={() => onAdd('ConnectedAsset')} hideFooterAction={relationships.connectedAssets.length > 0}>
               {relationships.connectedAssets.map((row) => (
                 <RelationshipRow key={row.id} label={assetLabel(row)} onRemove={() => onRemove(row.id, 'ConnectedAsset')} />
               ))}
