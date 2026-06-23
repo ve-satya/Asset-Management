@@ -399,6 +399,32 @@ export default function SoftwareDetailPage() {
     { id: 'history',       label: 'History'          },
   ];
 
+  const totalInstallations = sw.installationsCount ?? installs.length;
+  const licensedInstallations = sw.licensedInstallations ?? installs.filter((i) => i.licenseId != null).length;
+  const unlicensedInstallations = Math.max(0, totalInstallations - licensedInstallations);
+  const purchasedLicenses = sw.installationsAllowed ?? licenses.reduce((sum, lic) => sum + (lic.installationsAllowed ?? 0), 0);
+  const availableLicenses = sw.availableForAllocation ?? licenses.reduce((sum, lic) => sum + (lic.available ?? 0), 0);
+  const agreements = sw.licenseAgreements ?? [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const inDays = (days: number) => {
+    const date = new Date(today);
+    date.setDate(date.getDate() + days);
+    date.setHours(23, 59, 59, 999);
+    return date;
+  };
+  const expiredAgreements = agreements.filter((agreement) => agreement.endDate && new Date(agreement.endDate) < today).length;
+  const expiringIn7Days = agreements.filter((agreement) => {
+    if (!agreement.endDate) return false;
+    const end = new Date(agreement.endDate);
+    return end >= today && end <= inDays(7);
+  }).length;
+  const expiringIn30Days = agreements.filter((agreement) => {
+    if (!agreement.endDate) return false;
+    const end = new Date(agreement.endDate);
+    return end >= today && end <= inDays(30);
+  }).length;
+
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
@@ -503,6 +529,57 @@ export default function SoftwareDetailPage() {
           {/* ── Software Details tab ─────────────────────────────────────── */}
           {tab === 'details' && (
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="grid grid-cols-1 gap-3 border-b border-gray-200 p-4 dark:border-gray-700 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,1fr)]">
+                <div className="grid grid-cols-3 border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/40">
+                  <div className="flex min-h-[74px] items-center gap-4 border-r border-gray-200 px-8 dark:border-gray-700">
+                    <Monitor size={32} className="text-gray-400" />
+                    <div>
+                      <div className="text-2xl font-semibold leading-6 text-gray-700 dark:text-gray-200">{totalInstallations}</div>
+                      <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Installation(s)</div>
+                    </div>
+                  </div>
+                  <div className="flex min-h-[74px] flex-col items-center justify-center border-r border-gray-200 dark:border-gray-700">
+                    <div className="text-2xl font-semibold leading-6 text-gray-700 dark:text-gray-200">{licensedInstallations}</div>
+                    <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Licensed</div>
+                  </div>
+                  <div className="flex min-h-[74px] flex-col items-center justify-center">
+                    <div className="text-2xl font-semibold leading-6 text-gray-700 dark:text-gray-200">{unlicensedInstallations}</div>
+                    <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Unlicensed</div>
+                  </div>
+                  <div className="col-span-3 grid grid-cols-2 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex min-h-[74px] items-center gap-4 border-r border-gray-200 px-8 dark:border-gray-700">
+                      <Paperclip size={30} className="text-gray-400" />
+                      <div>
+                        <div className="text-2xl font-semibold leading-6 text-gray-700 dark:text-gray-200">{purchasedLicenses}</div>
+                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Purchased License(s)</div>
+                      </div>
+                    </div>
+                    <div className="flex min-h-[74px] flex-col items-center justify-center">
+                      <div className="text-2xl font-semibold leading-6 text-gray-700 dark:text-gray-200">{availableLicenses}</div>
+                      <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Available License(s)</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+                  <h3 className="border-b border-gray-200 pb-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200">License Agreement Expiry</h3>
+                  <div className="space-y-3 pt-3 text-sm text-gray-600 dark:text-gray-300">
+                    <div className="flex items-center gap-4">
+                      <span className="w-10 text-right text-lg font-semibold text-gray-700 dark:text-gray-200">{expiredAgreements}</span>
+                      <span>Expired</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="w-10 text-right text-lg font-semibold text-gray-700 dark:text-gray-200">{expiringIn7Days}</span>
+                      <span>Agreement expires in next 7 days</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="w-10 text-right text-lg font-semibold text-gray-700 dark:text-gray-200">{expiringIn30Days}</span>
+                      <span>Agreement expires in next 30 days</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Fields grid */}
               <div className="p-6">
                 <div className="grid grid-cols-2 gap-x-16 gap-y-4 text-sm">
@@ -519,10 +596,6 @@ export default function SoftwareDetailPage() {
                     <div className="flex gap-2">
                       <span className="w-32 text-right text-gray-500 dark:text-gray-400 shrink-0 text-xs font-medium pt-0.5">Description</span>
                       <span className="text-gray-700 dark:text-gray-300 leading-relaxed">{sw.description || '—'}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="w-32 text-right text-gray-500 dark:text-gray-400 shrink-0 text-xs font-medium pt-0.5">Installation(s)</span>
-                      <span className="text-gray-800 dark:text-gray-200 font-medium">{sw.installationsCount ?? installs.length}</span>
                     </div>
                   </div>
 
