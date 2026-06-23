@@ -10,6 +10,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsDownUp,
+  ChevronsUpDown,
   HardDrive,
   Image as ImageIcon,
   Keyboard,
@@ -153,13 +155,15 @@ function AssetTypeIcon({ name }: { name: string }) {
   return <Icon size={16} className="shrink-0 text-sky-400" />;
 }
 
-function TreeNodeComp({ node, depth, selectedNodeId, onSelect, openNodeIds, query }: {
+function TreeNodeComp({ node, depth, selectedNodeId, onSelect, openNodeIds, query, expandAllState, onToggleAll }: {
   node: TreeNode;
   depth: number;
   selectedNodeId: number;
   onSelect: (node: TreeNode) => void;
   openNodeIds: Set<number>;
   query: string;
+  expandAllState: boolean | null;
+  onToggleAll: () => void;
 }) {
   const hasChildren = node.children.length > 0;
   const [open, setOpen] = useState(() => openNodeIds.has(node.id));
@@ -167,6 +171,9 @@ function TreeNodeComp({ node, depth, selectedNodeId, onSelect, openNodeIds, quer
   const isSelected = selectedNodeId === node.id;
 
   useEffect(() => { if (openNodeIds.has(node.id)) setOpen(true); }, [openNodeIds, node.id]);
+  useEffect(() => {
+    if (expandAllState !== null && hasChildren) setOpen(expandAllState);
+  }, [expandAllState, hasChildren]);
 
   const visibleChildren = node.children.filter((child) => {
     if (!query.trim()) return true;
@@ -196,6 +203,20 @@ function TreeNodeComp({ node, depth, selectedNodeId, onSelect, openNodeIds, quer
         </button>
         {isAllAssets ? <Monitor size={16} className="text-sky-500" /> : <AssetTypeIcon name={node.displayName} />}
         <span className="min-w-0 truncate">{node.displayName}</span>
+        {isAllAssets && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleAll();
+            }}
+            title={expandAllState ? 'Collapse all' : 'Expand all'}
+            aria-label={expandAllState ? 'Collapse all' : 'Expand all'}
+            className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center text-gray-400 hover:text-sky-600 dark:text-gray-500 dark:hover:text-sky-300"
+          >
+            {expandAllState ? <ChevronsDownUp size={14} /> : <ChevronsUpDown size={14} />}
+          </button>
+        )}
       </div>
       {open && hasChildren && visibleChildren.map((child) => (
         <TreeNodeComp
@@ -206,6 +227,8 @@ function TreeNodeComp({ node, depth, selectedNodeId, onSelect, openNodeIds, quer
           onSelect={onSelect}
           openNodeIds={openNodeIds}
           query={query}
+          expandAllState={expandAllState}
+          onToggleAll={onToggleAll}
         />
       ))}
     </div>
@@ -491,6 +514,7 @@ export default function AssetList() {
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
   const [treeSearch, setTreeSearch] = useState('');
+  const [treeExpandAll, setTreeExpandAll] = useState<boolean | null>(null);
   const [rawSearch, setRawSearch] = useState('');
   const [stateFilter, setStateFilter] = useState('');
   const [assetViewFilter, setAssetViewFilter] = useState(() => localStorage.getItem(ASSET_VIEW_LS_KEY) || '');
@@ -712,6 +736,8 @@ export default function AssetList() {
               onSelect={selectNode}
               openNodeIds={openNodeIds}
               query={treeSearch}
+              expandAllState={treeExpandAll}
+              onToggleAll={() => setTreeExpandAll((value) => value === true ? false : true)}
             />
           ))}
         </div>
