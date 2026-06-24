@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Pencil, Trash2, Plus, Loader2, ChevronDown,
@@ -11,6 +12,7 @@ import { getInstallations, createInstallation, deleteInstallation } from '../ser
 import Modal from '../components/common/Modal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import SoftwareInstallationForm from '../components/software/SoftwareInstallationForm';
+import SoftwareFormPage from './SoftwareFormPage';
 import { getLicenses } from '../services/softwareLicenseService';
 import { ToastContainer, useToast } from '../components/common/Toast';
 import type { Software, SoftwareInstallation, SoftwareLicense } from '../types';
@@ -182,6 +184,7 @@ export default function SoftwareDetailPage() {
   // Delete software confirm
   const [deleteSoftwareOpen, setDeleteSoftwareOpen] = useState(false);
   const [deletingSoftware,   setDeletingSoftware]   = useState(false);
+  const [editSoftwareOpen,   setEditSoftwareOpen]   = useState(false);
 
   // File upload
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -440,7 +443,7 @@ export default function SoftwareDetailPage() {
         </button>
 
         <button
-          onClick={() => navigate(`/software/edit/${sw.id}`)}
+          onClick={() => setEditSoftwareOpen(true)}
           className="flex items-center gap-1.5 px-3 h-8 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition"
         >
           <Pencil size={13} /> Edit
@@ -457,7 +460,7 @@ export default function SoftwareDetailPage() {
           {showActions && (
             <div className="absolute left-0 top-full mt-1 z-20 w-48 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg py-1">
               <button
-                onClick={() => { setShowActions(false); navigate(`/software/edit/${sw.id}`); }}
+                onClick={() => { setShowActions(false); setEditSoftwareOpen(true); }}
                 className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
               >
                 <Pencil size={13} /> Edit
@@ -908,6 +911,25 @@ export default function SoftwareDetailPage() {
       </div>
 
       {/* ── Add/Edit installation modal ──────────────────────────────────── */}
+      {editSoftwareOpen && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+          <div
+            className="flex w-full max-w-5xl flex-col rounded-xl bg-white shadow-2xl dark:bg-gray-900"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit Software"
+          >
+            <SoftwareFormPage
+              embedded
+              recordId={String(sw.id)}
+              onCancel={() => setEditSoftwareOpen(false)}
+              onSuccess={() => { setEditSoftwareOpen(false); fetchAll(); showToast('Software saved.'); }}
+            />
+          </div>
+        </div>,
+        document.body
+      )}
+
       <Modal
         open={installForm}
         onClose={() => { setInstallForm(false); setEditInstall(null); }}

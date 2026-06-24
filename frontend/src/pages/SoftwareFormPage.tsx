@@ -80,10 +80,19 @@ function ImageSlot({
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
-export default function SoftwareFormPage() {
+interface SoftwareFormPageProps {
+  recordId?: string;
+  embedded?: boolean;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export default function SoftwareFormPage({ recordId, embedded = false, onSuccess, onCancel }: SoftwareFormPageProps = {}) {
   const navigate     = useNavigate();
-  const { id }       = useParams<{ id: string }>();
+  const params       = useParams<{ id: string }>();
+  const id           = recordId ?? params.id;
   const isEdit       = Boolean(id);
+  const hideEditOnlyFields = embedded && isEdit;
   const dropRef      = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -223,14 +232,16 @@ export default function SoftwareFormPage() {
 
       if (isEdit && id) {
         await updateSoftware(id, payload);
-        navigate(`/software/detail/${id}`);
+        if (embedded) onSuccess?.();
+        else navigate(`/software/detail/${id}`);
       } else {
         const created = await createSoftware(payload);
         /* upload any queued images */
         if (pending.length) {
           await Promise.all(pending.map((p) => uploadSoftwareImage(created.id, p.file)));
         }
-        navigate(`/software/detail/${created.id}`);
+        if (embedded) onSuccess?.();
+        else navigate(`/software/detail/${created.id}`);
       }
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string; errors?: { msg: string }[] } } };
@@ -265,24 +276,24 @@ export default function SoftwareFormPage() {
 
   /* ─────────────────────────────────────────────────────────────────────── */
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
+    <div className={`${embedded ? 'flex flex-col bg-gray-50 dark:bg-gray-950' : 'flex flex-col h-full bg-gray-50 dark:bg-gray-950'}`}>
 
       {/* ── Page header ─────────────────────────────────────────── */}
       <div className="px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shrink-0 flex items-center gap-3">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => { if (embedded) onCancel?.(); else navigate(-1); }}
           className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition"
         >
           <ArrowLeft size={18} />
         </button>
         <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-          {isEdit ? 'Edit Software' : 'New Software'}
+          {isEdit ? `Edit - ${form.name || 'Software'}` : 'New Software'}
         </h1>
       </div>
 
       {/* ── Scrollable form body ─────────────────────────────────── */}
-      <div className="flex-1 overflow-auto py-6 px-4 sm:px-8">
+      <div className={`${embedded ? 'py-5 px-4 sm:px-6' : 'flex-1 overflow-auto py-6 px-4 sm:px-8'}`}>
         <form onSubmit={handleSubmit} noValidate className="max-w-5xl mx-auto">
 
           {/* ── Card ──────────────────────────────────────────────── */}
@@ -301,16 +312,17 @@ export default function SoftwareFormPage() {
 
                 {/* ── Left column ─────────────────────────────────── */}
                 <div className="space-y-4">
-                  {/* Software Name */}
-                  <FieldRow label="Software Name" required error={errors.name}>
-                    <input
-                      name="name"
-                      value={form.name}
-                      onChange={ch}
-                      placeholder="Enter software name"
-                      className={fieldCls(!!errors.name)}
-                    />
-                  </FieldRow>
+                  {!hideEditOnlyFields && (
+                    <FieldRow label="Software Name" required error={errors.name}>
+                      <input
+                        name="name"
+                        value={form.name}
+                        onChange={ch}
+                        placeholder="Enter software name"
+                        className={fieldCls(!!errors.name)}
+                      />
+                    </FieldRow>
+                  )}
 
                   {/* Software Type */}
                   <FieldRow label="Software Type" required error={errors.softwareTypeId}>
@@ -350,16 +362,17 @@ export default function SoftwareFormPage() {
 
                 {/* ── Right column ────────────────────────────────── */}
                 <div className="space-y-4">
-                  {/* Version */}
-                  <FieldRow label="Version">
-                    <input
-                      name="version"
-                      value={form.version}
-                      onChange={ch}
-                      placeholder="Enter version"
-                      className={fieldCls()}
-                    />
-                  </FieldRow>
+                  {!hideEditOnlyFields && (
+                    <FieldRow label="Version">
+                      <input
+                        name="version"
+                        value={form.version}
+                        onChange={ch}
+                        placeholder="Enter version"
+                        className={fieldCls()}
+                      />
+                    </FieldRow>
+                  )}
 
                   {/* Software Category */}
                   <FieldRow label="Software Category" required error={errors.softwareCategoryId}>
@@ -499,7 +512,7 @@ export default function SoftwareFormPage() {
               </button>
               <button
                 type="button"
-                onClick={() => navigate(-1)}
+                onClick={() => { if (embedded) onCancel?.(); else navigate(-1); }}
                 disabled={saving}
                 className="px-8 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition"
               >
