@@ -167,6 +167,7 @@ export default function SoftwareDetailPage() {
   // Core data
   const [sw,       setSw]      = useState<Software | null>(null);
   const [installs, setInstalls] = useState<SoftwareInstallation[]>([]);
+  const [uninstalledInstalls, setUninstalledInstalls] = useState<SoftwareInstallation[]>([]);
   const [licenses, setLicenses] = useState<SoftwareLicense[]>([]);
   const [loading,  setLoading] = useState(true);
 
@@ -217,13 +218,15 @@ export default function SoftwareDetailPage() {
     if (!id) return;
     setLoading(true);
     try {
-      const [swData, inst, lic] = await Promise.all([
+      const [swData, inst, uninstalled, lic] = await Promise.all([
         getSoftware(id),
         getInstallations(id),
+        getInstallations(id, { isActive: 'false' }),
         getLicenses(id),
       ]);
       setSw(swData);
       setInstalls(inst);
+      setUninstalledInstalls(uninstalled);
       setLicenses(lic);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -267,10 +270,10 @@ export default function SoftwareDetailPage() {
     return true;
   }
 
-  const historyBase = histTab === 'uninstalled'
-    ? [] // no uninstall tracking yet
-    : installs.filter((i) => {
-        const matchDate   = (fromDate || toDate || datePreset) ? inDateRange(i.installedOn) : true;
+  const historySource = histTab === 'uninstalled' ? uninstalledInstalls : installs;
+  const historyBase = historySource.filter((i) => {
+        const historyDate = histTab === 'uninstalled' ? i.updatedAt : i.installedOn;
+        const matchDate   = (fromDate || toDate || datePreset) ? inDateRange(historyDate) : true;
         const matchSearch = !histSearch.trim() ||
           (i.computerName ?? '').toLowerCase().includes(histSearch.toLowerCase()) ||
           (i.userName     ?? '').toLowerCase().includes(histSearch.toLowerCase());
@@ -319,7 +322,7 @@ export default function SoftwareDetailPage() {
     setDeletingInst(true);
     try {
       await Promise.all(deleteInstTarget.ids.map((iid) => deleteInstallation(id, iid)));
-      showToast(`${deleteInstTarget.ids.length > 1 ? `${deleteInstTarget.ids.length} installation(s)` : `"${deleteInstTarget.label}"`} removed.`);
+      showToast(`${deleteInstTarget.ids.length > 1 ? `${deleteInstTarget.ids.length} installation(s)` : `"${deleteInstTarget.label}"`} moved to uninstalled history.`);
       setDeleteInstTarget(null);
       setSelectedInst([]);
       fetchAll();
@@ -364,7 +367,7 @@ export default function SoftwareDetailPage() {
   function exportHistoryCSV() {
     const headers = ['Discovered Date', 'Workstation', 'User', 'Department'];
     const rows = historyBase.map((i) => [
-      `"${fmtDate(i.installedOn)}"`,
+      `"${fmtDate(histTab === 'uninstalled' ? i.updatedAt : i.installedOn)}"`,
       `"${(i.computerName ?? '').replace(/"/g, '""')}"`,
       `"${(i.userName ?? '').replace(/"/g, '""')}"`,
       '""',
@@ -458,25 +461,19 @@ export default function SoftwareDetailPage() {
             Actions <ChevronDown size={13} />
           </button>
           {showActions && (
-            <div className="absolute left-0 top-full mt-1 z-20 w-48 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg py-1">
+            <div className="absolute left-0 top-full mt-1 z-20 w-60 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg py-1">
               <button
-                onClick={() => { setShowActions(false); setEditSoftwareOpen(true); }}
+                onClick={() => { setShowActions(false); setEditInstall(null); setInstallForm(true); }}
                 className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                title="Click to add software installation(s) manually"
               >
-                <Pencil size={13} /> Edit
+                <Plus size={13} /> Add Software Installation(s)
               </button>
               <button
-                onClick={() => { exportInstallCSV(); setShowActions(false); }}
+                onClick={() => { setShowActions(false); showToast('E-mail users is not configured yet.', 'error'); }}
                 className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
               >
-                <Download size={13} /> Export
-              </button>
-              <div className="border-t border-gray-100 dark:border-gray-700 my-0.5" />
-              <button
-                onClick={() => { setShowActions(false); setDeleteSoftwareOpen(true); }}
-                className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-              >
-                <Trash2 size={13} /> Delete
+                <Mail size={13} /> E-mail users
               </button>
             </div>
           )}
@@ -895,7 +892,7 @@ export default function SoftwareDetailPage() {
                         <td className="px-3 py-2 w-10">
                           <input type="checkbox" className="rounded border-gray-300 text-blue-600" />
                         </td>
-                        <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{fmtDate(inst.installedOn)}</td>
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-300">{fmtDate(histTab === 'uninstalled' ? inst.updatedAt : inst.installedOn)}</td>
                         <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-200">{inst.computerName || '—'}</td>
                         <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{inst.userName || '—'}</td>
                         <td className="px-3 py-2 text-gray-400 dark:text-gray-500">—</td>
@@ -934,6 +931,7 @@ export default function SoftwareDetailPage() {
         open={installForm}
         onClose={() => { setInstallForm(false); setEditInstall(null); }}
         title={editInstall ? 'Edit Installation' : 'Add Software Installation'}
+        square
       >
         <SoftwareInstallationForm
           softwareId={sw.id}
