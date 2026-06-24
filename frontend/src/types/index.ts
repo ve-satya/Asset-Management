@@ -398,7 +398,7 @@ export interface SoftwareInstallation {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  license?: { id: number; licenseKey: string | null; licenseType: string | null } | null;
+  license?: { id: number; licenseKey: string | null; licenseType: string | null; allocatedSite: string | null } | null;
 }
 
 export interface SoftwareLicenseAgreement {

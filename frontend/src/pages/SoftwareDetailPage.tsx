@@ -34,7 +34,8 @@ function useClickOutside(ref: React.RefObject<HTMLElement | null>, onClose: () =
   }, [ref, onClose]);
 }
 
-const SITES = ['All Sites', 'Head Office', 'Branch Office', 'Data Center', 'Remote Site'];
+const NO_SITE_VALUE = '__no_site__';
+const SITES = ['Head Office', 'Branch Office', 'Data Center', 'Remote Site'];
 const DATE_PRESETS = ['Today', 'Yesterday', 'This week', 'Last week', 'This month', 'Last month', 'This year'];
 const PAGE_SIZES = [10, 25, 50, 100];
 
@@ -234,8 +235,25 @@ export default function SoftwareDetailPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  useEffect(() => {
+    setSelectedInst([]);
+    setInstallPage(1);
+    setHistPage(1);
+  }, [siteFilter]);
+
+  function matchesSelectedSite(site: string | null | undefined): boolean {
+    if (!siteFilter) return true;
+    const normalizedSite = (site ?? '').trim();
+    if (siteFilter === NO_SITE_VALUE) return normalizedSite === '';
+    return normalizedSite.toLowerCase().includes(siteFilter.toLowerCase());
+  }
+
+  const siteFilteredInstalls = installs.filter((i) => matchesSelectedSite(i.license?.allocatedSite));
+  const siteFilteredUninstalledInstalls = uninstalledInstalls.filter((i) => matchesSelectedSite(i.license?.allocatedSite));
+  const siteFilteredLicenses = licenses.filter((lic) => matchesSelectedSite(lic.allocatedSite));
+
   // ── Derived: installations filtered + paginated ────────────────────────────
-  const filteredInstalls = installs.filter((i) => {
+  const filteredInstalls = siteFilteredInstalls.filter((i) => {
     if (!installSearch.trim()) return true;
     const q = installSearch.toLowerCase();
     return (
@@ -270,7 +288,7 @@ export default function SoftwareDetailPage() {
     return true;
   }
 
-  const historySource = histTab === 'uninstalled' ? uninstalledInstalls : installs;
+  const historySource = histTab === 'uninstalled' ? siteFilteredUninstalledInstalls : siteFilteredInstalls;
   const historyBase = historySource.filter((i) => {
         const historyDate = histTab === 'uninstalled' ? i.updatedAt : i.installedOn;
         const matchDate   = (fromDate || toDate || datePreset) ? inDateRange(historyDate) : true;
@@ -405,11 +423,11 @@ export default function SoftwareDetailPage() {
     { id: 'history',       label: 'History'          },
   ];
 
-  const totalInstallations = sw.installationsCount ?? installs.length;
-  const licensedInstallations = sw.licensedInstallations ?? installs.filter((i) => i.licenseId != null).length;
+  const totalInstallations = siteFilteredInstalls.length;
+  const licensedInstallations = siteFilteredInstalls.filter((i) => i.licenseId != null).length;
   const unlicensedInstallations = Math.max(0, totalInstallations - licensedInstallations);
-  const purchasedLicenses = sw.installationsAllowed ?? licenses.reduce((sum, lic) => sum + (lic.installationsAllowed ?? 0), 0);
-  const availableLicenses = sw.availableForAllocation ?? licenses.reduce((sum, lic) => sum + (lic.available ?? 0), 0);
+  const purchasedLicenses = siteFilteredLicenses.reduce((sum, lic) => sum + (lic.installationsAllowed ?? 0), 0);
+  const availableLicenses = siteFilteredLicenses.reduce((sum, lic) => sum + (lic.available ?? 0), 0);
   const agreements = sw.licenseAgreements ?? [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -492,14 +510,16 @@ export default function SoftwareDetailPage() {
             {/* Name */}
             <span className="text-base font-semibold text-gray-900 dark:text-gray-100">{sw.name}</span>
             {/* Site dropdown */}
-            <div className="ml-auto flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-              <span className="text-xs font-medium">Site:</span>
+            <div className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
+              <span className="text-sm">Site:</span>
               <select
                 value={siteFilter}
                 onChange={(e) => setSiteFilter(e.target.value)}
-                className="h-8 pl-2.5 pr-6 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="h-9 w-64 border border-gray-300 bg-white px-3 py-0 text-sm leading-9 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
               >
-                {SITES.map((s) => <option key={s} value={s === 'All Sites' ? '' : s}>{s}</option>)}
+                <option value="">All Sites</option>
+                <option value={NO_SITE_VALUE}>Not associated to any site</option>
+                {SITES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
           </div>
