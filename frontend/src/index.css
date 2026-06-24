@@ -30,4 +30,11 @@
   .dark .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: #4b5563;
   }
+  .asset-date-no-native-icon::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+  }
+  .asset-date-no-native-icon {
+    appearance: textfield;
+  }
 }

@@ -33,6 +33,18 @@ const HISTORY_FIELDS: Array<{ key: string; label: string }> = [
 const OWNERSHIP_FIELDS = new Set(['Asset State', 'User', 'Department', 'Associated Asset', 'Site', 'Location', 'Is Loanable', 'Loan Start', 'Loan End']);
 const ASSET_RELATIONSHIP_TYPES = new Set(['ConnectedAsset', 'AttachedAsset']);
 const SERVICE_RELATIONSHIP_TYPES = new Set(['ConnectedService', 'AttachedComponent']);
+const COST_FACTORS = new Set([
+  'Disposal Cost',
+  'Move/Change Cost',
+  'Others',
+  'Service Cost',
+  'Purchase Cost',
+  'Maintenance Cost',
+  'Operational Cost',
+  'Repair Cost',
+  'Upgrade Cost',
+  'Other',
+]);
 
 function changedBy(req: Request, body?: Record<string, unknown>) {
   const user = (req as Request & { user?: { name?: string; email?: string; username?: string } }).user;
@@ -67,6 +79,17 @@ function readBodyValue(body: Record<string, unknown>, ...keys: string[]) {
     if (body[key] !== undefined) return body[key];
   }
   return undefined;
+}
+
+function optionalDate(value: unknown) {
+  if (value === undefined || value === null || String(value).trim() === '') return null;
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function money(value: unknown) {
+  const amount = parseFloat(String(value ?? '0'));
+  return Number.isFinite(amount) ? amount : 0;
 }
 
 type HistoryAsset = Prisma.AssetGetPayload<{
@@ -462,6 +485,168 @@ async function deleteAssetRelationship(req: Request, res: Response, next: NextFu
   } catch (err) { next(err); }
 }
 
+async function getAssetContracts(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const assetId = parseInt(String(req.params.id), 10);
+    const { page = '1', pageSize = '25', sortBy = 'contractId', sortDirection = 'asc' } = req.query as Record<string, string>;
+    const pageNum = Math.max(1, parseInt(page, 10));
+    const pageSizeNum = Math.min(100, Math.max(1, parseInt(pageSize, 10)));
+    const safeDirection = sortDirection === 'desc' ? 'desc' : 'asc';
+    const SORTABLE: Record<string, string> = {
+      contractId: 'contractId',
+      contractName: 'contractName',
+      maintenanceVendor: 'maintenanceVendor',
+      fromDate: 'fromDate',
+      toDate: 'toDate',
+      createdOn: 'createdOn',
+    };
+    const orderField = SORTABLE[sortBy] || 'contractId';
+    const where: Prisma.AssetContractWhereInput = { assetId };
+
+    const [total, items] = await Promise.all([
+      prisma.assetContract.count({ where }),
+      prisma.assetContract.findMany({
+        where,
+        orderBy: { [orderField]: safeDirection } as Prisma.AssetContractOrderByWithRelationInput,
+        skip: (pageNum - 1) * pageSizeNum,
+        take: pageSizeNum,
+      }),
+    ]);
+
+    res.json({ data: items, pagination: { page: pageNum, pageSize: pageSizeNum, total, totalPages: Math.ceil(total / pageSizeNum) } });
+  } catch (err) { next(err); }
+}
+
+async function createAssetContract(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const assetId = parseInt(String(req.params.id), 10);
+    const contractId = String(req.body.contractId || '').trim();
+    const contractName = String(req.body.contractName || '').trim();
+    if (!contractId || !contractName) { res.status(400).json({ error: 'Contract ID and Contract Name are required.' }); return; }
+    const item = await prisma.assetContract.create({
+      data: {
+        assetId,
+        contractId,
+        contractName,
+        maintenanceVendor: String(req.body.maintenanceVendor || '').trim() || null,
+        fromDate: optionalDate(req.body.fromDate),
+        toDate: optionalDate(req.body.toDate),
+        createdBy: changedBy(req, req.body),
+      },
+    });
+    res.status(201).json(item);
+  } catch (err) { next(err); }
+}
+
+async function deleteAssetContract(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id = parseInt(String(req.params.contractId), 10);
+    await prisma.assetContract.delete({ where: { id } });
+    res.json({ message: 'Contract removed successfully.' });
+  } catch (err) { next(err); }
+}
+
+function depreciationDetails(asset: { purchaseCost: number | null; acquisitionDate: Date | null }) {
+  if (!asset.purchaseCost || !asset.acquisitionDate) return null;
+  const usefulLifeYears = 5;
+  const method = 'Straight Line';
+  const purchaseCost = asset.purchaseCost;
+  const elapsedMs = Date.now() - asset.acquisitionDate.getTime();
+  const elapsedYears = Math.max(0, elapsedMs / (365.25 * 24 * 60 * 60 * 1000));
+  const depreciationAmount = Math.min(purchaseCost, (purchaseCost / usefulLifeYears) * elapsedYears);
+  const currentBookValue = Math.max(0, purchaseCost - depreciationAmount);
+  return {
+    purchaseCost,
+    currentBookValue,
+    depreciationAmount,
+    depreciationPercentage: purchaseCost ? (depreciationAmount / purchaseCost) * 100 : 0,
+    depreciationMethod: method,
+    purchaseDate: asset.acquisitionDate,
+    usefulLifeYears,
+    supportedMethods: ['Straight Line', 'Declining Balance'],
+  };
+}
+
+async function getAssetCosts(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const assetId = parseInt(String(req.params.id), 10);
+    const asset = await prisma.asset.findUnique({
+      where: { id: assetId },
+      select: { id: true, purchaseCost: true, acquisitionDate: true },
+    });
+    if (!asset) { res.status(404).json({ error: 'Asset not found.' }); return; }
+    const items = await prisma.assetCost.findMany({ where: { assetId }, orderBy: { costDate: 'desc' } });
+    const purchaseCostRowsTotal = items.filter((item) => item.costFactor === 'Purchase Cost').reduce((sum, item) => sum + item.costAmount, 0);
+    const operationalCost = items.filter((item) => ['Move/Change Cost', 'Service Cost', 'Others', 'Operational Cost', 'Maintenance Cost', 'Repair Cost', 'Upgrade Cost', 'Other'].includes(item.costFactor)).reduce((sum, item) => sum + item.costAmount, 0);
+    const disposalCost = items.filter((item) => item.costFactor === 'Disposal Cost').reduce((sum, item) => sum + item.costAmount, 0);
+    const purchaseCost = purchaseCostRowsTotal || asset.purchaseCost || 0;
+    const depreciation = depreciationDetails(asset);
+    const currentBookValue = depreciation?.currentBookValue ?? purchaseCost;
+    const tco = purchaseCost + operationalCost + disposalCost;
+
+    res.json({
+      data: items,
+      summary: {
+        purchaseCost,
+        operationalCost,
+        disposalCost,
+        currentBookValue,
+        tco,
+        total: operationalCost + disposalCost,
+        totalCostOfOwnership: tco,
+      },
+      depreciation,
+    });
+  } catch (err) { next(err); }
+}
+
+async function createAssetCost(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const assetId = parseInt(String(req.params.id), 10);
+    const costFactor = String(req.body.costFactor || '').trim();
+    if (!COST_FACTORS.has(costFactor)) { res.status(400).json({ error: 'Valid Cost Factor is required.' }); return; }
+    const amount = money(req.body.costAmount);
+    if (amount < 0) { res.status(400).json({ error: 'Cost Amount must be zero or greater.' }); return; }
+    const item = await prisma.assetCost.create({
+      data: {
+        assetId,
+        costFactor,
+        costAmount: amount,
+        description: String(req.body.description || '').trim() || null,
+        costDate: optionalDate(req.body.costDate),
+        createdBy: changedBy(req, req.body),
+      },
+    });
+    res.status(201).json(item);
+  } catch (err) { next(err); }
+}
+
+async function updateAssetCost(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id = parseInt(String(req.params.costId), 10);
+    const costFactor = String(req.body.costFactor || '').trim();
+    if (!COST_FACTORS.has(costFactor)) { res.status(400).json({ error: 'Valid Cost Factor is required.' }); return; }
+    const item = await prisma.assetCost.update({
+      where: { id },
+      data: {
+        costFactor,
+        costAmount: money(req.body.costAmount),
+        description: String(req.body.description || '').trim() || null,
+        costDate: optionalDate(req.body.costDate),
+      },
+    });
+    res.json(item);
+  } catch (err) { next(err); }
+}
+
+async function deleteAssetCost(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id = parseInt(String(req.params.costId), 10);
+    await prisma.assetCost.delete({ where: { id } });
+    res.json({ message: 'Cost removed successfully.' });
+  } catch (err) { next(err); }
+}
+
 async function recordSimpleHistory(assetId: number, actionType: string, changedByValue: string, fieldName: string, oldValue: string | null, newValue: string | null) {
   await prisma.assetHistory.create({
     data: {
@@ -561,4 +746,4 @@ async function saveDynamicFieldValues(tx: TransactionClient, assetId: number, bo
   }
 }
 
-export { getAssets, getAsset, createAsset, updateAsset, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, deleteAssetRelationship };
+export { getAssets, getAsset, createAsset, updateAsset, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, deleteAssetRelationship, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, createAssetCost, updateAssetCost, deleteAssetCost };

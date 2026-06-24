@@ -1,14 +1,17 @@
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, useRef, ReactNode } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Box, ChevronDown, Cpu, Info, Link, Loader2, Monitor, Pencil, Play, Plus, RefreshCw, Router, Trash2, UserCircle, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, Box, CalendarDays, ChevronDown, Cpu, Info, Link, Loader2, Monitor, Pencil, Play, Plus, RefreshCw, Router, Search, Trash2, UserCircle, UserPlus, X } from 'lucide-react';
 import DynamicAssetDetailsSection from '../components/asset/DynamicAssetDetailsSection';
 import RelationshipsTab from '../components/asset/RelationshipsTab';
-import { getAsset, getAssetHistory, updateAsset } from '../services/assetService';
+import { createAssetCost, deleteAssetCost, getAsset, getAssetContracts, getAssetCosts, getAssetHistory, updateAsset, updateAssetCost } from '../services/assetService';
 import { getAllAssetStates } from '../services/assetStateService';
-import type { Asset, AssetHistoryItem, NamedOption } from '../types';
+import type { Asset, AssetContract, AssetCost, AssetFinancialsResponse, AssetHistoryItem, NamedOption, PaginationMeta } from '../types';
 
 const MAIN_TABS      = [{ key: 'asset-detail', label: 'Asset Details' }, { key: 'relationships', label: 'Relationships' }, { key: 'contracts', label: 'Contracts' }, { key: 'financials', label: 'Financials' }, { key: 'associations', label: 'Associations' }, { key: 'history', label: 'History' }];
 const HISTORY_SUBTABS = [{ key: 'ownership', label: 'Asset Ownership History' }, { key: 'asset', label: 'Asset History' }];
+const FINANCIAL_SUBTABS = [{ key: 'cost', label: 'Cost' }, { key: 'depreciation', label: 'Depreciation Details' }];
+const COST_FACTORS = ['Disposal Cost', 'Move/Change Cost', 'Others', 'Service Cost'];
+const DEPRECIATION_METHODS = ['Declining Balance', 'Double Declining Balance', 'Straight Line', 'Sum Of The Years Digit'];
 const USERS = ['nitin agarwal', 'praveen ranjan', 'rahul sharma', 'priya patel'];
 const DEPARTMENTS = ['IT', 'HR', 'Finance', 'Operations', 'Administration', 'Marketing', 'Sales', 'Facilities'];
 const SITES = ['noida', 'NSEZ', 'nsez', 'delhi', 'mumbai'];
@@ -37,6 +40,30 @@ function fmt(d: string | null | undefined) {
   const date = new Date(d);
   if (Number.isNaN(date.getTime())) return d;
   return date.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+function fmtDate(d: string | null | undefined) {
+  if (!d) return '-';
+  const date = new Date(d);
+  if (Number.isNaN(date.getTime())) return d;
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+function currency(value: number | null | undefined) {
+  return Number(value || 0).toFixed(2);
+}
+function costDateText(value: string | null | undefined) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}.${month}.${day}`;
+}
+function sumCosts(items: AssetCost[]) {
+  return items.reduce((total, item) => total + item.costAmount, 0);
+}
+function isOperationalCostFactor(factor: string) {
+  return ['Move/Change Cost', 'Service Cost', 'Others', 'Operational Cost', 'Maintenance Cost', 'Repair Cost', 'Upgrade Cost', 'Other'].includes(factor);
 }
 function boolText(value: boolean | null | undefined) { return value == null ? null : value ? 'Yes' : 'No'; }
 function inputDateValue(value: string | null | undefined) {
@@ -400,6 +427,662 @@ function AssetDetailContent({ asset, onAssetStateClick }: { asset: Asset; onAsse
   );
 }
 
+type AssetContractSortKey = 'contractId' | 'contractName' | 'maintenanceVendor' | 'fromDate' | 'toDate';
+type SortDirection = 'asc' | 'desc';
+
+function AssetContractsTab({ assetId }: { assetId: number }) {
+  const [items, setItems] = useState<AssetContract[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [sortBy, setSortBy] = useState<AssetContractSortKey>('contractId');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    getAssetContracts(assetId, { page: pagination.page, pageSize: pagination.pageSize, sortBy, sortDirection })
+      .then((response) => {
+        if (!active) return;
+        setItems(response.data);
+        setPagination(response.pagination);
+      })
+      .catch((error) => { console.error(error); if (active) setItems([]); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [assetId, pagination.page, pagination.pageSize, sortBy, sortDirection]);
+
+  function sort(column: AssetContractSortKey) {
+    if (sortBy !== column) {
+      setSortBy(column);
+      setSortDirection('asc');
+    } else {
+      setSortDirection((value) => value === 'asc' ? 'desc' : 'asc');
+    }
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  }
+
+  return (
+    <div className="min-h-[520px] bg-white px-4 py-4 dark:bg-gray-900">
+      <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100">Contracts</h2>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[900px] border-collapse text-[11px]">
+          <thead className="bg-gray-50 uppercase text-gray-900 dark:bg-gray-800 dark:text-gray-100">
+            <tr className="border-y border-gray-200 dark:border-gray-700">
+              <ContractHead label="Contract ID" active={sortBy === 'contractId'} direction={sortDirection} onClick={() => sort('contractId')} />
+              <ContractHead label="Contract Name" active={sortBy === 'contractName'} direction={sortDirection} onClick={() => sort('contractName')} />
+              <ContractHead label="Maintenance Ven..." active={sortBy === 'maintenanceVendor'} direction={sortDirection} onClick={() => sort('maintenanceVendor')} />
+              <ContractHead label="From Date" active={sortBy === 'fromDate'} direction={sortDirection} onClick={() => sort('fromDate')} />
+              <ContractHead label="To Date" active={sortBy === 'toDate'} direction={sortDirection} onClick={() => sort('toDate')} />
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={5} className="h-24 text-center text-gray-500"><Loader2 size={16} className="mr-2 inline animate-spin" />Loading contracts...</td></tr>
+            ) : items.length ? items.map((item) => (
+              <tr key={item.id} className="border-b border-gray-100 dark:border-gray-800">
+                <td className="px-2 py-2">{item.contractId}</td>
+                <td className="px-2 py-2">{item.contractName}</td>
+                <td className="px-2 py-2">{item.maintenanceVendor || '-'}</td>
+                <td className="px-2 py-2">{fmtDate(item.fromDate)}</td>
+                <td className="px-2 py-2">{fmtDate(item.toDate)}</td>
+              </tr>
+            )) : (
+              <tr><td colSpan={5} className="h-20 text-center font-medium text-gray-900 dark:text-gray-100">No data available</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <TablePager pagination={pagination} onChange={setPagination} />
+    </div>
+  );
+}
+
+function ContractHead({ label, active, direction, onClick }: { label: string; active: boolean; direction: SortDirection; onClick: () => void }) {
+  return (
+    <th className="border-r border-gray-200 px-2 py-2 text-left font-normal dark:border-gray-700">
+      <button type="button" onClick={onClick} className={`flex w-full items-center justify-between gap-2 ${active ? 'text-sky-600 dark:text-sky-300' : ''}`}>
+        <span>{label}</span>
+        <span className="text-[10px]">{active ? direction === 'asc' ? '↑' : '↓' : '↕'}</span>
+      </button>
+    </th>
+  );
+}
+
+function TablePager({ pagination, onChange }: { pagination: PaginationMeta; onChange: (next: PaginationMeta) => void }) {
+  const start = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1;
+  const end = Math.min(pagination.page * pagination.pageSize, pagination.total);
+  return (
+    <div className="mt-3 flex items-center justify-end gap-2 text-[11px] text-gray-600 dark:text-gray-400">
+      <select value={pagination.pageSize} onChange={(event) => onChange({ ...pagination, page: 1, pageSize: Number(event.target.value) })} className="h-7 border border-gray-200 bg-white px-2 dark:border-gray-700 dark:bg-gray-900">
+        {[10, 25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
+      </select>
+      <span>{start} - {end}</span>
+      <SmallButton onClick={() => onChange({ ...pagination, page: Math.max(1, pagination.page - 1) })}><ChevronDown size={12} className="rotate-90" /></SmallButton>
+      <SmallButton onClick={() => onChange({ ...pagination, page: Math.min(pagination.totalPages || 1, pagination.page + 1) })}><ChevronDown size={12} className="-rotate-90" /></SmallButton>
+    </div>
+  );
+}
+
+function AssetFinancialsTab({ asset }: { asset: Asset }) {
+  const [subTab, setSubTab] = useState<'cost' | 'depreciation'>('cost');
+  const [data, setData] = useState<AssetFinancialsResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editCost, setEditCost] = useState<AssetCost | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [depreciationModalOpen, setDepreciationModalOpen] = useState(false);
+  const [depreciationConfig, setDepreciationConfig] = useState<DepreciationConfig | null>(null);
+
+  function load() {
+    setLoading(true);
+    getAssetCosts(asset.id).then(setData).catch(console.error).finally(() => setLoading(false));
+  }
+
+  useEffect(() => { load(); }, [asset.id, asset.purchaseCost, asset.acquisitionDate]);
+
+  async function saveCost(values: CostFormValues) {
+    setSaving(true);
+    try {
+      if (editCost) await updateAssetCost(editCost.id, values);
+      else await createAssetCost(asset.id, values);
+      setModalOpen(false);
+      setEditCost(null);
+      load();
+    } catch (error) {
+      console.error(error);
+      throw error;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeCost(id: number) {
+    setSaving(true);
+    try {
+      await deleteAssetCost(id);
+      load();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const costItems = data?.data || [];
+  const purchaseCostItems = costItems.filter((item) => item.costFactor === 'Purchase Cost');
+  const operationalCostItems = costItems.filter((item) => isOperationalCostFactor(item.costFactor));
+  const disposalCostItems = costItems.filter((item) => item.costFactor === 'Disposal Cost');
+  const purchaseCostTotal = purchaseCostItems.length ? sumCosts(purchaseCostItems) : data?.summary.purchaseCost ?? asset.purchaseCost ?? 0;
+  const operationalCostTotal = sumCosts(operationalCostItems);
+  const disposalCostTotal = sumCosts(disposalCostItems);
+  const tcoTotal = purchaseCostTotal + operationalCostTotal + disposalCostTotal;
+  const summary = data?.summary || { purchaseCost: purchaseCostTotal, operationalCost: operationalCostTotal, disposalCost: disposalCostTotal, currentBookValue: asset.purchaseCost || 0, tco: tcoTotal, total: operationalCostTotal + disposalCostTotal, totalCostOfOwnership: tcoTotal };
+  const configuredDepreciation = depreciationConfig || (data?.depreciation ? {
+    purchaseCost: data.depreciation.purchaseCost,
+    acquisitionDate: inputDateValue(data.depreciation.purchaseDate),
+    method: data.depreciation.depreciationMethod,
+    usefulLifeYears: data.depreciation.usefulLifeYears,
+  } : null);
+
+  return (
+    <div className="min-h-[520px] bg-white dark:bg-gray-900">
+      <div className="border-b border-gray-200 px-4 dark:border-gray-700">
+        <nav className="flex gap-4">
+          {FINANCIAL_SUBTABS.map(({ key, label }) => (
+            <button key={key} type="button" onClick={() => setSubTab(key as 'cost' | 'depreciation')} className={`h-12 border-b-2 px-3 text-[12px] font-medium ${subTab === key ? 'border-sky-500 text-sky-600 dark:text-sky-300' : 'border-transparent text-gray-700 dark:text-gray-300'}`}>
+              {label}
+            </button>
+          ))}
+        </nav>
+      </div>
+      {subTab === 'cost' ? (
+        <div className="px-4 py-4">
+          <button type="button" onClick={() => { setEditCost(null); setModalOpen(true); }} className="mb-4 inline-flex h-7 items-center gap-1 border border-gray-300 bg-white px-2 text-[11px] text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+            <Plus size={13} className="text-gray-600 dark:text-gray-300" /> Add Cost
+          </button>
+          <div className="border-y border-gray-200 py-4 dark:border-gray-700">
+            <div className="grid grid-cols-1 gap-y-4 text-[12px] md:grid-cols-2">
+              <CostSummary label="Purchase Cost ($)" value={purchaseCostTotal} />
+              <CostSummary label="Current Book Value ($)" value={summary.currentBookValue} />
+              <CostSummary label="Operational Cost(s) ($)" value={operationalCostTotal} />
+              <CostSummary label="TCO ($)" value={tcoTotal} />
+            </div>
+          </div>
+          {loading ? (
+            <div className="flex h-24 items-center justify-center text-xs text-gray-500"><Loader2 size={16} className="mr-2 animate-spin" />Loading costs...</div>
+          ) : (
+            <>
+              <CostSection title="Purchase Cost" items={purchaseCostItems} total={purchaseCostTotal} onEdit={(item) => { setEditCost(item); setModalOpen(true); }} onDelete={removeCost} saving={saving} fallbackPurchaseCost={purchaseCostItems.length ? undefined : purchaseCostTotal} />
+              <CostSection title="Operational Cost(s)" items={operationalCostItems} total={operationalCostTotal} onEdit={(item) => { setEditCost(item); setModalOpen(true); }} onDelete={removeCost} saving={saving} />
+              <CostSection title="Disposal Cost" items={disposalCostItems} total={disposalCostTotal} onEdit={(item) => { setEditCost(item); setModalOpen(true); }} onDelete={removeCost} saving={saving} />
+            </>
+          )}
+          <div className="ml-auto mt-5 w-72 space-y-3 border-t border-gray-200 pt-3 text-right text-[12px] dark:border-gray-700">
+            <p>Total Cost of Ownership($) : {currency(tcoTotal)}</p>
+          </div>
+        </div>
+      ) : (
+        <DepreciationDetails
+          config={configuredDepreciation}
+          loading={loading}
+          onConfigure={() => setDepreciationModalOpen(true)}
+        />
+      )}
+      <CostModal open={modalOpen} cost={editCost} saving={saving} onClose={() => { setModalOpen(false); setEditCost(null); }} onSave={saveCost} />
+      <ConfigureDepreciationModal
+        open={depreciationModalOpen}
+        asset={asset}
+        initialConfig={configuredDepreciation}
+        onClose={() => setDepreciationModalOpen(false)}
+        onSave={(config) => {
+          setDepreciationConfig(config);
+          setDepreciationModalOpen(false);
+        }}
+      />
+    </div>
+  );
+}
+
+function CostSummary({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="grid grid-cols-[220px_1fr] gap-5">
+      <span className="text-right text-gray-700 dark:text-gray-300">{label}</span>
+      <span className="font-semibold text-gray-900 dark:text-gray-100">{currency(value)}</span>
+    </div>
+  );
+}
+
+function CostSection({ title, items, total, onEdit, onDelete, saving, fallbackPurchaseCost }: { title: string; items: AssetCost[]; total: number; onEdit: (item: AssetCost) => void; onDelete: (id: number) => void; saving: boolean; fallbackPurchaseCost?: number }) {
+  if (!items.length && fallbackPurchaseCost == null) return null;
+
+  return (
+    <section className="mt-4">
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+      <table className="mt-2 w-full border-collapse text-[11px]">
+        <thead className="bg-gray-50 uppercase dark:bg-gray-800">
+          <tr className="border-y border-gray-200 dark:border-gray-700">
+            <th className="w-14 px-2 py-2 text-left font-normal" />
+            <th className="w-14 px-2 py-2 text-left font-normal" />
+            <th className="px-2 py-2 text-left font-normal">Date</th>
+            <th className="px-2 py-2 text-left font-normal">Cost Factor</th>
+            <th className="px-2 py-2 text-left font-normal">Description</th>
+            <th className="px-2 py-2 text-left font-normal">Cost ($)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.length ? items.map((item) => (
+            <tr key={item.id} className="border-b border-gray-100 dark:border-gray-800">
+              <td className="px-2 py-2 text-gray-500">
+                <button type="button" onClick={() => onEdit(item)} title="Edit"><Pencil size={13} /></button>
+              </td>
+              <td className="px-2 py-2 text-gray-500">
+                <button type="button" onClick={() => onDelete(item.id)} disabled={saving} title="Delete" className="hover:text-red-600"><Trash2 size={13} /></button>
+              </td>
+              <td className="px-2 py-2">{costDateText(item.costDate)}</td>
+              <td className="px-2 py-2">{item.costFactor}</td>
+              <td className="px-2 py-2">{item.description || '-'}</td>
+              <td className="px-2 py-2">{currency(item.costAmount)}</td>
+            </tr>
+          )) : (
+            <tr className="border-b border-gray-100 dark:border-gray-800">
+              <td className="px-2 py-2" />
+              <td className="px-2 py-2" />
+              <td className="px-2 py-2">-</td>
+              <td className="px-2 py-2">Purchase Cost</td>
+              <td className="px-2 py-2">-</td>
+              <td className="px-2 py-2">{currency(fallbackPurchaseCost)}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+      <div className="mt-4 text-right text-[12px] text-gray-900 dark:text-gray-100">
+        Total($) : {currency(total)}
+      </div>
+    </section>
+  );
+}
+
+interface CostFormValues {
+  costFactor: string;
+  costAmount: number;
+  description: string;
+  costDate: string;
+}
+
+function CostModal({ open, cost, saving, onClose, onSave }: { open: boolean; cost: AssetCost | null; saving: boolean; onClose: () => void; onSave: (values: CostFormValues) => Promise<void> }) {
+  const [form, setForm] = useState({ costFactor: '', costAmount: '', description: '', costDate: new Date().toISOString().slice(0, 10) });
+  const [error, setError] = useState('');
+  const isEdit = Boolean(cost);
+
+  useEffect(() => {
+    if (!open) return;
+    setError('');
+    setForm({
+      costFactor: cost?.costFactor || '',
+      costAmount: cost?.costAmount != null ? currency(cost.costAmount) : '',
+      description: cost?.description || '',
+      costDate: cost?.costDate ? new Date(cost.costDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+    });
+  }, [open, cost]);
+
+  if (!open) return null;
+
+  async function save() {
+    if (!form.costDate) { setError('Date is required.'); return; }
+    if (!form.costFactor) { setError('Cost Factor is required.'); return; }
+    if (form.costAmount === '' || Number.isNaN(Number(form.costAmount)) || Number(form.costAmount) < 0) { setError('Amount must be zero or greater.'); return; }
+    try {
+      await onSave({ ...form, costAmount: Number(form.costAmount) });
+    } catch (err) {
+      const message = err && typeof err === 'object' && 'response' in err
+        ? String((err as { response?: { data?: { error?: string } } }).response?.data?.error || 'Unable to save cost.')
+        : 'Unable to save cost.';
+      setError(message);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/45" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-[438px] border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex h-11 items-center justify-between border-b border-gray-200 px-3 dark:border-gray-700">
+          <h2 className="text-sm font-medium text-gray-950 dark:text-gray-100">{isEdit ? 'Edit Cost' : 'Add Cost'}</h2>
+          <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-white" aria-label="Close"><X size={16} /></button>
+        </div>
+        <div className="space-y-3 px-6 py-5 text-xs">
+          {error && <p className="ml-[108px] text-red-600">{error}</p>}
+          <CostModalRow label="Date" required>
+            <DateInputWithIcon value={form.costDate} onChange={(value) => setForm((prev) => ({ ...prev, costDate: value }))} />
+          </CostModalRow>
+          <CostModalRow label="Cost Factor" required>
+            <SearchableCostFactorSelect
+              value={form.costFactor}
+              onChange={(value) => setForm((prev) => ({ ...prev, costFactor: value }))}
+            />
+          </CostModalRow>
+          <CostModalRow label="Description">
+            <textarea value={form.description} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} className="min-h-16 w-full resize-none border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+          </CostModalRow>
+          <CostModalRow label="Amount ($)" required>
+            <input type="number" min="0" step="0.01" value={form.costAmount} onChange={(event) => setForm((prev) => ({ ...prev, costAmount: event.target.value }))} className="h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+          </CostModalRow>
+        </div>
+        <div className="flex justify-center gap-3 border-t border-gray-200 px-4 py-3 dark:border-gray-700">
+          <button type="button" onClick={save} disabled={saving} className="h-8 rounded-full bg-sky-600 px-5 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-50">{isEdit ? 'Update' : 'Add Cost'}</button>
+          <button type="button" onClick={onClose} disabled={saving} className="h-8 rounded-full border border-gray-300 bg-white px-5 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CostModalRow({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
+  return (
+    <label className="grid grid-cols-[96px_minmax(0,1fr)] items-start gap-3">
+      <span className="pt-2 text-right text-xs text-gray-700 dark:text-gray-300">{required && <span className="mr-1 text-red-500">*</span>}{label}</span>
+      <span>{children}</span>
+    </label>
+  );
+}
+
+function DateInputWithIcon({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  function openPicker() {
+    const input = inputRef.current;
+    if (!input) return;
+    input.focus();
+    if (typeof input.showPicker === 'function') input.showPicker();
+    else input.click();
+  }
+
+  return (
+    <div className="flex h-8">
+      <input
+        ref={inputRef}
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onClick={openPicker}
+        className="asset-date-no-native-icon h-8 min-w-0 flex-1 border border-gray-300 bg-white px-2 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+      />
+      <button
+        type="button"
+        onClick={openPicker}
+        className="flex h-8 w-8 items-center justify-center border border-l-0 border-gray-300 bg-gray-50 text-gray-500 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+        aria-label="Open calendar"
+      >
+        <CalendarDays size={14} />
+      </button>
+    </div>
+  );
+}
+
+function SearchableCostFactorSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const options = value && !COST_FACTORS.includes(value) ? [value, ...COST_FACTORS] : COST_FACTORS;
+  const filtered = options.filter((option) => option.toLowerCase().includes(search.trim().toLowerCase()));
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex h-8 w-full items-center justify-between border border-gray-300 bg-white px-2 text-left text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+      >
+        <span className={value ? '' : 'text-gray-400'}>{value || '--Select Cost Factor--'}</span>
+        <ChevronDown size={14} className={`text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-40 border border-gray-300 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+          <div className="relative m-1">
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              autoFocus
+              className="h-7 w-full border border-sky-400 bg-white px-2 pr-7 text-xs text-gray-900 outline-none dark:bg-gray-900 dark:text-gray-100"
+            />
+            <Search size={14} className="absolute right-2 top-1.5 text-gray-500" />
+          </div>
+          <div className="max-h-40 overflow-auto py-1">
+            {filtered.length ? filtered.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => {
+                  onChange(option);
+                  setOpen(false);
+                  setSearch('');
+                }}
+                className={`block h-7 w-full px-2 text-left text-xs ${option === value ? 'bg-sky-600 text-white' : 'text-gray-800 hover:bg-sky-100 hover:text-gray-900 dark:text-gray-100 dark:hover:bg-sky-900/40'}`}
+              >
+                {option}
+              </button>
+            )) : <p className="px-2 py-2 text-xs text-gray-500">No options found</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface DepreciationConfig {
+  purchaseCost: number;
+  acquisitionDate: string;
+  method: string;
+  usefulLifeYears: number;
+}
+
+interface DepreciationScheduleRow {
+  period: string;
+  depreciation: number;
+  accumulatedDepreciation: number;
+  bookValue: number;
+  remainingLife: string;
+}
+
+function DepreciationDetails({ config, loading, onConfigure }: { config: DepreciationConfig | null; loading: boolean; onConfigure: () => void }) {
+  const [scheduleType, setScheduleType] = useState<'annually' | 'monthly'>('annually');
+  const [pageSize, setPageSize] = useState(25);
+  const [page, setPage] = useState(1);
+  const rows = config ? buildDepreciationSchedule(config, scheduleType) : [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const start = rows.length ? (safePage - 1) * pageSize + 1 : 0;
+  const end = Math.min(safePage * pageSize, rows.length);
+
+  useEffect(() => { setPage(1); }, [scheduleType, pageSize, config?.purchaseCost, config?.acquisitionDate, config?.method]);
+
+  if (loading) return <div className="flex h-40 items-center justify-center text-xs text-gray-500"><Loader2 size={16} className="mr-2 animate-spin" />Loading depreciation details...</div>;
+
+  return (
+    <div className="min-h-[520px] px-4 py-4">
+      <button type="button" onClick={onConfigure} className="inline-flex h-7 items-center gap-1 border border-gray-300 bg-white px-2 text-[11px] text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+        <Plus size={13} className="text-gray-600 dark:text-gray-300" /> Configure Depreciation
+      </button>
+      <div className="mt-5 flex flex-wrap items-center gap-2 text-[12px]">
+        <span className="text-gray-900 dark:text-gray-100">Depreciation Schedule :</span>
+        <div className="inline-flex overflow-hidden rounded-full border border-gray-300 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
+          <button type="button" onClick={() => setScheduleType('annually')} className={`h-6 px-3 text-[11px] font-medium ${scheduleType === 'annually' ? 'bg-sky-500 text-white' : 'text-gray-700 dark:text-gray-300'}`}>ANNUALLY</button>
+          <button type="button" onClick={() => setScheduleType('monthly')} className={`h-6 px-3 text-[11px] font-medium ${scheduleType === 'monthly' ? 'bg-sky-500 text-white' : 'text-gray-700 dark:text-gray-300'}`}>MONTHLY</button>
+        </div>
+        <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} className="ml-1 h-7 border border-gray-300 bg-white px-2 text-[11px] dark:border-gray-700 dark:bg-gray-900">
+          {[10, 25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
+        </select>
+        <span className="border-l border-gray-200 pl-2 text-[11px] text-gray-500 dark:border-gray-700">{start} - {end} of {rows.length}</span>
+        <SmallButton onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronDown size={12} className="rotate-90" /></SmallButton>
+        <SmallButton onClick={() => setPage((value) => Math.min(totalPages, value + 1))}><ChevronDown size={12} className="-rotate-90" /></SmallButton>
+      </div>
+      <table className="mt-3 w-full border-collapse text-[11px]">
+        <thead className="bg-gray-50 uppercase dark:bg-gray-800">
+          <tr className="border-y border-gray-200 dark:border-gray-700">
+            <th className="border-r border-gray-200 px-2 py-2 text-left font-normal dark:border-gray-700">Year(s)</th>
+            <th className="border-r border-gray-200 px-2 py-2 text-left font-normal dark:border-gray-700">Depreciation ($)</th>
+            <th className="border-r border-gray-200 px-2 py-2 text-left font-normal dark:border-gray-700">Accumulated Depreciation ($)</th>
+            <th className="border-r border-gray-200 px-2 py-2 text-left font-normal dark:border-gray-700">Book Value ($)</th>
+            <th className="px-2 py-2 text-left font-normal">Remaining Life</th>
+          </tr>
+        </thead>
+        <tbody>
+          {visibleRows.length ? visibleRows.map((row) => (
+            <tr key={row.period} className="border-b border-gray-100 dark:border-gray-800">
+              <td className="px-2 py-2">{row.period}</td>
+              <td className="px-2 py-2">{currency(row.depreciation)}</td>
+              <td className="px-2 py-2">{currency(row.accumulatedDepreciation)}</td>
+              <td className="px-2 py-2">{currency(row.bookValue)}</td>
+              <td className="px-2 py-2">{row.remainingLife}</td>
+            </tr>
+          )) : (
+            <tr><td colSpan={5} className="h-20 text-center font-medium text-gray-900 dark:text-gray-100">No data available</td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function buildDepreciationSchedule(config: DepreciationConfig, scheduleType: 'annually' | 'monthly'): DepreciationScheduleRow[] {
+  if (!config.purchaseCost || !config.acquisitionDate || !config.method) return [];
+  const periods = scheduleType === 'monthly' ? config.usefulLifeYears * 12 : config.usefulLifeYears;
+  const rows: DepreciationScheduleRow[] = [];
+  const startDate = new Date(`${config.acquisitionDate}T00:00:00`);
+  let bookValue = config.purchaseCost;
+  let accumulated = 0;
+  const sumOfYears = (config.usefulLifeYears * (config.usefulLifeYears + 1)) / 2;
+
+  for (let index = 1; index <= periods; index += 1) {
+    const yearIndex = scheduleType === 'monthly' ? Math.ceil(index / 12) : index;
+    let depreciation = config.purchaseCost / periods;
+    if (config.method === 'Declining Balance') depreciation = bookValue * (0.2 / (scheduleType === 'monthly' ? 12 : 1));
+    if (config.method === 'Double Declining Balance') depreciation = bookValue * ((2 / config.usefulLifeYears) / (scheduleType === 'monthly' ? 12 : 1));
+    if (config.method === 'Sum Of The Years Digit') {
+      const annual = config.purchaseCost * ((config.usefulLifeYears - yearIndex + 1) / sumOfYears);
+      depreciation = scheduleType === 'monthly' ? annual / 12 : annual;
+    }
+    depreciation = Math.min(depreciation, bookValue);
+    accumulated += depreciation;
+    bookValue = Math.max(0, config.purchaseCost - accumulated);
+    const periodDate = new Date(startDate);
+    if (scheduleType === 'monthly') periodDate.setMonth(startDate.getMonth() + index - 1);
+    else periodDate.setFullYear(startDate.getFullYear() + index - 1);
+    rows.push({
+      period: scheduleType === 'monthly' ? periodDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : String(periodDate.getFullYear()),
+      depreciation,
+      accumulatedDepreciation: accumulated,
+      bookValue,
+      remainingLife: scheduleType === 'monthly' ? `${Math.max(0, periods - index)} month(s)` : `${Math.max(0, config.usefulLifeYears - index)} year(s)`,
+    });
+    if (bookValue <= 0) break;
+  }
+  return rows;
+}
+
+function ConfigureDepreciationModal({ open, asset, initialConfig, onClose, onSave }: { open: boolean; asset: Asset; initialConfig: DepreciationConfig | null; onClose: () => void; onSave: (config: DepreciationConfig) => void }) {
+  const [form, setForm] = useState({ purchaseCost: '', acquisitionDate: '', method: '', usefulLifeYears: '5' });
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setError('');
+    setForm({
+      purchaseCost: currency(initialConfig?.purchaseCost ?? asset.purchaseCost ?? 0),
+      acquisitionDate: initialConfig?.acquisitionDate || inputDateValue(asset.acquisitionDate),
+      method: initialConfig?.method || '',
+      usefulLifeYears: String(initialConfig?.usefulLifeYears || 5),
+    });
+  }, [open, asset.purchaseCost, asset.acquisitionDate, initialConfig]);
+
+  if (!open) return null;
+
+  function save() {
+    if (form.purchaseCost === '' || Number.isNaN(Number(form.purchaseCost)) || Number(form.purchaseCost) < 0) { setError('Purchase Cost is required.'); return; }
+    if (!form.acquisitionDate) { setError('Acquisition Date is required.'); return; }
+    if (!form.method) { setError('Depreciation Method is required.'); return; }
+    onSave({
+      purchaseCost: Number(form.purchaseCost),
+      acquisitionDate: form.acquisitionDate,
+      method: form.method,
+      usefulLifeYears: Math.max(1, Number(form.usefulLifeYears) || 5),
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/45" onClick={onClose} />
+      <div className="relative z-10 flex max-h-[82vh] w-full max-w-[580px] flex-col border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex h-11 shrink-0 items-center justify-between border-b border-gray-200 px-3 dark:border-gray-700">
+          <h2 className="text-sm font-medium text-gray-950 dark:text-gray-100">Configure Depreciation</h2>
+          <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-white" aria-label="Close"><X size={16} /></button>
+        </div>
+        <div className="min-h-0 flex-1 space-y-3 overflow-visible px-6 py-4 text-xs">
+          {error && <p className="ml-[178px] text-red-600">{error}</p>}
+          <DepreciationModalRow label="Purchase Cost($)" required>
+            <input type="number" min="0" step="0.01" value={form.purchaseCost} onChange={(event) => setForm((prev) => ({ ...prev, purchaseCost: event.target.value }))} className="h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+          </DepreciationModalRow>
+          <DepreciationModalRow label="Acquisition Date" required>
+            <DateInputWithIcon value={form.acquisitionDate} onChange={(value) => setForm((prev) => ({ ...prev, acquisitionDate: value }))} />
+          </DepreciationModalRow>
+          <DepreciationModalRow label="Configure Depreciation" required>
+            <label className="flex h-8 items-center gap-2 text-xs text-gray-900 dark:text-gray-100">
+              <input type="radio" checked readOnly className="border-gray-300 text-sky-600 focus:ring-sky-500" />
+              For this asset
+            </label>
+          </DepreciationModalRow>
+          <DepreciationModalRow label="Depreciation Method" required>
+            <SearchableOptionSelect options={DEPRECIATION_METHODS} value={form.method} placeholder="--Choose Depreciation Method--" onChange={(value) => setForm((prev) => ({ ...prev, method: value }))} />
+          </DepreciationModalRow>
+        </div>
+        <div className="sticky bottom-0 flex shrink-0 justify-center gap-3 border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+          <button type="button" onClick={save} className="h-8 rounded-full bg-sky-600 px-5 text-xs font-semibold text-white hover:bg-sky-700">Save</button>
+          <button type="button" onClick={onClose} className="h-8 rounded-full border border-gray-300 bg-white px-5 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DepreciationModalRow({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
+  return (
+    <label className="grid grid-cols-[166px_minmax(0,1fr)] items-start gap-3">
+      <span className="pt-2 text-right text-xs text-gray-700 dark:text-gray-300">{required && <span className="mr-1 text-red-500">*</span>}{label}</span>
+      <span>{children}</span>
+    </label>
+  );
+}
+
+function SearchableOptionSelect({ options, value, placeholder, onChange }: { options: string[]; value: string; placeholder: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const selectOptions = value && !options.includes(value) ? [value, ...options] : options;
+  const filtered = selectOptions.filter((option) => option.toLowerCase().includes(search.trim().toLowerCase()));
+
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => setOpen((current) => !current)} className="flex h-8 w-full items-center justify-between border border-gray-300 bg-white px-2 text-left text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+        <span className={value ? '' : 'text-gray-400'}>{value || placeholder}</span>
+        <ChevronDown size={14} className={`text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-40 max-h-44 overflow-hidden border border-gray-300 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+          <div className="relative m-1">
+            <input value={search} onChange={(event) => setSearch(event.target.value)} autoFocus className="h-7 w-full border border-sky-400 bg-white px-2 pr-7 text-xs text-gray-900 outline-none dark:bg-gray-900 dark:text-gray-100" />
+            <Search size={14} className="absolute right-2 top-1.5 text-gray-500" />
+          </div>
+          <div className="max-h-32 overflow-auto py-1">
+            {filtered.length ? filtered.map((option) => (
+              <button key={option} type="button" onClick={() => { onChange(option); setOpen(false); setSearch(''); }} className={`block h-7 w-full px-2 text-left text-xs ${option === value ? 'bg-sky-600 text-white' : 'text-gray-800 hover:bg-sky-100 hover:text-gray-900 dark:text-gray-100 dark:hover:bg-sky-900/40'}`}>
+                {option}
+              </button>
+            )) : <p className="px-2 py-2 text-xs text-gray-500">No options found</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HistoryContent({ asset, refreshKey }: { asset: Asset; refreshKey: string }) {
   const [subTab, setSubTab] = useState<'ownership' | 'asset'>('asset');
   const [collapsedDates, setCollapsedDates] = useState<Record<string, boolean>>({});
@@ -613,8 +1296,8 @@ export default function AssetDetailPage() {
           <div>
             {activeTab === 'asset-detail'  && <AssetDetailContent asset={asset} onAssetStateClick={() => { setAssignMode('state'); setAssignOpen(true); }} />}
             {activeTab === 'relationships' && <RelationshipsTab asset={asset} onAssign={() => { setAssignMode('assign'); setAssignOpen(true); }} />}
-            {activeTab === 'contracts'     && <EmptyCard title="Contracts" />}
-            {activeTab === 'financials'    && <EmptyCard title="Financials" />}
+            {activeTab === 'contracts'     && <AssetContractsTab assetId={asset.id} />}
+            {activeTab === 'financials'    && <AssetFinancialsTab asset={asset} />}
             {activeTab === 'associations'  && <EmptyCard title="Associations" />}
             {activeTab === 'history'       && <HistoryContent asset={asset} refreshKey={refreshKey} />}
           </div>
