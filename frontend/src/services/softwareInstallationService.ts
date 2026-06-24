@@ -3,8 +3,11 @@ import type { SoftwareInstallation } from '../types';
 
 const BASE = (swId: number | string) => `/api/softwares/${swId}/installations`;
 
-export const getInstallations = (swId: number | string): Promise<SoftwareInstallation[]> =>
-  axios.get(BASE(swId)).then((r) => r.data);
+export const getInstallations = (
+  swId: number | string,
+  params?: Record<string, unknown>,
+): Promise<SoftwareInstallation[]> =>
+  axios.get(BASE(swId), { params }).then((r) => r.data);
 
 export const createInstallation = (swId: number | string, data: unknown): Promise<SoftwareInstallation> =>
   axios.post(BASE(swId), data).then((r) => r.data);

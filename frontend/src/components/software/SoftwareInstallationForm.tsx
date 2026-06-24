@@ -54,12 +54,12 @@ export default function SoftwareInstallationForm({ softwareId, record, licenses,
     } finally { setSaving(false); }
   }
 
-  const inp = `w-full px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 focus:ring-brand-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 transition`;
+  const inp = `w-full px-3 py-2 text-sm rounded-none border border-gray-300 dark:border-gray-600 focus:ring-brand-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 transition`;
 
   return (
     <form onSubmit={handleSubmit} noValidate>
       <div className="px-5 py-4 space-y-4">
-        {errors.submit && <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded text-sm text-red-700 dark:text-red-400">{errors.submit}</div>}
+        {errors.submit && <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-none text-sm text-red-700 dark:text-red-400">{errors.submit}</div>}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Computer Name</label>
@@ -90,11 +90,11 @@ export default function SoftwareInstallationForm({ softwareId, record, licenses,
       </div>
       <div className="flex justify-end gap-3 px-5 py-4 border-t border-gray-200 dark:border-gray-700">
         <button type="button" onClick={onCancel} disabled={saving}
-          className="px-5 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition">
+          className="px-5 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-none hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition">
           Cancel
         </button>
         <button type="submit" disabled={saving}
-          className="px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 flex items-center gap-2 transition">
+          className="px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-none disabled:opacity-50 flex items-center gap-2 transition">
           {saving && <Loader2 size={14} className="animate-spin" />}
           Save
         </button>
