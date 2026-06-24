@@ -255,8 +255,43 @@ model Asset {
   parentRelationships AssetRelationship[] @relation("ParentAssetRelationship")
   relatedRelationships AssetRelationship[] @relation("RelatedAssetRelationship")
   serviceRelationships AssetServiceRelationship[]
+  contracts AssetContract[]
+  costs AssetCost[]
 
   @@map("assets")
+}
+
+model AssetContract {
+  id                Int       @id @default(autoincrement())
+  assetId           Int       @map("asset_id")
+  contractId        String    @map("contract_id")
+  contractName      String    @map("contract_name")
+  maintenanceVendor String?   @map("maintenance_vendor")
+  fromDate          DateTime? @map("from_date")
+  toDate            DateTime? @map("to_date")
+  createdOn         DateTime  @default(now()) @map("created_on")
+  createdBy         String?   @map("created_by")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_contracts")
+}
+
+model AssetCost {
+  id          Int      @id @default(autoincrement())
+  assetId     Int      @map("asset_id")
+  costFactor  String   @map("cost_factor")
+  costAmount  Float    @map("cost_amount")
+  description String?
+  costDate    DateTime? @map("cost_date")
+  createdOn   DateTime @default(now()) @map("created_on")
+  createdBy   String?  @map("created_by")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_costs")
 }
 
 model Software {

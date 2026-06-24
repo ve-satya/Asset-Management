@@ -60,6 +60,56 @@ export interface AssetRelationshipsResponse {
   attachedAssets: AssetRelationshipAssetRow[];
 }
 
+export interface AssetContract {
+  id: number;
+  assetId: number;
+  contractId: string;
+  contractName: string;
+  maintenanceVendor: string | null;
+  fromDate: string | null;
+  toDate: string | null;
+  createdOn: string;
+  createdBy: string | null;
+}
+
+export interface AssetCost {
+  id: number;
+  assetId: number;
+  costFactor: string;
+  costAmount: number;
+  description: string | null;
+  costDate: string | null;
+  createdOn: string;
+  createdBy: string | null;
+}
+
+export interface AssetCostSummary {
+  purchaseCost: number;
+  operationalCost: number;
+  disposalCost?: number;
+  currentBookValue: number;
+  tco: number;
+  total: number;
+  totalCostOfOwnership: number;
+}
+
+export interface AssetDepreciationDetails {
+  purchaseCost: number;
+  currentBookValue: number;
+  depreciationAmount: number;
+  depreciationPercentage: number;
+  depreciationMethod: string;
+  purchaseDate: string | null;
+  usefulLifeYears: number;
+  supportedMethods: string[];
+}
+
+export interface AssetFinancialsResponse {
+  data: AssetCost[];
+  summary: AssetCostSummary;
+  depreciation: AssetDepreciationDetails | null;
+}
+
 export interface NamedOption {
   id: number;
   name: string;
