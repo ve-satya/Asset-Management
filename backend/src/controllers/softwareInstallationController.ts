@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 
 const prisma = new PrismaClient();
 
-const LICENSE_SELECT = { select: { id: true, licenseKey: true, licenseType: true } };
+const LICENSE_SELECT = { select: { id: true, licenseKey: true, licenseType: true, allocatedSite: true } };
 
 export async function getInstallations(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
