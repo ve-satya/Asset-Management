@@ -71,17 +71,6 @@ export default function Sidebar({ collapsed }: SidebarProps) {
         collapsed ? 'w-16' : 'w-56'
       } shrink-0 h-full`}
     >
-      <div className="flex items-center justify-center h-14 border-b border-gray-800 px-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-sm">A</span>
-          </div>
-          {!collapsed && (
-            <span className="text-sm font-semibold text-white truncate">AssetManager</span>
-          )}
-        </div>
-      </div>
-
       <nav className="flex-1 py-3 space-y-0.5 px-2 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -95,8 +84,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 className={() =>
                   `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     isTopActive(item)
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+                      ? 'bg-sky-50 text-sky-600 dark:bg-sky-900/20 dark:text-sky-300'
+                      : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/50 dark:hover:text-gray-100'
                   }`
                 }
               >
@@ -114,10 +103,10 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 onClick={() => { if (!collapsed) setSoftwareOpen((v) => !v); }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   parentActive && collapsed
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-sky-50 text-sky-600 dark:bg-sky-900/20 dark:text-sky-300'
                     : parentActive
-                    ? 'text-white bg-gray-800'
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-gray-100'
+                    ? 'bg-sky-50 text-sky-600 dark:bg-sky-900/20 dark:text-sky-300'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/50 dark:hover:text-gray-100'
                 }`}
               >
                 <Icon size={18} className="shrink-0" />
@@ -133,7 +122,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
               </button>
 
               {!collapsed && softwareOpen && (
-                <div className="ml-4 mt-0.5 space-y-0.5 border-l border-gray-700 pl-2">
+                <div className="ml-4 mt-0.5 space-y-0.5 border-l border-gray-200 pl-2 dark:border-gray-700">
                   {item.children.map((child) => {
                     const ChildIcon = child.icon;
                     const active = isSubActive(child.to);
@@ -144,8 +133,8 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                         className={() =>
                           `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${
                             active
-                              ? 'bg-blue-600 text-white'
-                              : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                              ? 'bg-sky-50 text-sky-600 dark:bg-sky-900/20 dark:text-sky-300'
+                              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/50 dark:hover:text-gray-200'
                           }`
                         }
                       >
