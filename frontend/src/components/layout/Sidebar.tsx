@@ -15,7 +15,7 @@ interface NavItem {
 const navItems: NavItem[] = [
 
   { to: '/dashboard',    label: 'Dashboard',     icon: LayoutDashboard },
-  { to: '/assets',       label: 'Master Assets', icon: Settings2       },
+  { to: '/assets',       label: 'Asset Management', icon: Settings2       },
   { to: '/assets/list',  label: 'Assets',        icon: Package         },
   {
     to: '/software',
