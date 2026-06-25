@@ -4,6 +4,30 @@ import { validationResult } from 'express-validator';
 
 const prisma = new PrismaClient();
 
+type AssetListQuery = {
+  where: Prisma.AssetWhereInput;
+  orderBy: Prisma.AssetOrderByWithRelationInput;
+};
+
+const EXPORT_COLUMNS = [
+  { key: 'name', label: 'Asset Name' },
+  { key: 'productType', label: 'Product Type' },
+  { key: 'product', label: 'Product' },
+  { key: 'primaryIpAddress', label: 'Primary IP Address' },
+  { key: 'assetState', label: 'Asset State' },
+  { key: 'barcode', label: 'Barcode' },
+  { key: 'user', label: 'User' },
+  { key: 'department', label: 'Department' },
+  { key: 'associatedToAssets', label: 'Associated To Assets' },
+  { key: 'site', label: 'Site' },
+  { key: 'purchaseCost', label: 'Purchase Cost' },
+  { key: 'vendor', label: 'Vendor' },
+  { key: 'loanEnd', label: 'Loan End' },
+  { key: 'id', label: 'ID' },
+] as const;
+
+type ExportColumnKey = typeof EXPORT_COLUMNS[number]['key'];
+
 const HISTORY_FIELDS: Array<{ key: string; label: string }> = [
   { key: 'name', label: 'Asset Name' },
   { key: 'assetTag', label: 'Asset Tag' },
@@ -157,70 +181,333 @@ const historyInclude = {
   },
 } satisfies Prisma.AssetInclude;
 
+function buildAssetListQuery(query: Record<string, string>): AssetListQuery {
+  const {
+    search = '', sortBy = 'id', sortOrder = 'asc', sortDirection,
+    productTypeId, productId, assetStateId, assetState, isActive = 'true', assetCategory, product, assetView, filterType,
+  } = query;
+  const viewFilter = assetView || filterType;
+  const requestedSortOrder = sortDirection || sortOrder;
+  const safeSortOrder: Prisma.SortOrder = requestedSortOrder === 'desc' ? 'desc' : 'asc';
+  const SORTABLE: Record<string, Prisma.AssetOrderByWithRelationInput> = {
+    id: { id: safeSortOrder },
+    name: { name: safeSortOrder },
+    product: { product: safeSortOrder },
+    productType: { productType: { displayName: safeSortOrder } },
+    assetState: { assetState: safeSortOrder },
+    barcode: { barcode: safeSortOrder },
+    user: { user: safeSortOrder },
+    department: { department: safeSortOrder },
+    associatedToAssets: { associatedToAssets: safeSortOrder },
+    site: { site: safeSortOrder },
+    purchaseCost: { purchaseCost: safeSortOrder },
+    vendor: { vendor: safeSortOrder },
+    location: { location: safeSortOrder },
+    loanEnd: { loanEnd: safeSortOrder },
+    createdAt: { createdAt: safeSortOrder },
+  };
+
+  const where: Prisma.AssetWhereInput = {
+    ...(isActive !== 'all' ? { isActive: isActive === 'true' } : {}),
+    ...(productTypeId ? { productTypeId: parseInt(productTypeId, 10) } : {}),
+    ...(productId ? { productId: parseInt(productId, 10) } : {}),
+    ...(assetStateId ? { assetStateId: parseInt(assetStateId, 10) } : {}),
+    ...(assetState ? { assetState } : {}),
+    ...(product ? { product } : {}),
+    ...(assetCategory ? { productType: { assetCategory } } : {}),
+    ...(viewFilter === 'disposed' ? { assetState: 'Disposed' } : {}),
+    ...(viewFilter === 'loaned' ? { isLoanable: true } : {}),
+    ...(search.trim() ? {
+      OR: [
+        { name:        { contains: search, mode: 'insensitive' } },
+        { product:     { contains: search, mode: 'insensitive' } },
+        { user:        { contains: search, mode: 'insensitive' } },
+        { department:  { contains: search, mode: 'insensitive' } },
+        { assetState:  { contains: search, mode: 'insensitive' } },
+        { location:    { contains: search, mode: 'insensitive' } },
+        { vendor:      { contains: search, mode: 'insensitive' } },
+        { assetTag:    { contains: search, mode: 'insensitive' } },
+      ],
+    } : {}),
+  };
+  if (viewFilter === 'unassigned') {
+    where.AND = [{ OR: [{ user: null }, { user: '' }] }];
+  }
+
+  return { where, orderBy: SORTABLE[sortBy] ?? { id: safeSortOrder } };
+}
+
+type ExportAsset = Prisma.AssetGetPayload<{ include: { productType: { select: { displayName: true; id: true } } } }>;
+
+function formatDateTime(date = new Date()) {
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date);
+}
+
+function filenameStamp(date = new Date()) {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}`;
+}
+
+function slug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'assets';
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeXml(value: unknown) {
+  return escapeHtml(value).replace(/\r?\n/g, '&#10;');
+}
+
+function formatDateValue(value: Date | string | null) {
+  if (!value) return '-';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+}
+
+function cellValue(asset: ExportAsset, key: ExportColumnKey) {
+  if (key === 'productType') return asset.productType?.displayName || '-';
+  if (key === 'primaryIpAddress') return '-';
+  if (key === 'purchaseCost') return asset.purchaseCost != null ? `$${asset.purchaseCost.toFixed(2)}` : '-';
+  if (key === 'loanEnd') return formatDateValue(asset.loanEnd);
+  const value = asset[key as keyof ExportAsset];
+  return value === null || value === undefined || value === '' ? '-' : String(value);
+}
+
+function resolveExportColumns(rawColumns?: string) {
+  const allowed = new Set(EXPORT_COLUMNS.map((column) => column.key));
+  const requested = String(rawColumns || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item): item is ExportColumnKey => allowed.has(item as ExportColumnKey));
+  const keys = requested.length ? requested : EXPORT_COLUMNS.map((column) => column.key);
+  for (const column of EXPORT_COLUMNS) {
+    if (!keys.includes(column.key)) keys.push(column.key);
+  }
+  return keys.map((key) => EXPORT_COLUMNS.find((column) => column.key === key)!);
+}
+
+function buildHtmlReport(title: string, assets: ExportAsset[], columns: ReturnType<typeof resolveExportColumns>, now = new Date()) {
+  const rows = assets.map((asset, index) => `
+    <tr class="${index % 2 ? 'odd' : 'even'}">
+      ${columns.map((column) => `<td>${escapeHtml(cellValue(asset, column.key))}</td>`).join('')}
+    </tr>
+  `).join('');
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 32px; font-size: 11px; }
+    .brand { display: inline-block; background: #4b5563; color: #fff; font-size: 18px; font-weight: 700; padding: 10px 12px; }
+    .brand span { color: #7ed321; }
+    .corp { float: right; font-size: 12px; font-weight: 700; margin-top: 8px; }
+    .rule { clear: both; border-top: 1px solid #5d8ee6; margin: 14px 0 16px; }
+    .meta { line-height: 1.6; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 40px; }
+    th { background: #cfd8e6; border-right: 2px solid #fff; border-bottom: 1px solid #6b7280; color: #000; padding: 4px 3px; text-align: left; font-weight: 700; }
+    td { border-right: 2px solid #fff; padding: 3px; overflow-wrap: anywhere; }
+    tr.even td { background: #f3f3f3; }
+    tr.odd td { background: #e7e7e7; }
+  </style>
+</head>
+<body>
+  <div class="brand">ServiceDesk <span>Plus</span></div>
+  <div class="corp">Zoho Corp</div>
+  <div class="rule"></div>
+  <div class="meta">
+    Generated by System&nbsp;&nbsp;Created on : ${escapeHtml(formatDateTime(now))}<br />
+    Total records : ${assets.length}
+  </div>
+  <div class="rule"></div>
+  <table>
+    <thead><tr>${columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join('')}</tr></thead>
+    <tbody>${rows || `<tr><td colspan="${columns.length}">No records found.</td></tr>`}</tbody>
+  </table>
+</body>
+</html>`;
+}
+
+function buildCsv(assets: ExportAsset[], columns: ReturnType<typeof resolveExportColumns>) {
+  const quote = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  return [
+    columns.map((column) => quote(column.label)).join(','),
+    ...assets.map((asset) => columns.map((column) => quote(cellValue(asset, column.key))).join(',')),
+  ].join('\r\n');
+}
+
+function buildWorkbookXml(assets: ExportAsset[], columns: ReturnType<typeof resolveExportColumns>) {
+  const rows = [
+    columns.map((column) => `<Cell><Data ss:Type="String">${escapeXml(column.label)}</Data></Cell>`).join(''),
+    ...assets.map((asset) => columns.map((column) => `<Cell><Data ss:Type="String">${escapeXml(cellValue(asset, column.key))}</Data></Cell>`).join('')),
+  ].map((cells) => `<Row>${cells}</Row>`).join('');
+  return `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Worksheet ss:Name="Assets"><Table>${rows}</Table></Worksheet>
+</Workbook>`;
+}
+
+const CRC_TABLE = Array.from({ length: 256 }, (_, index) => {
+  let c = index;
+  for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+
+function crc32(buffer: Buffer) {
+  let crc = 0xffffffff;
+  for (const byte of buffer) crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function dosDateTime(date = new Date()) {
+  const time = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+  const day = ((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+  return { time, day };
+}
+
+function createZip(files: Array<{ name: string; content: string }>) {
+  const chunks: Buffer[] = [];
+  const central: Buffer[] = [];
+  let offset = 0;
+  const { time, day } = dosDateTime();
+  for (const file of files) {
+    const name = Buffer.from(file.name);
+    const content = Buffer.from(file.content, 'utf8');
+    const crc = crc32(content);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0, 6);
+    local.writeUInt16LE(0, 8);
+    local.writeUInt16LE(time, 10);
+    local.writeUInt16LE(day, 12);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(content.length, 18);
+    local.writeUInt32LE(content.length, 22);
+    local.writeUInt16LE(name.length, 26);
+    chunks.push(local, name, content);
+
+    const header = Buffer.alloc(46);
+    header.writeUInt32LE(0x02014b50, 0);
+    header.writeUInt16LE(20, 4);
+    header.writeUInt16LE(20, 6);
+    header.writeUInt16LE(0, 8);
+    header.writeUInt16LE(0, 10);
+    header.writeUInt16LE(time, 12);
+    header.writeUInt16LE(day, 14);
+    header.writeUInt32LE(crc, 16);
+    header.writeUInt32LE(content.length, 20);
+    header.writeUInt32LE(content.length, 24);
+    header.writeUInt16LE(name.length, 28);
+    header.writeUInt32LE(offset, 42);
+    central.push(header, name);
+    offset += local.length + name.length + content.length;
+  }
+  const centralSize = central.reduce((sum, chunk) => sum + chunk.length, 0);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(files.length, 8);
+  end.writeUInt16LE(files.length, 10);
+  end.writeUInt32LE(centralSize, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...chunks, ...central, end]);
+}
+
+function buildXlsx(assets: ExportAsset[], columns: ReturnType<typeof resolveExportColumns>) {
+  const sheetRows = [
+    columns.map((column) => `<c t="inlineStr"><is><t>${escapeXml(column.label)}</t></is></c>`).join(''),
+    ...assets.map((asset) => columns.map((column) => `<c t="inlineStr"><is><t>${escapeXml(cellValue(asset, column.key))}</t></is></c>`).join('')),
+  ].map((cells, index) => `<row r="${index + 1}">${cells}</row>`).join('');
+  return createZip([
+    { name: '[Content_Types].xml', content: '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>' },
+    { name: '_rels/.rels', content: '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+    { name: 'xl/workbook.xml', content: '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Assets" sheetId="1" r:id="rId1"/></sheets></workbook>' },
+    { name: 'xl/_rels/workbook.xml.rels', content: '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>' },
+    { name: 'xl/worksheets/sheet1.xml', content: `<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${sheetRows}</sheetData></worksheet>` },
+  ]);
+}
+
+function pdfText(value: string) {
+  return value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+
+function buildPdf(title: string, assets: ExportAsset[], columns: ReturnType<typeof resolveExportColumns>, now = new Date()) {
+  const lines = [
+    'ServiceDesk Plus',
+    'Zoho Corp',
+    `Generated by System  Created on : ${formatDateTime(now)}`,
+    `Total records : ${assets.length}`,
+    '',
+    columns.map((column) => column.label).join(' | '),
+    ...assets.map((asset) => columns.map((column) => String(cellValue(asset, column.key))).join(' | ')),
+  ];
+  const content = [
+    'BT',
+    '/F1 9 Tf',
+    '36 790 Td',
+    `(${pdfText(title)}) Tj`,
+    ...lines.map((line) => `0 -14 Td (${pdfText(line.slice(0, 180))}) Tj`),
+    'ET',
+  ].join('\n');
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${Buffer.byteLength(content)} >>\nstream\n${content}\nendstream`,
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets: number[] = [0];
+  objects.forEach((object, index) => {
+    offsets.push(Buffer.byteLength(pdf));
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  offsets.slice(1).forEach((offset) => { pdf += `${String(offset).padStart(10, '0')} 00000 n \n`; });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return Buffer.from(pdf, 'binary');
+}
+
 async function getAssets(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const {
       page = '1', pageSize = '10',
-      search = '', sortBy = 'id', sortOrder = 'asc', sortDirection,
-      productTypeId, assetState, isActive = 'true', assetCategory, product, assetView,
     } = req.query as Record<string, string>;
 
     const pageNum     = Math.max(1, parseInt(page, 10));
     const pageSizeNum = Math.min(100, Math.max(1, parseInt(pageSize, 10)));
-    const requestedSortOrder = sortDirection || sortOrder;
-    const safeSortOrder = requestedSortOrder === 'desc' ? 'desc' : 'asc';
-    const SORTABLE: Record<string, unknown> = {
-      id: 'id',
-      name: 'name',
-      product: 'product',
-      productType: { productType: { displayName: safeSortOrder } },
-      assetState: 'assetState',
-      barcode: 'barcode',
-      user: 'user',
-      department: 'department',
-      associatedToAssets: 'associatedToAssets',
-      site: 'site',
-      purchaseCost: 'purchaseCost',
-      vendor: 'vendor',
-      location: 'location',
-      createdAt: 'createdAt',
-    };
-    const safeSortBy  = SORTABLE[sortBy] ?? 'id';
-    const orderBy = typeof safeSortBy === 'string' ? { [safeSortBy]: safeSortOrder } : safeSortBy;
-
-    const where: Record<string, unknown> = {
-      ...(isActive !== 'all' ? { isActive: isActive === 'true' } : {}),
-      ...(productTypeId ? { productTypeId: parseInt(productTypeId, 10) } : {}),
-      ...(assetState    ? { assetState } : {}),
-      ...(product       ? { product } : {}),
-      ...(assetCategory ? { productType: { assetCategory: assetCategory } } : {}),
-      ...(assetView === 'disposed' ? { assetState: 'Disposed' } : {}),
-      ...(assetView === 'loaned' ? { isLoanable: true } : {}),
-      ...(search.trim() ? {
-        OR: [
-          { name:        { contains: search, mode: 'insensitive' } },
-          { product:     { contains: search, mode: 'insensitive' } },
-          { user:        { contains: search, mode: 'insensitive' } },
-          { department:  { contains: search, mode: 'insensitive' } },
-          { assetState:  { contains: search, mode: 'insensitive' } },
-          { location:    { contains: search, mode: 'insensitive' } },
-          { vendor:      { contains: search, mode: 'insensitive' } },
-          { assetTag:    { contains: search, mode: 'insensitive' } },
-        ],
-      } : {}),
-    };
-    if (assetView === 'unassigned') {
-      where.AND = [{ OR: [{ user: null }, { user: '' }] }];
-    }
+    const { where, orderBy } = buildAssetListQuery(req.query as Record<string, string>);
 
     const [total, items] = await Promise.all([
-      prisma.asset.count({ where: where as Parameters<typeof prisma.asset.count>[0]['where'] }),
+      prisma.asset.count({ where }),
       prisma.asset.findMany({
-        where: where as Parameters<typeof prisma.asset.findMany>[0]['where'],
+        where,
         include: { productType: { select: { displayName: true, id: true } } },
         skip: (pageNum - 1) * pageSizeNum,
         take: pageSizeNum,
-        orderBy: orderBy as Parameters<typeof prisma.asset.findMany>[0]['orderBy'],
+        orderBy,
       }),
     ]);
 
@@ -228,6 +515,52 @@ async function getAssets(req: Request, res: Response, next: NextFunction): Promi
       data: items,
       pagination: { page: pageNum, pageSize: pageSizeNum, total, totalPages: Math.ceil(total / pageSizeNum) },
     });
+  } catch (err) { next(err); }
+}
+
+async function exportAssets(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const format = String(req.query.format || 'html').toLowerCase();
+    const allowedFormats = new Set(['html', 'xls', 'xlsx', 'pdf', 'csv']);
+    if (!allowedFormats.has(format)) {
+      res.status(400).json({ error: 'Unsupported export format.' });
+      return;
+    }
+
+    const { where, orderBy } = buildAssetListQuery(req.query as Record<string, string>);
+    const columns = resolveExportColumns(String(req.query.columns || ''));
+    const title = String(req.query.title || 'Export Assets');
+    const fileScope = slug(String(req.query.fileScope || 'assets'));
+    const extension = format === 'xls' ? 'xls' : format;
+    const filename = `Asset_${fileScope}_export_${filenameStamp()}.${extension}`;
+    const assets = await prisma.asset.findMany({
+      where,
+      include: { productType: { select: { displayName: true, id: true } } },
+      orderBy,
+    });
+
+    let body: string | Buffer;
+    let contentType: string;
+    if (format === 'csv') {
+      body = buildCsv(assets, columns);
+      contentType = 'text/csv; charset=utf-8';
+    } else if (format === 'xls') {
+      body = buildWorkbookXml(assets, columns);
+      contentType = 'application/vnd.ms-excel; charset=utf-8';
+    } else if (format === 'xlsx') {
+      body = buildXlsx(assets, columns);
+      contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    } else if (format === 'pdf') {
+      body = buildPdf(title, assets, columns);
+      contentType = 'application/pdf';
+    } else {
+      body = buildHtmlReport(title, assets, columns);
+      contentType = 'text/html; charset=utf-8';
+    }
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(body);
   } catch (err) { next(err); }
 }
 
@@ -746,4 +1079,4 @@ async function saveDynamicFieldValues(tx: TransactionClient, assetId: number, bo
   }
 }
 
-export { getAssets, getAsset, createAsset, updateAsset, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, deleteAssetRelationship, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, createAssetCost, updateAssetCost, deleteAssetCost };
+export { getAssets, getAsset, createAsset, updateAsset, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, deleteAssetRelationship, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets };

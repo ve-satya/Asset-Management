@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { getAssets, getAsset, createAsset, updateAsset, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, deleteAssetRelationship, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, createAssetCost, updateAssetCost, deleteAssetCost } from '../controllers/assetController';
+import { getAssets, getAsset, createAsset, updateAsset, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, deleteAssetRelationship, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets } from '../controllers/assetController';
 
 const router = express.Router();
 
@@ -14,6 +14,7 @@ const validators = [
 ];
 
 router.get('/',    getAssets);
+router.get('/export', exportAssets);
 router.get('/:id/history', getAssetHistory);
 router.get('/:id/relationships', getAssetRelationships);
 router.post('/:id/relationships', createAssetRelationship);
