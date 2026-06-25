@@ -6,6 +6,9 @@ const BASE = '/api/assets';
 export const getAssets   = (params: Record<string, unknown>): Promise<PaginatedResponse<Asset>> =>
   axios.get(BASE, { params }).then((r) => r.data);
 
+export const exportAssets = (params: Record<string, unknown>) =>
+  axios.get(`${BASE}/export`, { params, responseType: 'blob' });
+
 export const getAsset    = (id: number | string): Promise<Asset> =>
   axios.get(`${BASE}/${id}`).then((r) => r.data);
 

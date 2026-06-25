@@ -12,8 +12,12 @@ import {
   ChevronRight,
   ChevronsDownUp,
   ChevronsUpDown,
+  FileSpreadsheet,
+  FileText,
   HardDrive,
   Image as ImageIcon,
+  Info,
+  Import,
   Keyboard,
   Laptop,
   List,
@@ -30,14 +34,16 @@ import {
   TableProperties,
   Tablet,
   Trash2,
+  Upload,
   X,
 } from 'lucide-react';
 import { getAllProductTypes } from '../services/productTypeService';
 import { getAllAssetStates } from '../services/assetStateService';
 import { getAllProducts } from '../services/productService';
-import { getAssets, deleteAsset } from '../services/assetService';
+import { getAssets, deleteAsset, exportAssets } from '../services/assetService';
 import useDebounce from '../hooks/useDebounce';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import { ToastContainer, useToast } from '../components/common/Toast';
 import type { Asset, NamedOption, ProductTypeOption, PaginationMeta } from '../types';
 
 interface TreeNode extends ProductTypeOption {
@@ -50,6 +56,7 @@ type SortDirection = 'asc' | 'desc';
 interface ColumnDef { key: string; label: string; width: number; sortable?: boolean; sortKey?: string; }
 interface ProductFilterOption { id: number; name: string; productTypeId: number; }
 interface DropdownOption { value: string; label: string; group?: string; }
+type ExportFormat = 'html' | 'xls' | 'xlsx' | 'pdf' | 'csv';
 
 const ALL_COLUMNS: ColumnDef[] = [
   { key: 'name', label: 'Asset Name', width: 180, sortable: true, sortKey: 'name' },
@@ -306,6 +313,132 @@ function ActionsDropdown({ disabled }: { disabled: boolean }) {
   );
 }
 
+function ListViewDropdown({ onExportAssets }: { onExportAssets: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  function handlePlaceholder(action: 'Import Assets' | 'Export Assets') {
+    console.log(`${action} placeholder`);
+    setOpen(false);
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <ToolbarButton active={open} onClick={() => setOpen((value) => !value)}>
+        <List size={17} /> <ChevronDown size={13} />
+      </ToolbarButton>
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-1 min-w-44 overflow-hidden rounded border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+          <button
+            type="button"
+            onClick={() => handlePlaceholder('Import Assets')}
+            className="flex h-9 w-full items-center gap-2 px-3 text-left text-xs text-gray-700 hover:bg-sky-50 hover:text-sky-700 dark:text-gray-200 dark:hover:bg-sky-900/30 dark:hover:text-sky-200"
+          >
+            <Import size={15} className="shrink-0 text-gray-500 dark:text-gray-400" /> Import Assets
+          </button>
+          <button
+            type="button"
+            onClick={() => { setOpen(false); onExportAssets(); }}
+            className="flex h-9 w-full items-center gap-2 px-3 text-left text-xs text-gray-700 hover:bg-sky-50 hover:text-sky-700 dark:text-gray-200 dark:hover:bg-sky-900/30 dark:hover:text-sky-200"
+          >
+            <Upload size={15} className="shrink-0 text-gray-500 dark:text-gray-400" /> Export Assets
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const EXPORT_FORMATS: Array<{ value: ExportFormat; label: string; Icon: typeof FileText; iconClass: string }> = [
+  { value: 'html', label: 'HTML', Icon: FileText, iconClass: 'text-cyan-600' },
+  { value: 'xls', label: 'XLS', Icon: FileSpreadsheet, iconClass: 'text-green-700' },
+  { value: 'xlsx', label: 'XLSX', Icon: FileSpreadsheet, iconClass: 'text-green-700' },
+  { value: 'pdf', label: 'PDF', Icon: FileText, iconClass: 'text-red-600' },
+  { value: 'csv', label: 'CSV', Icon: FileText, iconClass: 'text-gray-700' },
+];
+
+function ExportAssetsModal({
+  open,
+  title,
+  loading,
+  onClose,
+  onExport,
+}: {
+  open: boolean;
+  title: string;
+  loading: boolean;
+  onClose: () => void;
+  onExport: (format: ExportFormat) => void;
+}) {
+  const [format, setFormat] = useState<ExportFormat>('html');
+
+  useEffect(() => {
+    if (open) setFormat('html');
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !loading) onClose();
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [open, loading, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4">
+      <div className="w-full max-w-[454px] border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900" role="dialog" aria-modal="true" aria-label={title}>
+        <div className="flex h-10 items-center justify-between border-b border-gray-200 px-3 dark:border-gray-700">
+          <h2 className="text-sm font-medium text-gray-950 dark:text-gray-100">{title}</h2>
+          <button type="button" onClick={onClose} disabled={loading} className="flex h-6 w-6 items-center justify-center text-gray-500 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-100" aria-label="Close export dialog">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="px-4 py-3">
+          <div className="mb-4 flex gap-2 border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-5 text-gray-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-gray-100">
+            <Info size={15} className="mt-0.5 shrink-0 text-sky-600" />
+            <span>The maximum number of rows that can be exported is based on Custom Report settings.</span>
+          </div>
+          <div className="space-y-3 pb-3">
+            {EXPORT_FORMATS.map(({ value, label, Icon, iconClass }) => (
+              <label key={value} className="flex w-fit cursor-pointer items-center gap-2 text-xs text-gray-900 dark:text-gray-100">
+                <input
+                  type="radio"
+                  name="asset-export-format"
+                  value={value}
+                  checked={format === value}
+                  onChange={() => setFormat(value)}
+                  className="h-3.5 w-3.5 border-gray-400 text-sky-600 focus:ring-0 focus:ring-offset-0"
+                />
+                <Icon size={15} className={iconClass} />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="flex h-12 items-center justify-center gap-2 border-t border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/80">
+          <button type="button" onClick={() => onExport(format)} disabled={loading} className="h-7 rounded-full bg-sky-600 px-5 text-xs font-medium text-white hover:bg-sky-700 disabled:cursor-wait disabled:opacity-70">
+            {loading ? 'Exporting...' : 'Export'}
+          </button>
+          <button type="button" onClick={onClose} disabled={loading} className="h-7 rounded-full border border-gray-300 bg-white px-5 text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SelectColumnsDropdown({ visible, onApply }: { visible: string[]; onApply: (keys: string[]) => void }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -382,7 +515,7 @@ function SearchableFilterDropdown({
   value,
   options,
   placeholder,
-  widthClass = 'w-56',
+  widthClass = 'w-full sm:w-56',
   onChange,
 }: {
   value: string;
@@ -536,7 +669,10 @@ export default function AssetList() {
   });
   const [deleteTarget, setDeleteTarget] = useState<number[] | Asset | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const search = useDebounce(rawSearch, 300);
+  const { toasts, showToast, removeToast } = useToast();
 
   useEffect(() => {
     Promise.all([getAllProductTypes(), getAllAssetStates(), getAllProducts()])
@@ -559,6 +695,7 @@ export default function AssetList() {
 
   const selectedProductType = productTypes.find((item) => item.id === selectedPtId);
   const pageTitle = selectedProductType?.displayName || (selectedCategory ? `${selectedCategory} Assets` : 'All Assets');
+  const exportTitle = selectedProductType?.displayName ? `Export ${selectedProductType.displayName}` : 'Export Assets';
   const selectedTreeNode = useMemo(() => {
     let found: TreeNode | null = null;
     function walk(nodes: TreeNode[]) {
@@ -700,9 +837,87 @@ export default function AssetList() {
     setSortDirection(null);
   }
 
+  function singularExportScope(value: string) {
+    return value
+      .trim()
+      .split(/\s+/)
+      .map((part, index, parts) => {
+        if (index === parts.length - 1 && part.length > 3 && /s$/i.test(part) && !/ss$/i.test(part)) return part.slice(0, -1);
+        return part;
+      })
+      .join(' ');
+  }
+
+  function downloadBlob(blob: Blob, filename: string) {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
+  function getDownloadFilename(disposition: string | undefined, fallback: string) {
+    const match = disposition?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    return match ? decodeURIComponent(match[1]) : fallback;
+  }
+
+  function exportTimestamp() {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+  }
+
+  async function handleExportAssets(format: ExportFormat) {
+    setExporting(true);
+    try {
+      const selectedProduct = productFilter
+        ? productList.find((product) => product.name === productFilter && (!selectedPtId || product.productTypeId === selectedPtId))
+        : null;
+      const selectedState = stateFilter ? stateList.find((state) => state.name === stateFilter) : null;
+      const scopeLabel = selectedProductType?.displayName ? singularExportScope(selectedProductType.displayName) : 'assets';
+      const params: Record<string, unknown> = {
+        format,
+        search,
+        isActive: 'true',
+        title: exportTitle,
+        fileScope: scopeLabel,
+        columns: visibleCols.join(','),
+      };
+      if (selectedPtId) params.productTypeId = selectedPtId;
+      if (selectedCategory) params.assetCategory = selectedCategory;
+      if (selectedState) params.assetStateId = selectedState.id;
+      if (stateFilter) params.assetState = stateFilter;
+      if (assetViewFilter) {
+        params.filterType = assetViewFilter;
+        params.assetView = assetViewFilter;
+      }
+      if (selectedProduct) params.productId = selectedProduct.id;
+      if (productFilter) params.product = productFilter;
+      if (sortKey && sortDirection) {
+        params.sortBy = sortKey;
+        params.sortOrder = sortDirection;
+        params.sortDirection = sortDirection;
+      }
+
+      const response = await exportAssets(params);
+      const extension = format === 'xls' ? 'xls' : format;
+      const fallback = `Asset_${scopeLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')}_export_${exportTimestamp()}.${extension}`;
+      downloadBlob(response.data, getDownloadFilename(response.headers['content-disposition'], fallback));
+      setExportOpen(false);
+    } catch (error) {
+      console.error(error);
+      showToast('Export failed. Please try again.', 'error');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
-    <div className="flex min-h-0 bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <div className="flex h-full min-h-0 flex-col bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100 lg:flex-row">
+      <aside className="flex max-h-64 w-full shrink-0 flex-col border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 lg:h-full lg:max-h-none lg:w-64 lg:border-b-0 lg:border-r">
         <div className="border-b border-gray-200 p-1.5 dark:border-gray-700">
           <div className="relative">
             <Search size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -714,7 +929,7 @@ export default function AssetList() {
             />
           </div>
         </div>
-        <div className="h-full overflow-y-auto py-2 scrollbar-thin">
+        <div className="min-h-0 flex-1 overflow-y-auto py-2 scrollbar-thin">
           <button
             type="button"
             onClick={() => {
@@ -743,7 +958,7 @@ export default function AssetList() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 bg-white dark:bg-gray-900">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-white dark:bg-gray-900">
         <div className="flex min-h-12 flex-wrap items-center gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700">
           <h1 className="mr-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{pageTitle}</h1>
           {canCreateAsset && (
@@ -753,7 +968,7 @@ export default function AssetList() {
             </ToolbarButton>
           )}
           <ActionsDropdown disabled={selected.length === 0} />
-          <ToolbarButton title="List view"><List size={17} /></ToolbarButton>
+          <ListViewDropdown onExportAssets={() => setExportOpen(true)} />
           <ToolbarButton>New Scan</ToolbarButton>
           <ToolbarButton active={searchFiltersOpen || hasActiveFilters} onClick={() => setSearchFiltersOpen((value) => !value)}>Filters</ToolbarButton>
           <ToolbarButton title="Delete selected" disabled={selected.length === 0} onClick={() => setDeleteTarget(selected)}><Trash2 size={16} /></ToolbarButton>
@@ -776,11 +991,11 @@ export default function AssetList() {
           </div>
         </div>
 
-        <div className="flex h-12 items-center gap-4 border-b border-gray-200 px-3 dark:border-gray-700">
+        <div className="flex min-h-12 flex-wrap items-center gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700 sm:gap-4">
           <select
             value={stateFilter}
             onChange={(event) => { setStateFilter(event.target.value); setPagination((prev) => ({ ...prev, page: 1 })); }}
-            className="h-8 w-56 rounded border border-gray-300 bg-white px-2 text-xs text-gray-700 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            className="h-8 w-full rounded border border-gray-300 bg-white px-2 text-xs text-gray-700 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 sm:w-56"
           >
             <option value="">Select States</option>
             {stateList.map((state) => <option key={state.id} value={state.name}>{state.name}</option>)}
@@ -818,8 +1033,8 @@ export default function AssetList() {
           </div>
         )}
 
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+        <div className="min-h-0 flex-1 overflow-auto scrollbar-thin">
+          <table className="min-w-[980px] w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
             <colgroup>
               <col style={{ width: 36 }} />
               <col style={{ width: 36 }} />
@@ -919,6 +1134,14 @@ export default function AssetList() {
           ? `Delete ${deleteTarget.length} selected asset(s)?`
           : `Delete asset "${deleteTarget?.name || ''}"?`}
       />
+      <ExportAssetsModal
+        open={exportOpen}
+        title={exportTitle}
+        loading={exporting}
+        onClose={() => { if (!exporting) setExportOpen(false); }}
+        onExport={handleExportAssets}
+      />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }
