@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, Headphones, HelpCircle, Menu, Moon, Search, Settings, Sun, UserCircle } from 'lucide-react';
 
 interface NavbarProps {
@@ -12,6 +12,7 @@ export default function Navbar({ darkMode, setDarkMode, onMenuToggle }: NavbarPr
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     function handleClick(event: MouseEvent) {
@@ -78,7 +79,7 @@ export default function Navbar({ darkMode, setDarkMode, onMenuToggle }: NavbarPr
         >
           {darkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
-        <button className="inline-flex h-9 w-9 items-center justify-center text-gray-300 hover:bg-white/10 hover:text-white" title="Settings" aria-label="Settings">
+        <button onClick={() => navigate('/assets')} className="inline-flex h-9 w-9 items-center justify-center text-gray-300 hover:bg-white/10 hover:text-white" title="Settings" aria-label="Settings">
           <Settings size={20} />
         </button>
         <button className="inline-flex h-9 w-9 items-center justify-center text-gray-300 hover:bg-white/10 hover:text-white" title="Help" aria-label="Help">
