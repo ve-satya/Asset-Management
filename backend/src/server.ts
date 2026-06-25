@@ -2,6 +2,8 @@ import 'dotenv/config';
 import path from 'path';
 import express from 'express';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec, swaggerUiOptions } from './config/swagger';
 import errorHandler from './middleware/errorHandler';
 import productTypeRoutes from './routes/productTypeRoutes';
 import productTypeFieldRoutes from './routes/productTypeFieldRoutes';
@@ -28,7 +30,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 app.use(express.json());
@@ -45,6 +47,8 @@ app.get('/', (_req, res) => {
 });
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/api-docs.json', (_req, res) => res.json(swaggerSpec));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
 app.use('/api/product-types',           productTypeRoutes);
 app.use('/api/product-type-fields',     productTypeFieldRoutes);
 app.use('/api/assets',                  assetRoutes);
