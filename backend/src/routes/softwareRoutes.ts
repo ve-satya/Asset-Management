@@ -16,6 +16,7 @@ const validators = [
 ];
 
 router.get('/all',                     getAllSoftwares);
+router.get('/options',                 getAllSoftwares);
 router.get('/',                        getSoftwares);
 router.get('/:id',                     getSoftware);
 router.post('/',                       validators, createSoftware);

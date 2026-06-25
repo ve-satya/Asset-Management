@@ -1,6 +1,7 @@
 import express from 'express';
 import { body } from 'express-validator';
 import { getProductTypes, getProductType, getAllProductTypes, createProductType, updateProductType, deleteProductType } from '../controllers/productTypeController';
+import { resolveProductTypeFields } from '../controllers/productTypeFieldController';
 
 const router = express.Router();
 
@@ -21,7 +22,9 @@ const validators = [
 ];
 
 router.get('/all', getAllProductTypes);
+router.get('/options', getAllProductTypes);
 router.get('/',    getProductTypes);
+router.get('/:productTypeId/fields', resolveProductTypeFields);
 router.get('/:id', getProductType);
 router.post('/',   validators, createProductType);
 router.put('/:id', validators, updateProductType);

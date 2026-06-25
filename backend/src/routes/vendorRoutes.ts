@@ -7,6 +7,7 @@ const router = express.Router();
 const validators = [body('name').trim().notEmpty().withMessage('Name is required.')];
 
 router.get('/all',    getAllVendors);
+router.get('/options', getAllVendors);
 router.get('/',       getVendors);
 router.get('/:id',    getVendor);
 router.post('/',      validators, createVendor);
