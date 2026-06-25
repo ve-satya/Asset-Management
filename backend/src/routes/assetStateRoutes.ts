@@ -7,6 +7,7 @@ const router = express.Router();
 const validators = [body('name').trim().notEmpty().withMessage('Name is required.')];
 
 router.get('/all',    getAllAssetStates);
+router.get('/options', getAllAssetStates);
 router.get('/',       getAssetStates);
 router.get('/:id',    getAssetState);
 router.post('/',      validators, createAssetState);

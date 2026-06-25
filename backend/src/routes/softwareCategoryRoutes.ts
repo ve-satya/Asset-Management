@@ -7,6 +7,7 @@ const router = express.Router();
 const validators = [body('name').trim().notEmpty().withMessage('Name is required.')];
 
 router.get('/all',    getAllSoftwareCategories);
+router.get('/options', getAllSoftwareCategories);
 router.get('/',       getSoftwareCategories);
 router.get('/:id',    getSoftwareCategory);
 router.post('/',      validators, createSoftwareCategory);

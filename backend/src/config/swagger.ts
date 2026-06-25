@@ -14,6 +14,8 @@ const idParam = (name = 'id', description = 'Record id') => ({
   schema: { type: 'integer', example: 1 },
 });
 
+const assetIdParam = idParam('assetId', 'Asset id');
+
 const softwareIdParam = {
   name: 'softwareId',
   in: 'path',
@@ -39,6 +41,46 @@ const responses = {
 };
 
 const bearerSecurity = [{ bearerAuth: [] }];
+
+const singularLabels: Record<string, string> = {
+  'Product Types': 'product type',
+  'Product Type Fields': 'product type field',
+  Products: 'product',
+  Vendors: 'vendor',
+  'Asset States': 'asset state',
+  Manufacturers: 'manufacturer',
+  'Software Types': 'software type',
+  'Software Categories': 'software category',
+  'Software License Types': 'software license type',
+  Software: 'software',
+  'License Agreements': 'license agreement',
+  'Global Software Licenses': 'global software license',
+  'Service Packs': 'service pack',
+};
+
+const pluralLabels: Record<string, string> = {
+  'Product Types': 'product types',
+  'Product Type Fields': 'product type fields',
+  Products: 'products',
+  Vendors: 'vendors',
+  'Asset States': 'asset states',
+  Manufacturers: 'manufacturers',
+  'Software Types': 'software types',
+  'Software Categories': 'software categories',
+  'Software License Types': 'software license types',
+  Software: 'software',
+  'License Agreements': 'license agreements',
+  'Global Software Licenses': 'global software licenses',
+  'Service Packs': 'service packs',
+};
+
+function labelFor(tag: string) {
+  return singularLabels[tag] || tag.toLowerCase();
+}
+
+function pluralLabelFor(tag: string) {
+  return pluralLabels[tag] || `${labelFor(tag)}s`;
+}
 
 function listOperation(tag: string, summary: string, extraParams: OpenApiObject[] = []) {
   return {
@@ -99,25 +141,36 @@ function deleteOperation(tag: string, summary: string, params: OpenApiObject[] =
 }
 
 function crudPaths(base: string, tag: string, example: OpenApiObject, allPath = true) {
+  const label = labelFor(tag);
+  const pluralLabel = pluralLabelFor(tag);
   return {
     ...(allPath ? {
       [`${base}/all`]: {
         get: {
           tags: [tag],
-          summary: `List all ${tag.toLowerCase()} records for dropdowns`,
+          summary: `List ${label} options (legacy /all endpoint)`,
+          deprecated: true,
+          security: bearerSecurity,
+          responses: { 200: responses.ok },
+        },
+      },
+      [`${base}/options`]: {
+        get: {
+          tags: [tag],
+          summary: `List ${label} options`,
           security: bearerSecurity,
           responses: { 200: responses.ok },
         },
       },
     } : {}),
     [base]: {
-      get: listOperation(tag, `List ${tag.toLowerCase()} records`),
-      post: createOperation(tag, `Create ${tag.toLowerCase()} record`, example),
+      get: listOperation(tag, `List ${pluralLabel}`),
+      post: createOperation(tag, `Create ${label}`, example),
     },
     [`${base}/{id}`]: {
-      get: getOperation(tag, `Get ${tag.toLowerCase()} record`),
-      put: updateOperation(tag, `Update ${tag.toLowerCase()} record`, example),
-      delete: deleteOperation(tag, `Delete ${tag.toLowerCase()} record`),
+      get: getOperation(tag, `Get ${label}`),
+      put: updateOperation(tag, `Update ${label}`, example),
+      delete: deleteOperation(tag, `Delete ${label}`),
     },
   };
 }
@@ -201,8 +254,14 @@ const paths: OpenApiObject = {
   },
 
   ...crudPaths('/api/product-types', 'Product Types', productTypeExample),
+  '/api/product-types/{productTypeId}/fields': {
+    get: getOperation('Product Type Fields', 'List product type fields including inherited fields', [idParam('productTypeId', 'Product type id')]),
+  },
   '/api/product-type-fields/resolve/{productTypeId}': {
-    get: getOperation('Product Type Fields', 'Resolve inherited dynamic fields for a product type', [idParam('productTypeId', 'Product type id')]),
+    get: {
+      ...getOperation('Product Type Fields', 'List product type fields including inherited fields (legacy endpoint)', [idParam('productTypeId', 'Product type id')]),
+      deprecated: true,
+    },
   },
   ...crudPaths('/api/product-type-fields', 'Product Type Fields', {
     productTypeId: 1,
@@ -246,53 +305,74 @@ const paths: OpenApiObject = {
     put: updateOperation('Assets', 'Update asset', assetExample),
     delete: deleteOperation('Assets', 'Delete asset'),
   },
-  '/api/assets/{id}/history': {
-    get: listOperation('Asset History', 'List asset history', [idParam(), { name: 'type', in: 'query', schema: { type: 'string', enum: ['asset', 'ownership'] } }]),
+  '/api/assets/{assetId}/history': {
+    get: listOperation('Asset History', 'List asset history', [assetIdParam, { name: 'type', in: 'query', schema: { type: 'string', enum: ['asset', 'ownership'] } }]),
   },
-  '/api/assets/{id}/relationships': {
-    get: getOperation('Asset Relationships', 'Get asset relationships'),
+  '/api/assets/{assetId}/relationships': {
+    get: getOperation('Asset Relationships', 'Get asset relationships', [assetIdParam]),
     post: createOperation('Asset Relationships', 'Create asset relationship', {
       relationshipType: 'ConnectedAsset',
       relatedAssetId: 2,
-    }, [idParam()]),
+    }, [assetIdParam]),
   },
-  '/api/assets/{id}/relationships/{relationshipId}': {
+  '/api/assets/{assetId}/relationships/{relationshipId}': {
     delete: deleteOperation('Asset Relationships', 'Delete asset relationship', [
-      idParam(),
+      assetIdParam,
       idParam('relationshipId', 'Relationship id'),
       { name: 'relationshipType', in: 'query', schema: { type: 'string', example: 'ConnectedAsset' } },
     ]),
   },
-  '/api/assets/{id}/contracts': {
-    get: listOperation('Asset Contracts', 'List asset contracts', [idParam()]),
+  '/api/assets/{assetId}/contracts': {
+    get: listOperation('Asset Contracts', 'List asset contracts', [assetIdParam]),
     post: createOperation('Asset Contracts', 'Create asset contract', {
       contractId: 'C-1001',
       contractName: 'Annual Maintenance',
       maintenanceVendor: 'Acme Support',
       fromDate: '2026-01-01',
       toDate: '2026-12-31',
-    }, [idParam()]),
+    }, [assetIdParam]),
+  },
+  '/api/assets/{assetId}/contracts/{contractId}': {
+    delete: deleteOperation('Asset Contracts', 'Delete asset contract', [assetIdParam, idParam('contractId', 'Contract id')]),
   },
   '/api/assets/contracts/{contractId}': {
-    delete: deleteOperation('Asset Contracts', 'Delete asset contract', [idParam('contractId', 'Contract record id')]),
+    delete: {
+      ...deleteOperation('Asset Contracts', 'Delete asset contract (legacy endpoint)', [idParam('contractId', 'Contract id')]),
+      deprecated: true,
+    },
   },
-  '/api/assets/{id}/costs': {
-    get: getOperation('Asset Financials', 'Get asset costs and financial summary'),
+  '/api/assets/{assetId}/costs': {
+    get: getOperation('Asset Financials', 'Get asset costs and financial summary', [assetIdParam]),
     post: createOperation('Asset Financials', 'Create asset cost', {
       costFactor: 'Service Cost',
       costAmount: 455,
       description: 'Service visit',
       costDate: '2026-06-24',
-    }, [idParam()]),
+    }, [assetIdParam]),
   },
-  '/api/assets/costs/{costId}': {
+  '/api/assets/{assetId}/costs/{costId}': {
     put: updateOperation('Asset Financials', 'Update asset cost', {
       costFactor: 'Move/Change Cost',
       costAmount: 555,
       description: 'Moved to another site',
       costDate: '2026-06-24',
-    }, [idParam('costId', 'Cost record id')]),
-    delete: deleteOperation('Asset Financials', 'Delete asset cost', [idParam('costId', 'Cost record id')]),
+    }, [assetIdParam, idParam('costId', 'Cost id')]),
+    delete: deleteOperation('Asset Financials', 'Delete asset cost', [assetIdParam, idParam('costId', 'Cost id')]),
+  },
+  '/api/assets/costs/{costId}': {
+    put: {
+      ...updateOperation('Asset Financials', 'Update asset cost (legacy endpoint)', {
+      costFactor: 'Move/Change Cost',
+      costAmount: 555,
+      description: 'Moved to another site',
+      costDate: '2026-06-24',
+      }, [idParam('costId', 'Cost id')]),
+      deprecated: true,
+    },
+    delete: {
+      ...deleteOperation('Asset Financials', 'Delete asset cost (legacy endpoint)', [idParam('costId', 'Cost id')]),
+      deprecated: true,
+    },
   },
 
   ...crudPaths('/api/software-types', 'Software Types', { name: 'Operating System', description: 'OS software type' }),
@@ -326,6 +406,7 @@ const paths: OpenApiObject = {
     post: createOperation('Software Installations', 'Create software installation', { assetId: 1, userName: 'administrator', installedOn: '2026-06-24' }, [softwareIdParam]),
   },
   '/api/softwares/{softwareId}/installations/{id}': {
+    get: getOperation('Software Installations', 'Get software installation', [softwareIdParam, idParam()]),
     put: updateOperation('Software Installations', 'Update software installation', { assetId: 1, userName: 'administrator' }, [softwareIdParam, idParam()]),
     delete: deleteOperation('Software Installations', 'Delete software installation', [softwareIdParam, idParam()]),
   },

@@ -7,7 +7,7 @@ const LICENSE_SELECT = { select: { id: true, licenseKey: true, licenseType: true
 
 export async function getInstallations(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const softwareId = parseInt(req.params.softwareId, 10);
+    const softwareId = parseInt(String(req.params.softwareId), 10);
     const { isActive = 'true' } = req.query as Record<string, string>;
     const items = await prisma.softwareInstallation.findMany({
       where: {
@@ -21,10 +21,24 @@ export async function getInstallations(req: Request, res: Response, next: NextFu
   } catch (err) { next(err); }
 }
 
+export async function getInstallation(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const item = await prisma.softwareInstallation.findFirst({
+      where: {
+        id: parseInt(String(req.params.id), 10),
+        softwareId: parseInt(String(req.params.softwareId), 10),
+      },
+      include: { license: LICENSE_SELECT },
+    });
+    if (!item) { res.status(404).json({ error: 'Installation not found.' }); return; }
+    res.json(item);
+  } catch (err) { next(err); }
+}
+
 export async function createInstallation(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const item = await prisma.softwareInstallation.create({
-      data:    buildPayload(req.body, parseInt(req.params.softwareId, 10)),
+      data:    buildPayload(req.body, parseInt(String(req.params.softwareId), 10)),
       include: { license: LICENSE_SELECT },
     });
     res.status(201).json(item);
@@ -34,8 +48,8 @@ export async function createInstallation(req: Request, res: Response, next: Next
 export async function updateInstallation(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const item = await prisma.softwareInstallation.update({
-      where:   { id: parseInt(req.params.id, 10) },
-      data:    buildPayload(req.body, parseInt(req.params.softwareId, 10)),
+      where:   { id: parseInt(String(req.params.id), 10) },
+      data:    buildPayload(req.body, parseInt(String(req.params.softwareId), 10)),
       include: { license: LICENSE_SELECT },
     });
     res.json(item);
@@ -45,7 +59,7 @@ export async function updateInstallation(req: Request, res: Response, next: Next
 export async function deleteInstallation(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     await prisma.softwareInstallation.update({
-      where: { id: parseInt(req.params.id, 10) },
+      where: { id: parseInt(String(req.params.id), 10) },
       data:  { isActive: false },
     });
     res.json({ message: 'Installation removed successfully.' });

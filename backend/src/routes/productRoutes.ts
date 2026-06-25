@@ -10,6 +10,7 @@ const validators = [
 ];
 
 router.get('/all',                     getAllProducts);
+router.get('/options',                 getAllProducts);
 router.get('/',                        getProducts);
 router.get('/:id',                     getProduct);
 router.post('/',                       validators, createProduct);
