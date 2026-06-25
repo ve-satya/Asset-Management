@@ -140,20 +140,11 @@ function deleteOperation(tag: string, summary: string, params: OpenApiObject[] =
   };
 }
 
-function crudPaths(base: string, tag: string, example: OpenApiObject, allPath = true) {
+function crudPaths(base: string, tag: string, example: OpenApiObject, optionsPath = true) {
   const label = labelFor(tag);
   const pluralLabel = pluralLabelFor(tag);
   return {
-    ...(allPath ? {
-      [`${base}/all`]: {
-        get: {
-          tags: [tag],
-          summary: `List ${label} options (legacy /all endpoint)`,
-          deprecated: true,
-          security: bearerSecurity,
-          responses: { 200: responses.ok },
-        },
-      },
+    ...(optionsPath ? {
       [`${base}/options`]: {
         get: {
           tags: [tag],
@@ -257,12 +248,6 @@ const paths: OpenApiObject = {
   '/api/product-types/{productTypeId}/fields': {
     get: getOperation('Product Type Fields', 'List product type fields including inherited fields', [idParam('productTypeId', 'Product type id')]),
   },
-  '/api/product-type-fields/resolve/{productTypeId}': {
-    get: {
-      ...getOperation('Product Type Fields', 'List product type fields including inherited fields (legacy endpoint)', [idParam('productTypeId', 'Product type id')]),
-      deprecated: true,
-    },
-  },
   ...crudPaths('/api/product-type-fields', 'Product Type Fields', {
     productTypeId: 1,
     fieldName: 'Service Tag',
@@ -335,12 +320,6 @@ const paths: OpenApiObject = {
   '/api/assets/{assetId}/contracts/{contractId}': {
     delete: deleteOperation('Asset Contracts', 'Delete asset contract', [assetIdParam, idParam('contractId', 'Contract id')]),
   },
-  '/api/assets/contracts/{contractId}': {
-    delete: {
-      ...deleteOperation('Asset Contracts', 'Delete asset contract (legacy endpoint)', [idParam('contractId', 'Contract id')]),
-      deprecated: true,
-    },
-  },
   '/api/assets/{assetId}/costs': {
     get: getOperation('Asset Financials', 'Get asset costs and financial summary', [assetIdParam]),
     post: createOperation('Asset Financials', 'Create asset cost', {
@@ -358,21 +337,6 @@ const paths: OpenApiObject = {
       costDate: '2026-06-24',
     }, [assetIdParam, idParam('costId', 'Cost id')]),
     delete: deleteOperation('Asset Financials', 'Delete asset cost', [assetIdParam, idParam('costId', 'Cost id')]),
-  },
-  '/api/assets/costs/{costId}': {
-    put: {
-      ...updateOperation('Asset Financials', 'Update asset cost (legacy endpoint)', {
-      costFactor: 'Move/Change Cost',
-      costAmount: 555,
-      description: 'Moved to another site',
-      costDate: '2026-06-24',
-      }, [idParam('costId', 'Cost id')]),
-      deprecated: true,
-    },
-    delete: {
-      ...deleteOperation('Asset Financials', 'Delete asset cost (legacy endpoint)', [idParam('costId', 'Cost id')]),
-      deprecated: true,
-    },
   },
 
   ...crudPaths('/api/software-types', 'Software Types', { name: 'Operating System', description: 'OS software type' }),
