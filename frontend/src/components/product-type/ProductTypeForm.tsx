@@ -44,21 +44,21 @@ function TreeNode({ node, selectedId, onSelect, level }: { node: TreeNodeData; s
   );
 }
 
-function ParentTreeDropdown({ value, displayLabel, treeRoots, onSelect, hasError }: { value: string; displayLabel: string; treeRoots: TreeNodeData[]; onSelect: (id: string, label: string) => void; hasError: boolean }) {
+function ParentTreeDropdown({ value, displayLabel, treeRoots, onSelect, hasError, disabled = false }: { value: string; displayLabel: string; treeRoots: TreeNodeData[]; onSelect: (id: string, label: string) => void; hasError: boolean; disabled?: boolean }) {
   const [open, setOpen] = useState(false); const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []);
   function handleSelect(id: string, label: string) { onSelect(id, label); setOpen(false); }
   function handleClear(e: React.MouseEvent) { e.stopPropagation(); onSelect('', ''); }
   return (
     <div className="relative" ref={ref}>
-      <button type="button" onClick={() => setOpen((v) => !v)} className={`w-full px-3 py-2 text-sm text-left rounded-lg border flex items-center justify-between gap-2 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 transition ${hasError ? 'border-red-400 focus:ring-red-400' : open ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'}`}>
+      <button type="button" disabled={disabled} onClick={() => setOpen((v) => !v)} className={`w-full px-3 py-2 text-sm text-left rounded-lg border flex items-center justify-between gap-2 focus:outline-none focus:ring-2 transition ${disabled ? 'cursor-not-allowed border-gray-300 bg-gray-100 text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400' : `bg-white dark:bg-gray-800 ${hasError ? 'border-red-400 focus:ring-red-400' : open ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'}`}`}>
         <span className={value ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'}>{displayLabel || '-- Select Parent --'}</span>
         <div className="flex items-center gap-1 shrink-0">
           {value && <span onClick={handleClear} className="text-gray-400 hover:text-gray-600 text-xs px-1" title="Clear">✕</span>}
           <ChevronDown size={14} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
         </div>
       </button>
-      {open && (
+      {open && !disabled && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl z-50 overflow-y-auto" style={{ maxHeight: '260px' }}>
           <div onClick={() => handleSelect('', '')} className={`px-4 py-2 text-sm cursor-pointer border-b border-gray-100 dark:border-gray-700 transition-colors ${!value ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-600 font-medium' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 italic'}`}>— No parent (root level) —</div>
           {treeRoots.length === 0 ? <p className="text-xs text-gray-400 px-4 py-3 italic">No product types available.</p> : <div className="p-1.5">{treeRoots.map((root) => <TreeNode key={root.id} node={root} selectedId={value} onSelect={handleSelect} level={0} />)}</div>}
@@ -73,11 +73,12 @@ const EMPTY = { displayName: '', displayPluralName: '', apiName: '', apiPluralNa
 interface ProductTypeFormProps {
   record: Record<string, unknown> | null;
   editingId?: number | null;
+  initialParent?: { id: number; label: string } | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export default function ProductTypeForm({ record, editingId, onSuccess, onCancel }: ProductTypeFormProps) {
+export default function ProductTypeForm({ record, editingId, initialParent, onSuccess, onCancel }: ProductTypeFormProps) {
   const [form,                 setForm]                 = useState(EMPTY);
   const [treeRoots,            setTreeRoots]            = useState<TreeNodeData[]>([]);
   const [errors,               setErrors]               = useState<Record<string, string>>({});
@@ -93,16 +94,23 @@ export default function ProductTypeForm({ record, editingId, onSuccess, onCancel
         const found = data.find((d) => d.id === Number(record.parentId));
         if (found) setForm((prev) => ({ ...prev, parentLabel: found.displayName }));
       }
+      if (!record && initialParent) {
+        setForm((prev) => ({ ...prev, parentId: String(initialParent.id), parentLabel: initialParent.label }));
+      }
     });
-  }, [editingId, record?.parentId]);
+  }, [editingId, record, record?.parentId, initialParent]);
 
   useEffect(() => {
     if (record) {
       setForm({ displayName: String(record.displayName || ''), displayPluralName: String(record.displayPluralName || ''), apiName: String(record.apiName || ''), apiPluralName: String(record.apiPluralName || ''), category: String(record.category || ''), assetType: String(record.assetType || ''), assetCategory: String(record.assetCategory || ''), description: String(record.description || ''), parentId: record.parentId != null ? String(record.parentId) : '', parentLabel: '' });
       setApiNameTouched(true); setApiPluralNameTouched(true);
-    } else { setForm(EMPTY); setApiNameTouched(false); setApiPluralNameTouched(false); }
+    } else {
+      setForm(initialParent ? { ...EMPTY, parentId: String(initialParent.id), parentLabel: initialParent.label } : EMPTY);
+      setApiNameTouched(false);
+      setApiPluralNameTouched(false);
+    }
     setErrors({});
-  }, [record]);
+  }, [record, initialParent]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value } = e.target;
@@ -177,7 +185,7 @@ export default function ProductTypeForm({ record, editingId, onSuccess, onCancel
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>{lbl('Category', true)}<select name="category" value={form.category} onChange={handleChange} disabled={isEditing} className={cls('category', isEditing)}><option value="">-- Select Category --</option>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select>{errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}</div>
-          <div>{lbl('Parent Product Type')}<ParentTreeDropdown value={form.parentId} displayLabel={form.parentLabel} treeRoots={treeRoots} onSelect={handleParentSelect} hasError={false} /></div>
+          <div>{lbl('Parent Product Type')}<ParentTreeDropdown value={form.parentId} displayLabel={form.parentLabel} treeRoots={treeRoots} onSelect={handleParentSelect} hasError={false} disabled={Boolean(initialParent && !isEditing)} /></div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">

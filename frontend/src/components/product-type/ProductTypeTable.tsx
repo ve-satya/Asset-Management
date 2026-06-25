@@ -171,9 +171,10 @@ function SelectColumnsDropdown({ visible, onApply }: { visible: string[]; onAppl
   );
 }
 
-function RowMenu({ row, onEdit, onDelete }: {
+function RowMenu({ row, onEdit, onCreateChild, onDelete }: {
   row: ProductType;
   onEdit: (row: ProductType) => void;
+  onCreateChild: (row: ProductType) => void;
   onDelete: (row: ProductType) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -203,7 +204,7 @@ function RowMenu({ row, onEdit, onDelete }: {
       return;
     }
     const rect = btnRef.current!.getBoundingClientRect();
-    const menuWidth = 112;
+    const menuWidth = 224;
     setPos({ top: rect.bottom + 4, left: rect.left + menuWidth > window.innerWidth ? rect.right - menuWidth : rect.left });
     setOpen(true);
   }
@@ -219,9 +220,12 @@ function RowMenu({ row, onEdit, onDelete }: {
         <AlignJustify size={17} />
       </button>
       {open && createPortal(
-        <div ref={menuRef} style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }} className="w-28 border border-gray-200 bg-white py-1 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+        <div ref={menuRef} style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }} className="w-56 border border-gray-200 bg-white py-1 shadow-xl dark:border-gray-700 dark:bg-gray-800">
           <button onClick={() => { onEdit(row); setOpen(false); }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700">
             <Pencil size={13} className="text-gray-400" /> Edit
+          </button>
+          <button onClick={() => { onCreateChild(row); setOpen(false); }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700">
+            <Plus size={13} className="text-gray-400" /> Create Child Product Type
           </button>
           <button onClick={() => { onDelete(row); setOpen(false); }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
             <Trash2 size={13} /> Delete
@@ -261,6 +265,7 @@ export default function ProductTypeTable() {
   const [userTouchedTree, setUserTouchedTree] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editRecord, setEditRecord] = useState<ProductType | null>(null);
+  const [initialParent, setInitialParent] = useState<{ id: number; label: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProductType | null>(null);
   const [deleting, setDeleting] = useState(false);
   const statusRef = useRef<HTMLDivElement>(null);
@@ -374,7 +379,7 @@ export default function ProductTypeTable() {
         <div className="flex h-11 items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 dark:border-gray-700 dark:bg-gray-800">
           <button
             type="button"
-            onClick={() => { setFormOpen(false); setEditRecord(null); }}
+            onClick={() => { setFormOpen(false); setEditRecord(null); setInitialParent(null); }}
             className="inline-flex h-7 w-8 items-center justify-center border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-700"
             title="Back"
           >
@@ -388,8 +393,9 @@ export default function ProductTypeTable() {
         <ProductTypeForm
           record={editRecord as Record<string, unknown> | null}
           editingId={editRecord?.id}
-          onSuccess={() => { setFormOpen(false); setEditRecord(null); fetchData(); }}
-          onCancel={() => { setFormOpen(false); setEditRecord(null); }}
+          initialParent={initialParent}
+          onSuccess={() => { setFormOpen(false); setEditRecord(null); setInitialParent(null); fetchData(); }}
+          onCancel={() => { setFormOpen(false); setEditRecord(null); setInitialParent(null); }}
         />
       </div>
     );
@@ -426,7 +432,7 @@ export default function ProductTypeTable() {
         </div>
 
         <button
-          onClick={() => { setEditRecord(null); setFormOpen(true); }}
+          onClick={() => { setEditRecord(null); setInitialParent(null); setFormOpen(true); }}
           className="flex h-[30px] items-center gap-1.5 border border-gray-200 bg-white px-3 text-sm font-normal text-gray-900 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
         >
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-500 text-white">
@@ -529,7 +535,8 @@ export default function ProductTypeTable() {
                   <td className="w-16 px-3 py-2.5">
                     <RowMenu
                       row={row}
-                      onEdit={(record) => { setEditRecord(record); setFormOpen(true); }}
+                      onEdit={(record) => { setInitialParent(null); setEditRecord(record); setFormOpen(true); }}
+                      onCreateChild={(record) => { setEditRecord(null); setInitialParent({ id: record.id, label: record.displayName }); setFormOpen(true); }}
                       onDelete={(record) => setDeleteTarget(record)}
                     />
                   </td>
