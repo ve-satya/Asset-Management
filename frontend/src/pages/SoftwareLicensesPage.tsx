@@ -9,6 +9,7 @@ import axios from 'axios';
 import { getGlobalLicenses, deleteGlobalLicense } from '../services/globalSoftwareLicenseService';
 import useDebounce from '../hooks/useDebounce';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import Modal from '../components/common/Modal';
 import { ToastContainer, useToast } from '../components/common/Toast';
 import type { SoftwareLicense, PaginationMeta, NamedOption } from '../types';
 
@@ -24,6 +25,13 @@ const LICENSE_FILTER_OPTIONS = [
   { value: 'suite',   label: 'Suite Licenses'   },
 ];
 
+const UNLICENSED_INSTALLATIONS = [
+  { workstation: 'SDP5', user: 'administrator', usage: 'Not Known', productId: '' },
+  { workstation: 'SDP1', user: 'Daniel C. Brown', usage: 'Not Known', productId: '' },
+  { workstation: 'SDP3', user: '', usage: 'Not Known', productId: '' },
+  { workstation: 'SDP4', user: '', usage: 'Not Known', productId: '' },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function useClickOutside(ref: React.RefObject<HTMLElement | null>, onClose: () => void) {
@@ -34,6 +42,82 @@ function useClickOutside(ref: React.RefObject<HTMLElement | null>, onClose: () =
     document.addEventListener('mousedown', handle);
     return () => document.removeEventListener('mousedown', handle);
   }, [ref, onClose]);
+}
+
+function AllocationPanel({ onCancel, onAllocate }: { onCancel: () => void; onAllocate: () => void }) {
+  return (
+    <div className="flex min-h-[520px] flex-col bg-white dark:bg-gray-900">
+      <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-2 py-2 dark:border-gray-700 dark:bg-gray-800/70">
+        <span className="text-sm text-gray-700 dark:text-gray-300">1 - 4 of 4</span>
+        <div className="flex items-center gap-0.5 text-gray-300 dark:text-gray-600">
+          <ChevronsLeft size={15} />
+          <ChevronLeft size={15} />
+          <ChevronRight size={15} />
+          <ChevronsRight size={15} />
+        </div>
+        <span className="h-4 w-px bg-blue-500" />
+        <span className="text-sm text-gray-700 dark:text-gray-300">Show</span>
+        <select className="h-9 rounded border border-gray-300 bg-white px-2 text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+          <option>25</option>
+        </select>
+        <span className="text-sm text-gray-700 dark:text-gray-300">per page</span>
+      </div>
+
+      <div className="flex-1 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+              <th className="w-9 border-b border-r border-gray-200 px-2 py-3 dark:border-gray-700">
+                <input type="checkbox" className="rounded border-gray-300 text-blue-600" />
+              </th>
+              <th className="border-b border-r border-gray-200 px-2 py-3 dark:border-gray-700">Workstation</th>
+              <th className="border-b border-r border-gray-200 px-2 py-3 dark:border-gray-700">User</th>
+              <th className="border-b border-r border-gray-200 px-2 py-3 dark:border-gray-700">Usage</th>
+              <th className="border-b border-gray-200 px-2 py-3 dark:border-gray-700">
+                <div className="flex items-center justify-between gap-3">
+                  <span>Product ID</span>
+                  <span className="flex items-center gap-3 text-gray-400">
+                    <Search size={15} />
+                    <span className="text-lg leading-none">⊞</span>
+                  </span>
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {UNLICENSED_INSTALLATIONS.map((row) => (
+              <tr key={row.workstation} className="border-b border-gray-100 dark:border-gray-800">
+                <td className="px-2 py-2.5">
+                  <input type="checkbox" className="rounded border-gray-300 text-blue-600" />
+                </td>
+                <td className="px-2 py-2.5 text-gray-900 dark:text-gray-100">{row.workstation}</td>
+                <td className="px-2 py-2.5 text-gray-900 dark:text-gray-100">{row.user}</td>
+                <td className="px-2 py-2.5 text-gray-900 dark:text-gray-100">{row.usage}</td>
+                <td className="px-2 py-2.5 text-gray-900 dark:text-gray-100">{row.productId}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex items-center justify-center gap-4 border-t border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
+        <button
+          type="button"
+          onClick={onAllocate}
+          className="h-9 rounded-full bg-blue-600 px-6 text-sm font-medium text-white transition hover:bg-blue-700"
+        >
+          Allocate License
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="h-9 rounded-full border border-gray-300 bg-gray-50 px-6 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -56,6 +140,7 @@ export default function SoftwareLicensesPage() {
   const [selected,     setSelected]     = useState<number[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<{ ids: number[]; label: string } | null>(null);
   const [deleting,     setDeleting]     = useState(false);
+  const [allocationOpen, setAllocationOpen] = useState(false);
 
   // Search
   const [showSearch, setShowSearch] = useState(false);
@@ -429,7 +514,14 @@ export default function SoftwareLicensesPage() {
                         <input type="checkbox" checked={isSelected} onChange={() => toggleRow(row.id)} className="rounded border-gray-300 text-blue-600" />
                       </td>
                       <td className="px-1 py-2.5 w-8">
-                        <FileText size={15} className="text-teal-500 dark:text-teal-400" />
+                        <button
+                          type="button"
+                          onClick={() => setAllocationOpen(true)}
+                          title="Allocate licenses"
+                          className="inline-flex h-6 w-6 items-center justify-center rounded text-teal-500 transition hover:bg-teal-50 hover:text-teal-600 dark:text-teal-400 dark:hover:bg-teal-950/40"
+                        >
+                          <FileText size={15} />
+                        </button>
                       </td>
                       <td className="px-3 py-2.5 font-medium">
                         <button
@@ -453,6 +545,22 @@ export default function SoftwareLicensesPage() {
 
         </div>
       </div>
+
+      <Modal
+        open={allocationOpen}
+        onClose={() => setAllocationOpen(false)}
+        title="Allocate licenses to unlicensed installations"
+        maxWidth="max-w-6xl"
+        square
+      >
+        <AllocationPanel
+          onCancel={() => setAllocationOpen(false)}
+          onAllocate={() => {
+            showToast('License allocation is not yet implemented.');
+            setAllocationOpen(false);
+          }}
+        />
+      </Modal>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
