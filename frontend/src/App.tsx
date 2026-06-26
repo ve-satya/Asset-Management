@@ -15,6 +15,7 @@ import LicenseAgreementsPage from './pages/LicenseAgreementsPage';
 import LicenseAgreementFormPage from './pages/LicenseAgreementFormPage';
 import SoftwareLicensesPage from './pages/SoftwareLicensesPage';
 import SoftwareLicenseFormPage from './pages/SoftwareLicenseFormPage';
+import SoftwareLicenseDetailPage from './pages/SoftwareLicenseDetailPage';
 import ServicePacksPage from './pages/ServicePacksPage';
 import AddLicensePopupPage from './pages/AddLicensePopupPage';
 import AssociateLicensesPopupPage from './pages/AssociateLicensesPopupPage';
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="/software/license-agreements/edit/:id" element={<LicenseAgreementFormPage />} />
           <Route path="/software/licenses"                  element={<SoftwareLicensesPage />} />
           <Route path="/software/licenses/create"           element={<SoftwareLicenseFormPage />} />
+          <Route path="/software/licenses/detail/:id"       element={<SoftwareLicenseDetailPage />} />
           <Route path="/software/licenses/edit/:id"         element={<SoftwareLicenseFormPage />} />
           <Route path="/software/service-packs"             element={<ServicePacksPage />} />
 

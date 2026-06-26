@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Trash2, Pencil, Loader2, RefreshCw, X, Eye,
+  Plus, Trash2, Loader2, RefreshCw, X,
   Search, ChevronDown, Download, FileText, Upload,
   ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
 } from 'lucide-react';
@@ -413,17 +413,16 @@ export default function SoftwareLicensesPage() {
                   <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">Available</th>
                   <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">License Types</th>
                   <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">Site</th>
-                  <th className="px-3 py-2.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {loading ? (
-                  <tr><td colSpan={9} className="py-16 text-center"><Loader2 size={28} className="animate-spin text-blue-500 mx-auto" /></td></tr>
+                  <tr><td colSpan={8} className="py-16 text-center"><Loader2 size={28} className="animate-spin text-blue-500 mx-auto" /></td></tr>
                 ) : items.length === 0 ? (
-                  <tr><td colSpan={9} className="py-16 text-center text-sm text-gray-400 dark:text-gray-500">No licenses found.</td></tr>
+                  <tr><td colSpan={8} className="py-16 text-center text-sm text-gray-400 dark:text-gray-500">No licenses found.</td></tr>
                 ) : items.map((row) => {
                   const isSelected = selected.includes(row.id);
-                  const editPath   = `/software/licenses/edit/${row.id}`;
+                  const detailPath = `/software/licenses/detail/${row.id}`;
                   return (
                     <tr key={row.id} className={isSelected ? 'bg-blue-50/50 dark:bg-blue-900/10' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors'}>
                       <td className="px-3 py-2.5 w-10">
@@ -432,19 +431,19 @@ export default function SoftwareLicensesPage() {
                       <td className="px-1 py-2.5 w-8">
                         <FileText size={15} className="text-teal-500 dark:text-teal-400" />
                       </td>
-                      <td className="px-3 py-2.5 font-medium text-gray-800 dark:text-gray-200">{row.software?.name ?? '—'}</td>
+                      <td className="px-3 py-2.5 font-medium">
+                        <button
+                          onClick={() => navigate(detailPath)}
+                          className="text-left text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          {row.software?.name ?? '—'}
+                        </button>
+                      </td>
                       <td className="px-3 py-2.5 tabular-nums text-gray-700 dark:text-gray-300">{row.purchased}</td>
                       <td className="px-3 py-2.5 tabular-nums text-gray-700 dark:text-gray-300">{row.allocated}</td>
                       <td className="px-3 py-2.5 tabular-nums text-gray-700 dark:text-gray-300">{row.available}</td>
                       <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400">{row.licenseType ?? '—'}</td>
                       <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400">{row.allocatedSite ?? '—'}</td>
-                      <td className="px-3 py-2.5">
-                        <div className="flex items-center justify-end gap-3">
-                          <button onClick={() => navigate(editPath)} className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"><Eye size={12} /> View</button>
-                          <button onClick={() => navigate(editPath)} className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:underline"><Pencil size={12} /> Edit</button>
-                          <button onClick={() => setDeleteTarget({ ids: [row.id], label: row.software?.name ?? `License #${row.id}` })} className="flex items-center gap-1 text-xs font-medium text-red-500 hover:underline"><Trash2 size={12} /> Delete</button>
-                        </div>
-                      </td>
                     </tr>
                   );
                 })}
