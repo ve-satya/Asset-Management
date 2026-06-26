@@ -34,9 +34,11 @@ const navItems: NavItem[] = [
 
 interface SidebarProps {
   collapsed: boolean;
+  mobileOpen?: boolean;
+  onNavigate?: () => void;
 }
 
-export default function Sidebar({ collapsed }: SidebarProps) {
+export default function Sidebar({ collapsed, mobileOpen = false, onNavigate }: SidebarProps) {
   const location = useLocation();
   const [softwareOpen, setSoftwareOpen] = useState(
     () => location.pathname.startsWith('/software'),
@@ -67,9 +69,9 @@ export default function Sidebar({ collapsed }: SidebarProps) {
 
   return (
     <aside
-      className={`flex flex-col bg-white border-r border-gray-200 transition-all duration-200 dark:bg-gray-900 dark:border-gray-800 ${
-        collapsed ? 'w-16' : 'w-56'
-      } shrink-0 h-full`}
+      className={`fixed inset-y-0 left-0 z-40 flex h-full flex-col border-r border-gray-200 bg-white transition-transform duration-200 dark:border-gray-800 dark:bg-gray-900 md:static md:z-auto md:translate-x-0 ${
+        mobileOpen ? 'translate-x-0' : '-translate-x-full'
+      } ${collapsed ? 'md:w-16' : 'md:w-56'} w-72 shrink-0`}
     >
       <nav className="flex-1 py-3 space-y-0.5 px-2 overflow-y-auto">
         {navItems.map((item) => {
@@ -81,6 +83,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                 key={item.to}
                 to={item.to}
                 end={item.to === '/assets'}
+                onClick={onNavigate}
                 className={() =>
                   `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     isTopActive(item)
@@ -130,6 +133,7 @@ export default function Sidebar({ collapsed }: SidebarProps) {
                       <NavLink
                         key={child.to}
                         to={child.to}
+                        onClick={onNavigate}
                         className={() =>
                           `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${
                             active

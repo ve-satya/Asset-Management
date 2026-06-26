@@ -173,27 +173,27 @@ export default function ProductTypeForm({ record, editingId, initialParent, onSu
       <div className="px-6 pt-5 pb-4">
         {errors.submit && <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg text-sm text-red-700 dark:text-red-400">{errors.submit}</div>}
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2">
           <div>{lbl('Display Name', true)}<input name="displayName" value={form.displayName} onChange={handleChange} className={cls('displayName')} placeholder="e.g. Smart Phone" />{errors.displayName && <p className="mt-1 text-xs text-red-500">{errors.displayName}</p>}</div>
           <div>{lbl('API Name', true)}<input name="apiName" value={form.apiName} onChange={(e) => { setApiNameTouched(true); handleChange(e); }} disabled={isEditing} className={cls('apiName', isEditing)} placeholder="e.g. custom_asset_smart-phone" />{errors.apiName ? <p className="mt-1 text-xs text-red-500">{errors.apiName}</p> : <p className="mt-1 text-xs text-gray-400">Auto-filled from Display Name</p>}</div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2">
           <div>{lbl('Display Plural Name', true)}<input name="displayPluralName" value={form.displayPluralName} onChange={handleChange} className={cls('displayPluralName')} placeholder="e.g. Smart Phones" />{errors.displayPluralName && <p className="mt-1 text-xs text-red-500">{errors.displayPluralName}</p>}</div>
           <div>{lbl('API Plural Name', true)}<input name="apiPluralName" value={form.apiPluralName} onChange={(e) => { setApiPluralNameTouched(true); handleChange(e); }} disabled={isEditing} className={cls('apiPluralName', isEditing)} placeholder="e.g. custom_asset_smart-phones" />{errors.apiPluralName ? <p className="mt-1 text-xs text-red-500">{errors.apiPluralName}</p> : <p className="mt-1 text-xs text-gray-400">Auto-filled from API Name</p>}</div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2">
           <div>{lbl('Category', true)}<select name="category" value={form.category} onChange={handleChange} disabled={isEditing} className={cls('category', isEditing)}><option value="">-- Select Category --</option>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select>{errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}</div>
           <div>{lbl('Parent Product Type')}<ParentTreeDropdown value={form.parentId} displayLabel={form.parentLabel} treeRoots={treeRoots} onSelect={handleParentSelect} hasError={false} disabled={Boolean(initialParent && !isEditing)} /></div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2">
           <div>{lbl('Asset Type', true)}<select name="assetType" value={form.assetType} onChange={handleChange} disabled={isEditing || !form.category || form.category === 'Consumable'} className={cls('assetType', isEditing || !form.category || form.category === 'Consumable')}><option value="">-- Select Asset Type --</option>{assetTypeOptions.map((t) => <option key={t} value={t}>{t}</option>)}</select>{errors.assetType && <p className="mt-1 text-xs text-red-500">{errors.assetType}</p>}</div>
           <div>{lbl('Description')}<textarea name="description" value={form.description} onChange={handleChange} rows={3} className={`${cls('description')} resize-none`} placeholder="Optional description…" /></div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>{lbl('Asset Category', true)}<select name="assetCategory" value={form.assetCategory} onChange={handleChange} disabled={isEditing || !form.category} className={cls('assetCategory', isEditing || !form.category)}><option value="">-- Select Asset Category --</option>{ASSET_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</select>{errors.assetCategory && <p className="mt-1 text-xs text-red-500">{errors.assetCategory}</p>}</div>
           <div />
         </div>

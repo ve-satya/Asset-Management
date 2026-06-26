@@ -566,7 +566,7 @@ export default function SoftwareDetailPage() {
                     <div className="text-2xl font-semibold leading-6 text-gray-700 dark:text-gray-200">{unlicensedInstallations}</div>
                     <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Unlicensed</div>
                   </div>
-                  <div className="col-span-3 grid grid-cols-2 border-t border-gray-200 dark:border-gray-700">
+                  <div className="col-span-3 grid grid-cols-1 border-t border-gray-200 dark:border-gray-700 sm:grid-cols-2">
                     <div className="flex min-h-[74px] items-center gap-4 border-r border-gray-200 px-8 dark:border-gray-700">
                       <Paperclip size={30} className="text-gray-400" />
                       <div>
@@ -602,7 +602,7 @@ export default function SoftwareDetailPage() {
 
               {/* Fields grid */}
               <div className="p-6">
-                <div className="grid grid-cols-2 gap-x-16 gap-y-4 text-sm">
+                <div className="grid grid-cols-1 gap-x-16 gap-y-4 text-sm md:grid-cols-2">
                   {/* Left column */}
                   <div className="space-y-4">
                     <div className="flex gap-2">

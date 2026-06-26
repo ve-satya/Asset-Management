@@ -31,7 +31,7 @@ export default function Navbar({ darkMode, setDarkMode, onMenuToggle }: NavbarPr
   ];
 
   return (
-    <header className="flex h-11 shrink-0 items-center border-b border-gray-950 bg-[#20282d] text-gray-200 shadow-sm">
+    <header className="flex h-11 shrink-0 items-center overflow-hidden border-b border-gray-950 bg-[#20282d] text-gray-200 shadow-sm">
       <button
         onClick={onMenuToggle}
         className="mx-2 inline-flex h-8 w-8 items-center justify-center text-gray-200 hover:bg-white/10"
@@ -40,11 +40,11 @@ export default function Navbar({ darkMode, setDarkMode, onMenuToggle }: NavbarPr
         <Menu size={20} />
       </button>
 
-      <div className="flex h-full items-center gap-2 px-2">
+      <div className="flex h-full min-w-0 items-center gap-2 px-2">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-white text-slate-700">
           <Headphones size={16} />
         </div>
-        <span className="whitespace-nowrap text-sm font-semibold text-white">IT Helpdesk</span>
+        <span className="hidden whitespace-nowrap text-sm font-semibold text-white sm:inline">IT Helpdesk</span>
       </div>
 
       <nav className="hidden h-full min-w-0 items-center md:flex">
@@ -63,8 +63,8 @@ export default function Navbar({ darkMode, setDarkMode, onMenuToggle }: NavbarPr
         ))}
       </nav>
 
-      <div className="ml-auto flex h-full items-center gap-1 px-2">
-        <button className="inline-flex h-9 w-9 items-center justify-center text-gray-300 hover:bg-white/10 hover:text-white" title="Search" aria-label="Search">
+      <div className="ml-auto flex h-full min-w-0 items-center gap-1 px-1 sm:px-2">
+        <button className="hidden h-9 w-9 items-center justify-center text-gray-300 hover:bg-white/10 hover:text-white sm:inline-flex" title="Search" aria-label="Search">
           <Search size={20} />
         </button>
         <button className="relative inline-flex h-9 w-9 items-center justify-center text-gray-300 hover:bg-white/10 hover:text-white" title="Notifications" aria-label="Notifications">
@@ -79,10 +79,10 @@ export default function Navbar({ darkMode, setDarkMode, onMenuToggle }: NavbarPr
         >
           {darkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
-        <button onClick={() => navigate('/assets')} className="inline-flex h-9 w-9 items-center justify-center text-gray-300 hover:bg-white/10 hover:text-white" title="Settings" aria-label="Settings">
+        <button onClick={() => navigate('/assets')} className="hidden h-9 w-9 items-center justify-center text-gray-300 hover:bg-white/10 hover:text-white sm:inline-flex" title="Settings" aria-label="Settings">
           <Settings size={20} />
         </button>
-        <button className="inline-flex h-9 w-9 items-center justify-center text-gray-300 hover:bg-white/10 hover:text-white" title="Help" aria-label="Help">
+        <button className="hidden h-9 w-9 items-center justify-center text-gray-300 hover:bg-white/10 hover:text-white sm:inline-flex" title="Help" aria-label="Help">
           <HelpCircle size={20} />
         </button>
 

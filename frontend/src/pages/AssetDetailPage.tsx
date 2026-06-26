@@ -19,8 +19,8 @@ const SITES = ['noida', 'NSEZ', 'nsez', 'delhi', 'mumbai'];
 function Field({ label, value }: { label: string; value: ReactNode }) {
   const display = value != null && value !== '' ? value : <span className="text-gray-400 dark:text-gray-600">-</span>;
   return (
-    <div className="grid min-w-0 grid-cols-[170px_minmax(0,1fr)] items-baseline gap-4">
-      <span className="text-right text-[11px] text-gray-600 dark:text-gray-400">{label}</span>
+    <div className="grid min-w-0 grid-cols-1 items-baseline gap-1 sm:grid-cols-[170px_minmax(0,1fr)] sm:gap-4">
+      <span className="text-left text-[11px] text-gray-600 dark:text-gray-400 sm:text-right">{label}</span>
       <span className="min-w-0 break-words text-[11px] font-medium text-gray-900 dark:text-gray-200">{display}</span>
     </div>
   );
@@ -29,7 +29,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section>
       <h3 className="border-b border-gray-200 px-3 pb-2 pt-3 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:text-gray-100">{title}</h3>
-      <div className="px-6 py-4">{children}</div>
+      <div className="px-3 py-4 sm:px-6">{children}</div>
     </section>
   );
 }
@@ -138,15 +138,15 @@ function AssignModal({ open, mode, onClose, asset, stateList, onSave, saving }: 
   const selectClass = 'h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/55" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-[500px] border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+      <div className="relative z-10 flex max-h-[92dvh] w-full max-w-[500px] flex-col border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
         <div className="flex h-12 items-center justify-between border-b border-gray-200 px-4 dark:border-gray-700">
           <h2 className="text-base font-medium text-gray-900 dark:text-gray-100">Assign / Associate</h2>
           <button onClick={onClose} className="p-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white" aria-label="Close"><X size={18} /></button>
         </div>
 
-        <div className="space-y-4 px-4 py-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-5 scrollbar-thin">
           {mode === 'state' && (
             <ModalField label="Asset State">
               <select
@@ -215,7 +215,7 @@ function AssignModal({ open, mode, onClose, asset, stateList, onSave, saving }: 
           </label>
         </div>
 
-        <div className="flex justify-center gap-3 border-t border-gray-200 px-4 py-4 dark:border-gray-700">
+        <div className="flex shrink-0 justify-center gap-3 border-t border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
           <button onClick={() => onSave(form)} disabled={saving} className="flex h-8 items-center gap-2 rounded-full bg-sky-600 px-5 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50">{saving && <Loader2 size={13} className="animate-spin" />} Update</button>
           <button onClick={onClose} disabled={saving} className="h-8 rounded-full border border-gray-300 bg-white px-5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">Cancel</button>
         </div>
@@ -283,7 +283,7 @@ function HeaderSummary({ asset }: { asset: Asset }) {
   const productTypeName = asset.productType?.displayName || '-';
   const userLabel = asset.isLoanable ? 'Loaned to User' : 'Assigned To User';
   return (
-    <div className="flex min-h-[82px] items-center gap-4 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+    <div className="flex min-h-[82px] flex-wrap items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900 sm:gap-4">
       <div className="flex h-14 w-14 items-center justify-center">
         <ProductTypeIcon name={productTypeName} />
       </div>
@@ -291,7 +291,7 @@ function HeaderSummary({ asset }: { asset: Asset }) {
         <h1 className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{asset.name || '-'}</h1>
         <p className="mt-1 text-[11px] text-gray-600 dark:text-gray-400">{asset.product || '-'} <span className="text-gray-400">(Asset / {productTypeName})</span></p>
       </div>
-      <div className="ml-10 text-[11px] text-gray-600 dark:text-gray-400">
+      <div className="w-full text-[11px] text-gray-600 dark:text-gray-400 sm:ml-10 sm:w-auto">
         {userLabel}: <span className="font-medium text-sky-600 dark:text-sky-300">{asset.user || '-'}</span>
       </div>
     </div>
@@ -301,7 +301,7 @@ function HeaderSummary({ asset }: { asset: Asset }) {
 function RightSidebar({ asset, onAssetStateClick }: { asset: Asset; onAssetStateClick: () => void }) {
   const productTypeName = asset.productType?.displayName || 'Asset';
   return (
-    <aside className="w-72 shrink-0 border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <aside className="w-full shrink-0 border-t border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 lg:w-72 lg:border-l lg:border-t-0">
       <div className="border-b border-gray-200 p-3 dark:border-gray-700">
         <div className="border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/60">
           <div className="flex gap-2 text-[11px] text-gray-700 dark:text-gray-300">
@@ -617,7 +617,7 @@ function AssetFinancialsTab({ asset }: { asset: Asset }) {
               <CostSection title="Disposal Cost" items={disposalCostItems} total={disposalCostTotal} onEdit={(item) => { setEditCost(item); setModalOpen(true); }} onDelete={removeCost} saving={saving} />
             </>
           )}
-          <div className="ml-auto mt-5 w-72 space-y-3 border-t border-gray-200 pt-3 text-right text-[12px] dark:border-gray-700">
+          <div className="ml-auto mt-5 w-full space-y-3 border-t border-gray-200 pt-3 text-right text-[12px] dark:border-gray-700 sm:w-72">
             <p>Total Cost of Ownership($) : {currency(tcoTotal)}</p>
           </div>
         </div>
@@ -645,7 +645,7 @@ function AssetFinancialsTab({ asset }: { asset: Asset }) {
 
 function CostSummary({ label, value }: { label: string; value: number }) {
   return (
-    <div className="grid grid-cols-[220px_1fr] gap-5">
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-[220px_1fr]">
       <span className="text-right text-gray-700 dark:text-gray-300">{label}</span>
       <span className="font-semibold text-gray-900 dark:text-gray-100">{currency(value)}</span>
     </div>
@@ -742,14 +742,14 @@ function CostModal({ open, cost, saving, onClose, onSave }: { open: boolean; cos
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/45" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-[438px] border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+      <div className="relative z-10 flex max-h-[92dvh] w-full max-w-[438px] flex-col border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
         <div className="flex h-11 items-center justify-between border-b border-gray-200 px-3 dark:border-gray-700">
           <h2 className="text-sm font-medium text-gray-950 dark:text-gray-100">{isEdit ? 'Edit Cost' : 'Add Cost'}</h2>
           <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-white" aria-label="Close"><X size={16} /></button>
         </div>
-        <div className="space-y-3 px-6 py-5 text-xs">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-5 text-xs scrollbar-thin sm:px-6">
           {error && <p className="ml-[108px] text-red-600">{error}</p>}
           <CostModalRow label="Date" required>
             <DateInputWithIcon value={form.costDate} onChange={(value) => setForm((prev) => ({ ...prev, costDate: value }))} />
@@ -767,7 +767,7 @@ function CostModal({ open, cost, saving, onClose, onSave }: { open: boolean; cos
             <input type="number" min="0" step="0.01" value={form.costAmount} onChange={(event) => setForm((prev) => ({ ...prev, costAmount: event.target.value }))} className="h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
           </CostModalRow>
         </div>
-        <div className="flex justify-center gap-3 border-t border-gray-200 px-4 py-3 dark:border-gray-700">
+        <div className="flex shrink-0 justify-center gap-3 border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
           <button type="button" onClick={save} disabled={saving} className="h-8 rounded-full bg-sky-600 px-5 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-50">{isEdit ? 'Update' : 'Add Cost'}</button>
           <button type="button" onClick={onClose} disabled={saving} className="h-8 rounded-full border border-gray-300 bg-white px-5 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Cancel</button>
         </div>
@@ -778,8 +778,8 @@ function CostModal({ open, cost, saving, onClose, onSave }: { open: boolean; cos
 
 function CostModalRow({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
   return (
-    <label className="grid grid-cols-[96px_minmax(0,1fr)] items-start gap-3">
-      <span className="pt-2 text-right text-xs text-gray-700 dark:text-gray-300">{required && <span className="mr-1 text-red-500">*</span>}{label}</span>
+    <label className="grid grid-cols-1 items-start gap-1 sm:grid-cols-[96px_minmax(0,1fr)] sm:gap-3">
+      <span className="text-left text-xs text-gray-700 dark:text-gray-300 sm:pt-2 sm:text-right">{required && <span className="mr-1 text-red-500">*</span>}{label}</span>
       <span>{children}</span>
     </label>
   );
@@ -1009,14 +1009,14 @@ function ConfigureDepreciationModal({ open, asset, initialConfig, onClose, onSav
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/45" onClick={onClose} />
       <div className="relative z-10 flex max-h-[82vh] w-full max-w-[580px] flex-col border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
         <div className="flex h-11 shrink-0 items-center justify-between border-b border-gray-200 px-3 dark:border-gray-700">
           <h2 className="text-sm font-medium text-gray-950 dark:text-gray-100">Configure Depreciation</h2>
           <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-white" aria-label="Close"><X size={16} /></button>
         </div>
-        <div className="min-h-0 flex-1 space-y-3 overflow-visible px-6 py-4 text-xs">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 text-xs scrollbar-thin sm:px-6">
           {error && <p className="ml-[178px] text-red-600">{error}</p>}
           <DepreciationModalRow label="Purchase Cost($)" required>
             <input type="number" min="0" step="0.01" value={form.purchaseCost} onChange={(event) => setForm((prev) => ({ ...prev, purchaseCost: event.target.value }))} className="h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
@@ -1045,8 +1045,8 @@ function ConfigureDepreciationModal({ open, asset, initialConfig, onClose, onSav
 
 function DepreciationModalRow({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
   return (
-    <label className="grid grid-cols-[166px_minmax(0,1fr)] items-start gap-3">
-      <span className="pt-2 text-right text-xs text-gray-700 dark:text-gray-300">{required && <span className="mr-1 text-red-500">*</span>}{label}</span>
+    <label className="grid grid-cols-1 items-start gap-1 sm:grid-cols-[166px_minmax(0,1fr)] sm:gap-3">
+      <span className="text-left text-xs text-gray-700 dark:text-gray-300 sm:pt-2 sm:text-right">{required && <span className="mr-1 text-red-500">*</span>}{label}</span>
       <span>{children}</span>
     </label>
   );
@@ -1175,7 +1175,7 @@ function TimelineItem({ event }: { event: TimelineEvent }) {
   const Icon = historyIcon(item.actionType);
   const details = event.items.flatMap(historyDetails);
   return (
-    <div className="grid grid-cols-[110px_58px_minmax(0,1fr)] py-5 text-[12px]">
+    <div className="grid grid-cols-[70px_48px_minmax(0,1fr)] py-5 text-[12px] sm:grid-cols-[110px_58px_minmax(0,1fr)]">
       <div className="pt-2 text-right font-medium text-gray-900 dark:text-gray-100">{displayTime(item.changedOn)}</div>
       <div className="relative flex justify-center">
         <span className="absolute bottom-[-20px] top-9 w-px bg-gray-200 dark:bg-gray-700" />
@@ -1267,7 +1267,7 @@ export default function AssetDetailPage() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-white dark:bg-gray-950">
-      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 dark:border-gray-700 dark:bg-gray-900">
+      <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
         <SmallButton onClick={() => navigate(`/assets/list${ptId ? `?asset-product-type-id=${ptId}` : ''}`)}><ArrowLeft size={13} /></SmallButton>
         <SmallButton onClick={() => navigate(`/assets/edit/${asset.id}`)}><Pencil size={12} /> Edit</SmallButton>
         <SmallButton onClick={() => { setAssignMode('assign'); setAssignOpen(true); }}>Assign</SmallButton>
@@ -1275,17 +1275,17 @@ export default function AssetDetailPage() {
         <SmallButton><Play size={12} /> Scan Now</SmallButton>
       </div>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <main className="min-w-0 flex-1 overflow-auto scrollbar-thin">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+        <main className="min-h-0 min-w-0 flex-1 overflow-auto scrollbar-thin">
           <HeaderSummary asset={asset} />
 
           <div className="border-b border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-gray-900">
-            <nav className="flex gap-6">
+            <nav className="flex gap-6 overflow-x-auto scrollbar-thin">
               {MAIN_TABS.map(({ key, label }) => (
                 <button
                   key={key}
                   onClick={() => goToTab(key)}
-                  className={`h-9 border-b-2 text-[11px] font-medium transition-colors ${activeTab === key ? 'border-sky-500 text-sky-600 dark:text-sky-300' : 'border-transparent text-gray-700 hover:text-sky-600 dark:text-gray-300 dark:hover:text-sky-300'}`}
+                  className={`h-9 shrink-0 border-b-2 text-[11px] font-medium transition-colors ${activeTab === key ? 'border-sky-500 text-sky-600 dark:text-sky-300' : 'border-transparent text-gray-700 hover:text-sky-600 dark:text-gray-300 dark:hover:text-sky-300'}`}
                 >
                   {label}
                 </button>

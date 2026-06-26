@@ -322,10 +322,10 @@ export default function MasterTable({
   const hasFilters = rawSearch || Object.values(colFilters).some(Boolean);
 
   return (
-    <div className="flex flex-col bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div className="flex min-w-0 flex-col rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
 
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="relative" ref={statusRef}>
             <button onClick={() => setStatusOpen((v) => !v)}
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
@@ -350,7 +350,7 @@ export default function MasterTable({
           </button>
         </div>
 
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
           {hasFilters && (
             <button onClick={clearFilters}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -365,11 +365,11 @@ export default function MasterTable({
         <input type="text" value={rawSearch}
           onChange={(e) => { setRawSearch(e.target.value); setPagination((p) => ({ ...p, page: 1 })); }}
           placeholder="Search across all fields…"
-          className="w-full max-w-sm px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 text-gray-900 dark:text-gray-100 dark:placeholder-gray-500" />
+          className="w-full max-w-sm rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500" />
       </div>
 
       <div className="overflow-x-auto scrollbar-thin">
-        <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
+        <table className="min-w-[760px] w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: 32 }} />
             {visibleDefs.map((col) => (

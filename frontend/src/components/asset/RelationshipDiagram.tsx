@@ -29,13 +29,13 @@ export default function RelationshipDiagram({ asset, relationships, onAdd, onAss
         <AddRelationshipButton onAdd={onAdd} onAssign={onAssign} />
       </div>
       <div className="border-t border-gray-200 pt-7 dark:border-gray-800">
-        <div className="relative mx-auto min-h-[565px] max-w-[1180px]">
-          <div className="absolute left-1/2 top-[116px] h-[88px] w-px -translate-x-1/2 bg-gray-400 dark:bg-gray-600" />
-          <div className="absolute left-[24%] right-[24%] top-[204px] h-px bg-gray-400 dark:bg-gray-600" />
-          <div className="absolute left-[24%] top-[204px] h-[48px] w-px bg-gray-400 dark:bg-gray-600" />
-          <div className="absolute right-[24%] top-[204px] h-[48px] w-px bg-gray-400 dark:bg-gray-600" />
-          <div className="absolute left-[22%] top-[238px] border-x-[6px] border-t-[8px] border-x-transparent border-t-gray-400 dark:border-t-gray-600" />
-          <div className="absolute right-[22%] top-[238px] border-x-[6px] border-t-[8px] border-x-transparent border-t-gray-400 dark:border-t-gray-600" />
+        <div className="relative mx-auto max-w-[1180px] md:min-h-[565px]">
+          <div className="absolute left-1/2 top-[116px] hidden h-[88px] w-px -translate-x-1/2 bg-gray-400 dark:bg-gray-600 md:block" />
+          <div className="absolute left-[24%] right-[24%] top-[204px] hidden h-px bg-gray-400 dark:bg-gray-600 md:block" />
+          <div className="absolute left-[24%] top-[204px] hidden h-[48px] w-px bg-gray-400 dark:bg-gray-600 md:block" />
+          <div className="absolute right-[24%] top-[204px] hidden h-[48px] w-px bg-gray-400 dark:bg-gray-600 md:block" />
+          <div className="absolute left-[22%] top-[238px] hidden border-x-[6px] border-t-[8px] border-x-transparent border-t-gray-400 dark:border-t-gray-600 md:block" />
+          <div className="absolute right-[22%] top-[238px] hidden border-x-[6px] border-t-[8px] border-x-transparent border-t-gray-400 dark:border-t-gray-600 md:block" />
 
           <div className="text-center text-base font-medium">
             {productTypeName} - {asset.name}
@@ -48,7 +48,7 @@ export default function RelationshipDiagram({ asset, relationships, onAdd, onAss
           </div>
 
           {relationships.assignedUser && (
-            <div className="absolute left-[7%] top-[84px] w-[185px] border border-gray-400 bg-white text-[11px] dark:border-gray-700 dark:bg-gray-900">
+            <div className="mt-4 w-full border border-gray-400 bg-white text-[11px] dark:border-gray-700 dark:bg-gray-900 md:absolute md:left-[7%] md:top-[84px] md:mt-0 md:w-[185px]">
               <div className="flex h-7 items-center justify-between border-b border-gray-300 bg-gray-50 px-2 dark:border-gray-700 dark:bg-gray-800">
                 <span className="font-semibold uppercase">User</span>
                 <button
@@ -65,21 +65,21 @@ export default function RelationshipDiagram({ asset, relationships, onAdd, onAss
                 <UserCircle size={16} className="text-gray-400" />
                 <span className="truncate">{relationships.assignedUser.name}</span>
               </div>
-              <div className="absolute left-full top-1/2 h-px w-[112px] bg-gray-400 dark:bg-gray-600" />
-              <div className="absolute left-[calc(100%+54px)] top-[calc(50%-13px)] border border-gray-400 bg-white px-4 py-1 text-[11px] dark:border-gray-700 dark:bg-gray-900">
+              <div className="absolute left-full top-1/2 hidden h-px w-[112px] bg-gray-400 dark:bg-gray-600 md:block" />
+              <div className="absolute left-[calc(100%+54px)] top-[calc(50%-13px)] hidden border border-gray-400 bg-white px-4 py-1 text-[11px] dark:border-gray-700 dark:bg-gray-900 md:block">
                 Assigned to
               </div>
             </div>
           )}
 
-          <div className="absolute left-[25%] top-[235px] -translate-x-1/2 skew-x-[-22deg] border border-gray-400 bg-white px-5 py-1 text-[11px] dark:border-gray-700 dark:bg-gray-900">
+          <div className="absolute left-[25%] top-[235px] hidden -translate-x-1/2 skew-x-[-22deg] border border-gray-400 bg-white px-5 py-1 text-[11px] dark:border-gray-700 dark:bg-gray-900 md:block">
             <span className="inline-block skew-x-[22deg]">Connected</span>
           </div>
-          <div className="absolute right-[25%] top-[235px] translate-x-1/2 skew-x-[-22deg] border border-gray-400 bg-white px-5 py-1 text-[11px] dark:border-gray-700 dark:bg-gray-900">
+          <div className="absolute right-[25%] top-[235px] hidden translate-x-1/2 skew-x-[-22deg] border border-gray-400 bg-white px-5 py-1 text-[11px] dark:border-gray-700 dark:bg-gray-900 md:block">
             <span className="inline-block skew-x-[22deg]">Attached</span>
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 grid grid-cols-1 gap-3 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-1 gap-3 md:absolute md:inset-x-0 md:bottom-0 md:mt-0 lg:grid-cols-4">
             <RelationshipCard title="Assets" count={relationships.connectedAssets.length} emptyText="No assets connected yet" actionLabel="Connect" onAction={() => onAdd('ConnectedAsset')} hideFooterAction={relationships.connectedAssets.length > 0}>
               {relationships.connectedAssets.map((row) => (
                 <RelationshipRow key={row.id} label={assetLabel(row)} onRemove={() => onRemove(row.id, 'ConnectedAsset')} />

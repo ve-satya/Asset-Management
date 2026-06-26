@@ -3,6 +3,13 @@
 @tailwind utilities;
 
 @layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
   body {
     @apply bg-gray-50 text-gray-900 font-sans;
   }
@@ -12,6 +19,15 @@
 }
 
 @layer utilities {
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .responsive-table {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: #d1d5db transparent;

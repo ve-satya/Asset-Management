@@ -62,9 +62,9 @@ export default function AddRelationshipModal({ open, type, currentAssetId, asset
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-[520px] border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+      <div className="relative z-10 flex max-h-[92dvh] w-full max-w-[520px] flex-col border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
         <div className="flex h-12 items-center justify-between border-b border-gray-200 px-4 dark:border-gray-700">
           <h2 className="text-base font-medium text-gray-900 dark:text-gray-100">{LABELS[type]}</h2>
           <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-white" aria-label="Close">
@@ -72,7 +72,7 @@ export default function AddRelationshipModal({ open, type, currentAssetId, asset
           </button>
         </div>
 
-        <div className="space-y-4 px-4 py-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5 scrollbar-thin">
           {isAssignUser ? (
             <label className="block">
               <span className="mb-1.5 block text-xs text-gray-700 dark:text-gray-300">User</span>
@@ -105,7 +105,7 @@ export default function AddRelationshipModal({ open, type, currentAssetId, asset
           )}
         </div>
 
-        <div className="flex justify-center gap-3 border-t border-gray-200 px-4 py-4 dark:border-gray-700">
+        <div className="flex shrink-0 justify-center gap-3 border-t border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
           <button onClick={save} disabled={saving} className="inline-flex h-8 items-center gap-2 rounded-full bg-sky-600 px-5 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50">
             {saving && <Loader2 size={13} className="animate-spin" />} Save
           </button>
@@ -231,8 +231,8 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-6">
-      <div className="relative flex h-[calc(100vh-64px)] w-[calc(100vw-84px)] max-w-[1828px] flex-col border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-2 sm:p-6">
+      <div className="relative flex h-[calc(100dvh-16px)] w-[calc(100vw-16px)] max-w-[1828px] flex-col border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:h-[calc(100vh-64px)] sm:w-[calc(100vw-84px)]">
         {toastVisible && (
           <div className="absolute left-1/2 top-5 z-20 flex -translate-x-1/2 items-center gap-2 rounded border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-700 shadow-lg dark:border-emerald-800 dark:bg-gray-900 dark:text-emerald-300">
             <CheckCircle2 size={16} /> Connected
@@ -245,14 +245,14 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
           </button>
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-4 px-3 py-3">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 px-3 py-3 sm:gap-4">
           <select
             value={productTypeId}
             onChange={(event) => resetPageForFilter(() => {
               setProductTypeId(event.target.value);
               setProductName('');
             })}
-            className="h-8 w-56 border border-gray-300 bg-white px-2 text-xs text-gray-700 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            className="h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-700 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 sm:w-56"
           >
             <option value="">Product Type</option>
             {productTypes.map((type) => <option key={type.id} value={type.id}>{type.displayName}</option>)}
@@ -261,7 +261,7 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
           <select
             value={productName}
             onChange={(event) => resetPageForFilter(() => setProductName(event.target.value))}
-            className="h-8 w-56 border border-gray-300 bg-white px-2 text-xs text-gray-700 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            className="h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-700 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 sm:w-56"
           >
             <option value="">Product</option>
             {filteredProducts.map((product) => <option key={product.id} value={product.name}>{product.name}</option>)}
@@ -270,14 +270,14 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
           <select
             value={assetState}
             onChange={(event) => resetPageForFilter(() => setAssetState(event.target.value))}
-            className="h-8 w-56 border border-gray-300 bg-white px-2 text-xs text-gray-700 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            className="h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-700 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 sm:w-56"
           >
             <option value="">Select States</option>
             {states.map((state) => <option key={state.id} value={state.name}>{state.name}</option>)}
           </select>
         </div>
 
-        <div className="flex shrink-0 items-center justify-between px-3 pb-2">
+        <div className="flex shrink-0 flex-col gap-2 px-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             {selectedIds.length > 0 && (
               <>
