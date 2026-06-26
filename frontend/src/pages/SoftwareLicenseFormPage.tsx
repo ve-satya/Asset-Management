@@ -288,13 +288,13 @@ export default function SoftwareLicenseFormPage() {
                   {/* Left */}
                   <div className="space-y-4">
                     <Field label="Manufacturer">
-                      <select value={form.manufacturerId} onChange={(e) => set('manufacturerId', e.target.value)} className={INPUT}>
+                      <select value={form.manufacturerId} onChange={(e) => set('manufacturerId', e.target.value)} disabled={isEdit} className={`${INPUT} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 dark:disabled:bg-gray-700 dark:disabled:text-gray-400`}>
                         <option value="">-- All Manufacturers --</option>
                         {manufacturers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                       </select>
                     </Field>
                     <Field label="Managed Software" required error={errors.softwareId}>
-                      <select value={form.softwareId} onChange={(e) => set('softwareId', e.target.value)} className={INPUT}>
+                      <select value={form.softwareId} onChange={(e) => set('softwareId', e.target.value)} disabled={isEdit} className={`${INPUT} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 dark:disabled:bg-gray-700 dark:disabled:text-gray-400`}>
                         <option value="">--Choose Software--</option>
                         {softwares.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
@@ -323,10 +323,10 @@ export default function SoftwareLicenseFormPage() {
                   {/* Right */}
                   <div className="space-y-4">
                     <Field label="Acquisition Date">
-                      <input type="date" value={form.acquiredDate} onChange={(e) => set('acquiredDate', e.target.value)} className={INPUT} />
+                      <input type="date" value={form.acquiredDate} onChange={(e) => set('acquiredDate', e.target.value)} disabled={isEdit} className={`${INPUT} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 dark:disabled:bg-gray-700 dark:disabled:text-gray-400`} />
                     </Field>
                     <Field label="Expiry Date">
-                      <input type="date" value={form.expiryDate} onChange={(e) => set('expiryDate', e.target.value)} className={INPUT} />
+                      <input type="date" value={form.expiryDate} onChange={(e) => set('expiryDate', e.target.value)} disabled={isEdit} className={`${INPUT} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 dark:disabled:bg-gray-700 dark:disabled:text-gray-400`} />
                     </Field>
                     <Field label="Purchase Cost ($)">
                       <input type="number" step="0.01" min="0" value={form.purchaseCost} onChange={(e) => set('purchaseCost', e.target.value)} className={INPUT} placeholder="0.0" />
