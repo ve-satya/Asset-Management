@@ -86,35 +86,35 @@ export default function VendorForm({ record, onSuccess, onCancel }: VendorFormPr
             {errors.submit}
           </div>
         )}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div><Label text="Name" req /><input name="name" value={form.name} onChange={ch} className={inp(!!errors.name)} />{errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}</div>
           <div><Label text="Currency" /><select name="currency" value={form.currency} onChange={ch} className={inp(false)}><option value="">Select</option>{CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div><Label text="Contact Person" /><input name="contactPerson" value={form.contactPerson} onChange={ch} className={inp(false)} /></div>
           <div><Label text="Email" /><input type="email" name="email" value={form.email} onChange={ch} className={inp(false)} /></div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div><Label text="Phone" /><input name="phone" value={form.phone} onChange={ch} className={inp(false)} /></div>
           <div><Label text="Fax" /><input name="fax" value={form.fax} onChange={ch} className={inp(false)} /></div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div><Label text="Website" /><input name="website" value={form.website} onChange={ch} className={inp(false)} /></div>
         </div>
         <div><Label text="Description" /><textarea name="description" value={form.description} onChange={ch} rows={3} className={`${inp(false)} resize-none`} placeholder="Enter vendor description" /></div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div><Label text="Door Number" /><input name="doorNumber" value={form.doorNumber} onChange={ch} className={inp(false)} /></div>
           <div><Label text="Street" /><input name="street" value={form.street} onChange={ch} className={inp(false)} /></div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div><Label text="Landmark" /><input name="landmark" value={form.landmark} onChange={ch} className={inp(false)} /></div>
           <div><Label text="City" /><input name="city" value={form.city} onChange={ch} className={inp(false)} /></div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div><Label text="Postal Code" /><input name="postalCode" value={form.postalCode} onChange={ch} className={inp(false)} /></div>
           <div><Label text="State" /><input name="state" value={form.state} onChange={ch} className={inp(false)} /></div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div><Label text="Country" /><input name="country" value={form.country} onChange={ch} className={inp(false)} /></div>
         </div>
       </div>

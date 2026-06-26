@@ -306,7 +306,7 @@ export default function LicenseAgreementFormPage() {
           {/* ── Section 1: License Agreement Details ─────────────────────── */}
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
             <SectionHeader>License Agreement Details</SectionHeader>
-            <div className="grid grid-cols-2 gap-x-12 gap-y-4">
+            <div className="grid grid-cols-1 gap-x-12 gap-y-4 md:grid-cols-2">
               {/* Left */}
               <div className="space-y-4">
                 <Field label="Manufacturer">
@@ -349,7 +349,7 @@ export default function LicenseAgreementFormPage() {
           {/* ── Section 2: Purchase & Invoice Details ────────────────────── */}
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
             <SectionHeader>Purchase &amp; Invoice Details</SectionHeader>
-            <div className="grid grid-cols-2 gap-x-12 gap-y-4">
+            <div className="grid grid-cols-1 gap-x-12 gap-y-4 md:grid-cols-2">
               {/* Left */}
               <div className="space-y-4">
                 <Field label="PO #">

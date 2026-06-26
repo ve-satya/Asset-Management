@@ -283,7 +283,7 @@ export default function SoftwareLicenseFormPage() {
             <>
               {/* License Information */}
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-                <div className="grid grid-cols-2 gap-x-12 gap-y-4">
+                <div className="grid grid-cols-1 gap-x-12 gap-y-4 md:grid-cols-2">
                   {/* Left */}
                   <div className="space-y-4">
                     <Field label="Manufacturer">
@@ -371,7 +371,7 @@ export default function SoftwareLicenseFormPage() {
           {/* ── Upgrade License Form ───────────────────────────────────────── */}
           {isUpgrade && (
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-              <div className="grid grid-cols-2 gap-x-12 gap-y-4">
+              <div className="grid grid-cols-1 gap-x-12 gap-y-4 md:grid-cols-2">
                 {/* Left */}
                 <div className="space-y-4">
                   <Field label="Manufacturer">

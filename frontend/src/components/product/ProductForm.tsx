@@ -126,7 +126,7 @@ export default function ProductForm({ record, onSuccess, onCancel, defaultProduc
       <div className="px-6 pt-5 pb-4 space-y-4">
         {errors.submit && <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg text-sm text-red-700 dark:text-red-400">{errors.submit}</div>}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             {lbl('Name', true)}
             <input name="name" value={form.name} onChange={handleChange} className={cls('name')} placeholder="e.g. iPhone 17 Pro" />
@@ -144,7 +144,7 @@ export default function ProductForm({ record, onSuccess, onCancel, defaultProduc
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             {lbl('Manufacturer')}
             <select name="manufacturerId" value={form.manufacturerId} onChange={handleChange} className={cls('manufacturerId')}>
@@ -155,7 +155,7 @@ export default function ProductForm({ record, onSuccess, onCancel, defaultProduc
           <div>{lbl('Part No')}<input name="partNo" value={form.partNo} onChange={handleChange} className={cls('partNo')} placeholder="e.g. 00000-11" /></div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             {lbl('Cost ($)')}
             <div className="relative">

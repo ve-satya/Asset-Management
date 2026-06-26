@@ -68,7 +68,7 @@ export default function SoftwareLicenseAgreementForm({ softwareId, record, onSuc
     <form onSubmit={handleSubmit} noValidate>
       <div className="px-5 py-4 space-y-4">
         {errors.submit && <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded text-sm text-red-700 dark:text-red-400">{errors.submit}</div>}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="col-span-2">
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
               Agreement Name <span className="text-red-500">*</span>

@@ -407,11 +407,11 @@ export default function AssetFormPage() {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white dark:bg-gray-950">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      <div className="flex items-center gap-3 px-3 pt-3 pb-4 border-t border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-3 border-t border-b border-gray-200 px-3 pb-4 pt-3 dark:border-gray-700">
         <button onClick={() => navigate(-1)} className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800" aria-label="Back">
           <ArrowLeft size={15} />
         </button>
-        <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">{pageTitle}</h1>
+        <h1 className="min-w-0 flex-1 truncate text-base font-semibold text-gray-900 dark:text-gray-100">{pageTitle}</h1>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto scrollbar-thin">
@@ -448,7 +448,7 @@ export default function AssetFormPage() {
         </div>
       </div>
 
-      <div className="z-20 flex shrink-0 justify-center gap-2 border-t border-gray-200 bg-white px-4 py-2.5 shadow-[0_-2px_8px_rgba(15,23,42,0.08)] dark:border-gray-700 dark:bg-gray-950">
+      <div className="z-20 flex shrink-0 flex-wrap justify-center gap-2 border-t border-gray-200 bg-white px-3 py-2.5 shadow-[0_-2px_8px_rgba(15,23,42,0.08)] dark:border-gray-700 dark:bg-gray-950 sm:px-4">
         <button
           type="button"
           onClick={() => handleSave(false)}
