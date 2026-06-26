@@ -22,7 +22,7 @@ export async function getLicensesGlobal(req: Request, res: Response, next: NextF
   try {
     const {
       page = '1', pageSize = '10', search = '', isActive = 'true',
-      manufacturerId, licenseType, unassociated, softwareId,
+      manufacturerId, licenseType, unassociated, softwareId, isExpired, isSuite,
     } = req.query as Record<string, string>;
 
     const pageNum     = Math.max(1, parseInt(page, 10));
@@ -31,11 +31,13 @@ export async function getLicensesGlobal(req: Request, res: Response, next: NextF
     const where: Record<string, unknown> = {
       ...(isActive !== 'all' ? { isActive: isActive === 'true' } : {}),
       ...(licenseType ? { licenseType } : {}),
+      ...(isExpired === 'true' ? { expiryDate: { lt: new Date() } } : {}),
       ...(unassociated === 'true' ? { agreementId: null } : {}),
-      ...((manufacturerId || softwareId) ? {
+      ...((manufacturerId || softwareId || isSuite === 'true') ? {
         software: {
           ...(manufacturerId ? { manufacturerId: parseInt(manufacturerId, 10) } : {}),
           ...(softwareId     ? { id:             parseInt(softwareId,     10) } : {}),
+          ...(isSuite === 'true' ? { isSoftwareSuite: true } : {}),
         },
       } : {}),
       ...(search.trim() ? {

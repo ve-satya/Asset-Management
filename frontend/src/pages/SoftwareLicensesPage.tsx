@@ -17,11 +17,11 @@ import type { SoftwareLicense, PaginationMeta, NamedOption } from '../types';
 const PAGE_SIZES = [10, 25, 50, 100];
 
 const LICENSE_FILTER_OPTIONS = [
-  { value: 'all',             label: 'All Licenses'    },
-  { value: 'Individual',      label: 'Individual'      },
-  { value: 'Volume',          label: 'Volume'          },
-  { value: 'Named License',   label: 'Named License'   },
-  { value: 'Upgrade License', label: 'Upgrade License' },
+  { value: 'all',     label: 'All Licenses'     },
+  { value: 'active',  label: 'Active Licenses'  },
+  { value: 'expired', label: 'Expired Licenses' },
+  { value: 'upgrade', label: 'Upgrade Licenses' },
+  { value: 'suite',   label: 'Suite Licenses'   },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -97,7 +97,11 @@ export default function SoftwareLicensesPage() {
         page:     pagination.page,
         pageSize: pagination.pageSize,
         search,
-        ...(licenseTypeFilter  !== 'all' ? { licenseType:    licenseTypeFilter  } : {}),
+        ...(licenseTypeFilter === 'all'     ? { isActive: 'all' } : {}),
+        ...(licenseTypeFilter === 'active'  ? { isActive: 'true' } : {}),
+        ...(licenseTypeFilter === 'expired' ? { isExpired: 'true' } : {}),
+        ...(licenseTypeFilter === 'upgrade' ? { licenseType: 'Upgrade License' } : {}),
+        ...(licenseTypeFilter === 'suite'   ? { isSuite: 'true' } : {}),
         ...(manufacturerFilter            ? { manufacturerId: manufacturerFilter } : {}),
       });
       setItems(res.data);

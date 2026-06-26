@@ -28,7 +28,8 @@ const INPUT    = 'w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-
 const TEXTAREA = `${INPUT} resize-none`;
 
 const LICENSE_TYPES   = ['Individual', 'Volume', 'Named License', 'Concurrent', 'OEM', 'Site License'];
-const LICENSE_OPTIONS = ['--None--', 'Single User', 'Multi User', 'Enterprise', 'Per Device', 'Per Core', 'Per Seat'];
+const LICENSE_OPTIONS = ['--None--', 'Full Packaged Product (FPP)', 'Others'];
+const SITE_OPTIONS    = ['Head Office', 'Branch Office', 'Data Center', 'Remote Site'];
 
 interface DowngradeRow { softwareId: string; softwareName: string; licenseKey: string }
 
@@ -61,7 +62,7 @@ export default function SoftwareLicenseFormPage() {
     purchasedFor:        '',
     allocatedSite:       '',
     description:         '',
-    isCritical:          false,
+    criticalLicense:     '',
     purchased:           '1',
     installationsAllowed:'1',
     // Upgrade-specific fields
@@ -107,7 +108,7 @@ export default function SoftwareLicenseFormPage() {
         purchasedFor:          d.purchasedFor          ?? '',
         allocatedSite:         d.allocatedSite         ?? '',
         description:           '',
-        isCritical:            d.isCritical,
+        criticalLicense:       d.isCritical ? 'Yes' : '',
         purchased:             String(d.purchased),
         installationsAllowed:  String(d.installationsAllowed),
         upgradeToSoftwareId:   isUpgradeLic ? String(d.softwareId) : '',
@@ -210,7 +211,7 @@ export default function SoftwareLicenseFormPage() {
           purchaseCost:         form.purchaseCost ? parseFloat(form.purchaseCost) : null,
           purchasedFor:         form.purchasedFor || null,
           allocatedSite:        form.allocatedSite || null,
-          isCritical:           form.isCritical,
+          isCritical:           form.criticalLicense.trim().length > 0,
           purchased:            parseInt(form.purchased, 10)             || 1,
           installationsAllowed: parseInt(form.installationsAllowed, 10)  || 1,
           allocated:            0,
@@ -334,7 +335,9 @@ export default function SoftwareLicenseFormPage() {
                       <input type="text" value={form.purchasedFor} onChange={(e) => set('purchasedFor', e.target.value)} className={INPUT} placeholder="--Choose Department--" />
                     </Field>
                     <Field label="Allocated To Site">
-                      <input type="text" value={form.allocatedSite} onChange={(e) => set('allocatedSite', e.target.value)} className={INPUT} placeholder="Organization" />
+                      <select value={form.allocatedSite} onChange={(e) => set('allocatedSite', e.target.value)} className={INPUT}>
+                        {SITE_OPTIONS.map((site) => <option key={site} value={site}>{site}</option>)}
+                      </select>
                     </Field>
                     <Field label="Description">
                       <textarea
@@ -355,14 +358,12 @@ export default function SoftwareLicenseFormPage() {
               <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
                 <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Additional Information</h2>
                 <Field label="Critical license">
-                  <label className="flex items-center gap-2 cursor-pointer pt-1.5">
-                    <input
-                      type="checkbox"
-                      checked={form.isCritical}
-                      onChange={(e) => set('isCritical', e.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                  </label>
+                  <input
+                    type="text"
+                    value={form.criticalLicense}
+                    onChange={(e) => set('criticalLicense', e.target.value)}
+                    className={`${INPUT} max-w-sm`}
+                  />
                 </Field>
               </div>
             </>
