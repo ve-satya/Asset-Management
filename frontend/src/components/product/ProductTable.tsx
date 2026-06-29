@@ -1,14 +1,22 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { Fragment, useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Plus, X, ChevronDown, ChevronLeft, ChevronRight,
   Pencil, Trash2, AlignJustify, Loader2, Search, Columns3,
 } from 'lucide-react';
-import { getProduct, getProducts, deleteProduct } from '../../services/productService';
+import {
+  createProductVendorAssociation,
+  deleteProduct,
+  getProduct,
+  getProducts,
+  getProductVendorAssociations,
+  updateProductVendorAssociation,
+} from '../../services/productService';
+import { getAllVendors } from '../../services/vendorService';
 import useDebounce from '../../hooks/useDebounce';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ProductForm from './ProductForm';
-import type { Product, PaginationMeta } from '../../types';
+import type { NamedOption, Product, ProductVendorAssociation, PaginationMeta } from '../../types';
 
 interface ColDef { key: string; label: string; sortable: boolean; }
 const ALL_COLUMNS: ColDef[] = [
@@ -182,6 +190,235 @@ function ToolbarPagination({
   );
 }
 
+function AssociationModal({
+  product,
+  record,
+  vendors,
+  onClose,
+  onSaved,
+}: {
+  product: Product;
+  record: ProductVendorAssociation | null;
+  vendors: NamedOption[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const isEdit = Boolean(record);
+  const [form, setForm] = useState({
+    vendorId: record?.vendorId ? String(record.vendorId) : '',
+    price: record ? String(record.price.toFixed(2)) : '0.00',
+    taxRate: record?.taxRate !== null && record?.taxRate !== undefined ? String(record.taxRate.toFixed(2)) : '0.00',
+    warrantyYears: record ? String(record.warrantyYears) : '0',
+    warrantyMonths: record ? String(record.warrantyMonths) : '0',
+    maintenanceVendorId: record?.maintenanceVendorId ? String(record.maintenanceVendorId) : '',
+    comments: record?.comments ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function set(key: string, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => { const next = { ...prev }; delete next[key]; return next; });
+  }
+
+  async function save(addAnother = false) {
+    const nextErrors: Record<string, string> = {};
+    if (!form.vendorId) nextErrors.vendorId = 'Vendor is required.';
+    if (!form.price) nextErrors.price = 'Price is required.';
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    setSaving(true);
+    try {
+      const payload = {
+        vendorId: parseInt(form.vendorId, 10),
+        price: parseFloat(form.price) || 0,
+        taxRate: form.taxRate === '' ? null : parseFloat(form.taxRate) || 0,
+        warrantyYears: parseInt(form.warrantyYears, 10) || 0,
+        warrantyMonths: parseInt(form.warrantyMonths, 10) || 0,
+        maintenanceVendorId: form.maintenanceVendorId ? parseInt(form.maintenanceVendorId, 10) : null,
+        comments: form.comments,
+      };
+      if (record) await updateProductVendorAssociation(product.id, record.id, payload);
+      else await createProductVendorAssociation(product.id, payload);
+      onSaved();
+      if (addAnother) {
+        setForm({
+          vendorId: '',
+          price: '0.00',
+          taxRate: '0.00',
+          warrantyYears: '0',
+          warrantyMonths: '0',
+          maintenanceVendorId: '',
+          comments: '',
+        });
+      } else {
+        onClose();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const input = 'h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100';
+  const label = 'w-48 shrink-0 pt-2 text-right text-sm text-gray-600 dark:text-gray-300';
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+      <div className="flex w-full max-w-3xl flex-col border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{isEdit ? 'Edit Product-Vendor association' : 'New Product-Vendor association'}</h2>
+          <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-4 px-5 py-8">
+          <div className="flex gap-4">
+            <label className={label}><span className="text-red-500">*</span> Product</label>
+            <div className="flex-1 pt-2 text-sm text-gray-700 dark:text-gray-200">{product.name}</div>
+          </div>
+          <div className="flex gap-4">
+            <label className={label}><span className="text-red-500">*</span> Vendor</label>
+            <div className="flex-1">
+              <select value={form.vendorId} onChange={(e) => set('vendorId', e.target.value)} className={input}>
+                <option value="">--Select Vendor--</option>
+                {vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}
+              </select>
+              {errors.vendorId && <p className="mt-1 text-xs text-red-500">{errors.vendorId}</p>}
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <label className={label}><span className="text-red-500">*</span> Price{isEdit ? ' (undefined)' : ''}</label>
+            <div className="flex-1">
+              <input value={form.price} onChange={(e) => set('price', e.target.value)} className={input} />
+              {errors.price && <p className="mt-1 text-xs text-red-500">{errors.price}</p>}
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <label className={label}>Tax Rate (%)</label>
+            <input value={form.taxRate} onChange={(e) => set('taxRate', e.target.value)} className={input} />
+          </div>
+          <div className="flex gap-4">
+            <label className={label}>Warranty Period</label>
+            <div className="flex flex-1 items-center gap-3">
+              <input value={form.warrantyYears} onChange={(e) => set('warrantyYears', e.target.value)} className="h-9 w-20 border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" />
+              <span className="text-sm text-gray-600 dark:text-gray-300">Years</span>
+              <input value={form.warrantyMonths} onChange={(e) => set('warrantyMonths', e.target.value)} className="h-9 w-20 border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" />
+              <span className="text-sm text-gray-600 dark:text-gray-300">Months</span>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <label className={label}>Maintenance Vendor</label>
+            <select value={form.maintenanceVendorId} onChange={(e) => set('maintenanceVendorId', e.target.value)} className={input}>
+              <option value="">--Select Maintenance Vendor--</option>
+              {vendors.map((vendor) => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}
+            </select>
+          </div>
+          <div className="flex gap-4">
+            <label className={label}>Comments</label>
+            <textarea value={form.comments} onChange={(e) => set('comments', e.target.value)} rows={4} className={`${input} h-24 resize-none py-2`} />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-3 border-t border-gray-200 px-4 py-4 dark:border-gray-700">
+          <button type="button" disabled={saving} onClick={() => save(false)} className="inline-flex h-9 items-center gap-2 rounded-full bg-blue-600 px-6 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+            {saving && <Loader2 size={15} className="animate-spin" />}
+            {saving ? (isEdit ? 'Updating...' : 'Saving...') : (isEdit ? 'Update' : 'Save')}
+          </button>
+          {!isEdit && (
+            <button type="button" disabled={saving} onClick={() => save(true)} className="inline-flex h-9 items-center gap-2 rounded-full border border-gray-300 bg-white px-5 text-sm text-gray-800 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+              {saving && <Loader2 size={15} className="animate-spin" />}
+              {saving ? 'Saving...' : 'Save and Add New'}
+            </button>
+          )}
+          <button type="button" onClick={onClose} className="h-9 rounded-full border border-gray-300 bg-gray-50 px-6 text-sm text-gray-800 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function warrantyLabel(row: ProductVendorAssociation) {
+  const parts = [];
+  if (row.warrantyYears) parts.push(`${row.warrantyYears} year${row.warrantyYears === 1 ? '' : 's'}`);
+  if (row.warrantyMonths) parts.push(`${row.warrantyMonths} month${row.warrantyMonths === 1 ? '' : 's'}`);
+  return parts.length > 0 ? parts.join(' ') : '-';
+}
+
+function ProductVendorPanel({
+  product,
+  rows,
+  loading,
+  onAssociate,
+  onEdit,
+}: {
+  product: Product;
+  rows: ProductVendorAssociation[];
+  loading: boolean;
+  onAssociate: () => void;
+  onEdit: (row: ProductVendorAssociation) => void;
+}) {
+  return (
+    <div className="border-x border-b border-yellow-100 bg-yellow-50 px-8 pb-5 pt-3 dark:border-yellow-900/50 dark:bg-yellow-950/20">
+      <div className="flex items-center gap-3 bg-white px-2 py-2 dark:bg-gray-900">
+        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Vendors associated with {product.name}</h3>
+        <button type="button" onClick={onAssociate} className="h-7 border border-gray-300 bg-white px-3 text-sm text-gray-800 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+          Associate Vendor
+        </button>
+        <button type="button" className="inline-flex h-7 w-9 items-center justify-center border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+          <Search size={15} />
+        </button>
+        <button type="button" disabled className="inline-flex h-7 w-9 cursor-not-allowed items-center justify-center border border-gray-300 bg-white text-gray-300 dark:border-gray-600 dark:bg-gray-800">
+          <Trash2 size={14} />
+        </button>
+        <div className="flex h-7 items-center gap-0 text-sm text-gray-700 dark:text-gray-300">
+          <select className="h-7 w-[72px] border border-gray-300 bg-white pl-3 pr-8 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800">
+            <option>25</option>
+          </select>
+          <span className="-ml-px flex h-7 items-center border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-800">0 - {rows.length} of {rows.length}</span>
+          <button type="button" disabled className="-ml-px inline-flex h-7 w-9 cursor-not-allowed items-center justify-center border border-gray-300 bg-white text-gray-300 dark:border-gray-600 dark:bg-gray-800"><ChevronLeft size={16} /></button>
+          <button type="button" disabled className="-ml-px inline-flex h-7 w-9 cursor-not-allowed items-center justify-center border border-gray-300 bg-white text-gray-300 dark:border-gray-600 dark:bg-gray-800"><ChevronRight size={16} /></button>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-900">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+              <th className="w-10 px-3 py-2 text-left"><input type="checkbox" className="rounded border-gray-300 text-blue-600" /></th>
+              <th className="px-3 py-2 text-left">Vendor</th>
+              <th className="px-3 py-2 text-left">Price</th>
+              <th className="px-3 py-2 text-left">Warranty Period</th>
+              <th className="px-3 py-2 text-left">Comments</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={5} className="py-8 text-center"><Loader2 size={22} className="mx-auto animate-spin text-brand-500" /></td></tr>
+            ) : rows.length === 0 ? (
+              <tr><td colSpan={5} className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">No data available</td></tr>
+            ) : rows.map((row) => (
+              <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/60">
+                <td className="px-3 py-2"><input type="checkbox" className="rounded border-gray-300 text-blue-600" /></td>
+                <td className="px-3 py-2">
+                  <button type="button" onClick={() => onEdit(row)} className="text-blue-600 hover:underline dark:text-blue-400">{row.vendor?.name ?? '-'}</button>
+                </td>
+                <td className="px-3 py-2">{Number(row.price).toFixed(2)}</td>
+                <td className="px-3 py-2">{warrantyLabel(row)}</td>
+                <td className="px-3 py-2">{row.comments || '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductTable() {
   const [data,         setData]        = useState<Product[]>([]);
   const [loading,      setLoading]     = useState(false);
@@ -197,11 +434,18 @@ export default function ProductTable() {
   const [deleteTarget, setDeleteTarget]= useState<Product | null>(null);
   const [deleting,     setDeleting]    = useState(false);
   const [showFilters,  setShowFilters] = useState(false);
+  const [expandedProductId, setExpandedProductId] = useState<number | null>(null);
+  const [associationLoading, setAssociationLoading] = useState<Record<number, boolean>>({});
+  const [associations, setAssociations] = useState<Record<number, ProductVendorAssociation[]>>({});
+  const [vendors, setVendors] = useState<NamedOption[]>([]);
+  const [associationProduct, setAssociationProduct] = useState<Product | null>(null);
+  const [editingAssociation, setEditingAssociation] = useState<ProductVendorAssociation | null>(null);
   const [colWidths,    setColWidths]   = useState<Record<string, number>>(() => { try { const s = localStorage.getItem(LS_KEY + '_widths'); if (s) return { ...DEFAULT_COL_WIDTHS, ...JSON.parse(s) }; } catch {} return DEFAULT_COL_WIDTHS; });
   const search = useDebounce(rawSearch, 300);
 
   useEffect(() => { localStorage.setItem(LS_KEY, JSON.stringify(visibleCols)); }, [visibleCols]);
   useEffect(() => { localStorage.setItem(LS_KEY + '_widths', JSON.stringify(colWidths)); }, [colWidths]);
+  useEffect(() => { getAllVendors().then(setVendors).catch(console.error); }, []);
 
   function startResize(key: string, e: React.MouseEvent) {
     e.preventDefault(); e.stopPropagation(); const startX = e.clientX; const startW = colWidths[key] || DEFAULT_COL_WIDTHS[key] || 150;
@@ -241,6 +485,38 @@ export default function ProductTable() {
     setFormOpen(true);
   }
 
+  async function loadAssociations(productId: number) {
+    setAssociationLoading((prev) => ({ ...prev, [productId]: true }));
+    try {
+      const rows = await getProductVendorAssociations(productId);
+      setAssociations((prev) => ({ ...prev, [productId]: rows }));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setAssociationLoading((prev) => ({ ...prev, [productId]: false }));
+    }
+  }
+
+  function toggleAssociations(row: Product) {
+    const nextId = expandedProductId === row.id ? null : row.id;
+    setExpandedProductId(nextId);
+    if (nextId && !associations[nextId]) loadAssociations(nextId);
+  }
+
+  function openAssociationModal(product: Product, record: ProductVendorAssociation | null = null) {
+    setAssociationProduct(product);
+    setEditingAssociation(record);
+  }
+
+  function closeAssociationModal() {
+    setAssociationProduct(null);
+    setEditingAssociation(null);
+  }
+
+  async function handleAssociationSaved() {
+    if (associationProduct) await loadAssociations(associationProduct.id);
+  }
+
   const visibleDefs = ALL_COLUMNS.filter((col) => visibleCols.includes(col.key));
   const hasFilters = rawSearch || Object.values(colFilters).some(Boolean);
   return (
@@ -274,10 +550,10 @@ export default function ProductTable() {
 
       <div className="overflow-x-auto scrollbar-thin">
         <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
-          <colgroup><col style={{ width: 32 }} />{visibleDefs.map((col) => <col key={col.key} style={{ width: colWidths[col.key] || DEFAULT_COL_WIDTHS[col.key] || 150 }} />)}</colgroup>
+          <colgroup><col style={{ width: 64 }} />{visibleDefs.map((col) => <col key={col.key} style={{ width: colWidths[col.key] || DEFAULT_COL_WIDTHS[col.key] || 150 }} />)}</colgroup>
           <thead className="sticky top-0 z-10">
             <tr className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
-              <th className="h-8 w-8 px-2 py-1" />
+              <th className="h-8 w-16 px-2 py-1" />
               {visibleDefs.map((col) => (
                 <th key={col.key}
                   className="relative h-8 px-3 py-1.5 text-left text-xs font-semibold uppercase overflow-hidden select-none text-gray-500 dark:text-gray-400"
@@ -290,7 +566,7 @@ export default function ProductTable() {
               ))}
             </tr>
             {showFilters && <tr className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
-              <th className="w-8 px-2 py-1" />
+              <th className="w-16 px-2 py-1" />
               {visibleDefs.map((col) => (
                 <th key={`${col.key}-filter`} className="px-1 py-1 text-left font-normal border-r border-gray-200 dark:border-gray-700 last:border-r-0">
                   {col.key !== 'cost' && (
@@ -311,11 +587,26 @@ export default function ProductTable() {
             ) : data.length === 0 ? (
               <tr><td colSpan={visibleDefs.length + 1} className="py-16 text-center text-gray-400 dark:text-gray-500">No products found.</td></tr>
             ) : data.map((row) => (
-              <tr key={row.id} className="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                <td className="px-2 py-2.5 w-8"><RowMenu row={row} onEdit={handleEdit} onDelete={(r) => setDeleteTarget(r)} /></td>
+              <Fragment key={row.id}>
+              <tr className={`group transition-colors ${expandedProductId === row.id ? 'bg-yellow-50 dark:bg-yellow-950/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
+                <td className="w-16 px-2 py-2.5">
+                  <RowMenu row={row} onEdit={handleEdit} onDelete={(r) => setDeleteTarget(r)} />
+                </td>
                 {visibleDefs.map((col) => (
                   <td key={col.key} className="px-3 py-2.5 text-gray-700 dark:text-gray-300">
-                    {col.key === 'name' ? <span className="font-medium text-gray-800 dark:text-gray-200">{row.name}</span>
+                    {col.key === 'name' ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleAssociations(row)}
+                          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-gray-400 text-gray-600 hover:bg-gray-100 dark:border-gray-500 dark:text-gray-300 dark:hover:bg-gray-800"
+                          title="Show associated vendors"
+                        >
+                          <ChevronDown size={14} className={`transition-transform ${expandedProductId === row.id ? 'rotate-180' : ''}`} />
+                        </button>
+                        <span className="font-medium text-gray-800 dark:text-gray-200">{row.name}</span>
+                      </div>
+                    )
                     : col.key === 'productType' ? <span className="text-brand-600 dark:text-brand-400">{row.productType?.displayName || '—'}</span>
                     : col.key === 'manufacturer' ? <span>{row.manufacturer?.name || '—'}</span>
                     : col.key === 'cost' ? (row.cost != null ? <span className="font-medium">{Number(row.cost).toLocaleString('en-IN')}</span> : '—')
@@ -325,6 +616,20 @@ export default function ProductTable() {
                   </td>
                 ))}
               </tr>
+              {expandedProductId === row.id && (
+                <tr>
+                  <td colSpan={visibleDefs.length + 1} className="p-0">
+                    <ProductVendorPanel
+                      product={row}
+                      rows={associations[row.id] ?? []}
+                      loading={Boolean(associationLoading[row.id])}
+                      onAssociate={() => openAssociationModal(row)}
+                      onEdit={(association) => openAssociationModal(row, association)}
+                    />
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -358,6 +663,16 @@ export default function ProductTable() {
           </div>
         </div>,
         document.body
+      )}
+
+      {associationProduct && (
+        <AssociationModal
+          product={associationProduct}
+          record={editingAssociation}
+          vendors={vendors}
+          onClose={closeAssociationModal}
+          onSaved={handleAssociationSaved}
+        />
       )}
 
       <ConfirmDialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} onConfirm={handleConfirmDelete} loading={deleting} title="Delete Product" message={`Are you sure you want to deactivate "${deleteTarget?.name}"?`} />
