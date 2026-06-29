@@ -1,11 +1,15 @@
-import { useState, useEffect, useRef, ReactNode } from 'react';
+import { useState, useEffect, useRef, ReactNode, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Box, CalendarDays, ChevronDown, Cpu, Info, Link, Loader2, Monitor, Pencil, Play, Plus, RefreshCw, Router, Search, Trash2, UserCircle, UserPlus, X } from 'lucide-react';
 import DynamicAssetDetailsSection from '../components/asset/DynamicAssetDetailsSection';
 import RelationshipsTab from '../components/asset/RelationshipsTab';
-import { createAssetCost, deleteAssetCost, getAsset, getAssetContracts, getAssetCosts, getAssetHistory, updateAsset, updateAssetCost } from '../services/assetService';
+import { createAssetCost, deleteAssetCost, getAsset, getAssetContracts, getAssetCosts, getAssetHistory, modifyAssetType, updateAsset, updateAssetCost } from '../services/assetService';
 import { getAllAssetStates } from '../services/assetStateService';
-import type { Asset, AssetContract, AssetCost, AssetFinancialsResponse, AssetHistoryItem, NamedOption, PaginationMeta } from '../types';
+import { getAllProductTypes } from '../services/productTypeService';
+import { getAllProducts } from '../services/productService';
+import { ToastContainer, useToast } from '../components/common/Toast';
+import UserDetailsDrawer from '../components/user/UserDetailsDrawer';
+import type { Asset, AssetContract, AssetCost, AssetFinancialsResponse, AssetHistoryItem, NamedOption, PaginationMeta, ProductTypeOption } from '../types';
 
 const MAIN_TABS      = [{ key: 'asset-detail', label: 'Asset Details' }, { key: 'relationships', label: 'Relationships' }, { key: 'contracts', label: 'Contracts' }, { key: 'financials', label: 'Financials' }, { key: 'associations', label: 'Associations' }, { key: 'history', label: 'History' }];
 const HISTORY_SUBTABS = [{ key: 'ownership', label: 'Asset Ownership History' }, { key: 'asset', label: 'Asset History' }];
@@ -104,6 +108,265 @@ interface AssignValues {
 }
 
 type AssignModalMode = 'assign' | 'state';
+
+interface ProductOption {
+  id: number;
+  name: string;
+  productTypeId: number;
+}
+
+interface ProductTypeTreeNode extends ProductTypeOption {
+  children: ProductTypeTreeNode[];
+}
+
+function buildProductTypeTree(items: ProductTypeOption[]): ProductTypeTreeNode[] {
+  const map: Record<number, ProductTypeTreeNode> = {};
+  items.forEach((item) => { map[item.id] = { ...item, children: [] }; });
+  const roots: ProductTypeTreeNode[] = [];
+  items.forEach((item) => {
+    const node = map[item.id];
+    if (!node) return;
+    if (item.parentId && map[item.parentId]) map[item.parentId].children.push(node);
+    else roots.push(node);
+  });
+  return roots;
+}
+
+function filterProductTypeTree(nodes: ProductTypeTreeNode[], query: string): ProductTypeTreeNode[] {
+  const value = query.trim().toLowerCase();
+  if (!value) return nodes;
+  return nodes.flatMap((node) => {
+    const children = filterProductTypeTree(node.children, query);
+    const matches = node.displayName.toLowerCase().includes(value) || String(node.fullPath || '').toLowerCase().includes(value);
+    return matches || children.length ? [{ ...node, children }] : [];
+  });
+}
+
+function ProductTypeDropdown({
+  value,
+  items,
+  onChange,
+}: {
+  value: number | '';
+  items: ProductTypeOption[];
+  onChange: (id: number, label: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = items.find((item) => item.id === value);
+  const tree = useMemo(() => filterProductTypeTree(buildProductTypeTree(items), query), [items, query]);
+
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  function select(id: number, label: string) {
+    onChange(id, label);
+    setOpen(false);
+    setQuery('');
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className={`flex h-8 w-full items-center justify-between border bg-white px-2 text-left text-xs outline-none dark:bg-gray-900 ${open ? 'border-sky-400' : 'border-gray-300 dark:border-gray-700'}`}
+      >
+        <span className={selected ? 'truncate text-gray-900 dark:text-gray-100' : 'text-gray-400'}>{selected?.displayName || 'Product Type'}</span>
+        <span className="ml-2 flex shrink-0 items-center gap-1 text-gray-500">
+          {selected && <X size={13} onClick={(event) => { event.stopPropagation(); onChange(0, ''); }} />}
+          <ChevronDown size={14} className={open ? 'rotate-180' : ''} />
+        </span>
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-[60] border border-gray-300 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+          <div className="relative border-b border-gray-200 p-1 dark:border-gray-700">
+            <input
+              autoFocus
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="h-7 w-full border border-sky-400 bg-white pl-2 pr-7 text-xs text-gray-900 outline-none dark:bg-gray-900 dark:text-gray-100"
+            />
+            <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          </div>
+          <div className="max-h-48 overflow-y-auto py-1 scrollbar-thin">
+            {tree.length ? tree.map((node) => (
+              <ProductTypeOptionNode key={node.id} node={node} value={value} depth={0} onSelect={select} />
+            )) : <div className="px-3 py-2 text-xs text-gray-400">No product types found.</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProductTypeOptionNode({ node, value, depth, onSelect }: { node: ProductTypeTreeNode; value: number | ''; depth: number; onSelect: (id: number, label: string) => void }) {
+  const selected = value === node.id;
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => onSelect(node.id, node.displayName)}
+        className={`flex h-7 w-full items-center text-left text-xs hover:bg-sky-50 hover:text-sky-700 dark:hover:bg-sky-900/30 ${selected ? 'bg-sky-500 text-white hover:bg-sky-500 hover:text-white' : 'text-gray-900 dark:text-gray-100'}`}
+        style={{ paddingLeft: 8 + depth * 18, paddingRight: 8 }}
+      >
+        {node.displayName}
+      </button>
+      {node.children.map((child) => <ProductTypeOptionNode key={child.id} node={child} value={value} depth={depth + 1} onSelect={onSelect} />)}
+    </div>
+  );
+}
+
+function ProductDropdown({
+  value,
+  products,
+  disabled,
+  onChange,
+}: {
+  value: number | '';
+  products: ProductOption[];
+  disabled?: boolean;
+  onChange: (id: number, label: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = products.find((item) => item.id === value);
+  const filtered = products.filter((item) => item.name.toLowerCase().includes(query.trim().toLowerCase()));
+
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  function select(id: number, label: string) {
+    onChange(id, label);
+    setOpen(false);
+    setQuery('');
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((current) => !current)}
+        className={`flex h-8 w-full items-center justify-between border bg-white px-2 text-left text-xs outline-none disabled:bg-gray-100 disabled:text-gray-400 dark:bg-gray-900 dark:disabled:bg-gray-800/70 ${open ? 'border-sky-400' : 'border-gray-300 dark:border-gray-700'}`}
+      >
+        <span className={selected ? 'truncate text-gray-900 dark:text-gray-100' : 'text-gray-400'}>{selected?.name || 'Product'}</span>
+        <ChevronDown size={14} className={`ml-2 shrink-0 text-gray-500 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && !disabled && (
+        <div className="absolute left-0 right-0 top-full z-[60] border border-gray-300 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+          <div className="relative border-b border-gray-200 p-1 dark:border-gray-700">
+            <input
+              autoFocus
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="h-7 w-full border border-sky-400 bg-white pl-2 pr-7 text-xs text-gray-900 outline-none dark:bg-gray-900 dark:text-gray-100"
+            />
+            <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          </div>
+          <div className="max-h-48 overflow-y-auto py-1 scrollbar-thin">
+            {filtered.length ? filtered.map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                onClick={() => select(product.id, product.name)}
+                className={`flex h-7 w-full items-center px-3 text-left text-xs hover:bg-sky-50 hover:text-sky-700 dark:hover:bg-sky-900/30 ${value === product.id ? 'bg-sky-500 text-white hover:bg-sky-500 hover:text-white' : 'text-gray-900 dark:text-gray-100'}`}
+              >
+                {product.name}
+              </button>
+            )) : <div className="px-3 py-2 text-xs text-gray-400">No products found.</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModifyTypeModal({
+  open,
+  asset,
+  productTypes,
+  products,
+  saving,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  asset: Asset;
+  productTypes: ProductTypeOption[];
+  products: ProductOption[];
+  saving: boolean;
+  onClose: () => void;
+  onSave: (values: { productTypeId: number; productId: number }) => void;
+}) {
+  const [productTypeId, setProductTypeId] = useState<number | ''>('');
+  const [productId, setProductId] = useState<number | ''>('');
+  const productOptions = useMemo(() => products.filter((product) => product.productTypeId === productTypeId), [products, productTypeId]);
+  const canSave = Boolean(productTypeId && productId && !saving);
+
+  useEffect(() => {
+    if (!open) return;
+    const initialProductTypeId = asset.productTypeId || '';
+    const initialProductId = asset.productId || products.find((product) => product.productTypeId === initialProductTypeId && product.name === asset.product)?.id || '';
+    setProductTypeId(initialProductTypeId);
+    setProductId(initialProductId);
+  }, [open, asset, products]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+      <div className="relative z-10 flex w-full max-w-[454px] flex-col border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex h-11 items-center justify-between border-b border-gray-200 px-3 dark:border-gray-700">
+          <h2 className="text-sm font-medium text-gray-950 dark:text-gray-100">Modify Type</h2>
+          <button type="button" onClick={onClose} disabled={saving} className="flex h-6 w-6 items-center justify-center text-gray-500 hover:text-gray-900 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-100" aria-label="Close">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="space-y-5 px-3 py-3">
+          <ModalField label="Product Type" required>
+            <ProductTypeDropdown
+              value={productTypeId}
+              items={productTypes}
+              onChange={(id) => {
+                setProductTypeId(id || '');
+                setProductId('');
+              }}
+            />
+          </ModalField>
+          <ModalField label="Product" required>
+            <ProductDropdown
+              value={productId}
+              products={productOptions}
+              disabled={!productTypeId}
+              onChange={(id) => setProductId(id || '')}
+            />
+          </ModalField>
+        </div>
+        <div className="flex h-12 items-center justify-center gap-2 border-t border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/80">
+          <button type="button" onClick={() => productTypeId && productId && onSave({ productTypeId, productId })} disabled={!canSave} className="flex h-7 items-center gap-2 rounded-full bg-sky-600 px-5 text-xs font-medium text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50">
+            {saving && <Loader2 size={13} className="animate-spin" />} Save
+          </button>
+          <button type="button" onClick={onClose} disabled={saving} className="h-7 rounded-full border border-gray-300 bg-white px-5 text-xs text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AssignModal({ open, mode, onClose, asset, stateList, onSave, saving }: { open: boolean; mode: AssignModalMode; onClose: () => void; asset: Asset; stateList: NamedOption[]; onSave: (values: AssignValues) => void; saving: boolean }) {
   const [form, setForm] = useState<AssignValues>({
@@ -251,7 +514,7 @@ function SmallButton({ children, onClick }: { children: ReactNode; onClick?: () 
   );
 }
 
-function ActionsMenu() {
+function ActionsMenu({ onModifyType }: { onModifyType: () => void }) {
   const [open, setOpen] = useState(false);
   const items = [
     'Modify Type',
@@ -269,7 +532,15 @@ function ActionsMenu() {
       {open && (
         <div className="absolute left-0 top-full z-30 mt-1 min-w-48 rounded border border-gray-200 bg-white py-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
           {items.map((item) => (
-            <button key={item} type="button" onClick={() => setOpen(false)} className="block h-9 w-full px-4 text-left text-[12px] text-gray-700 hover:bg-sky-50 hover:text-sky-700 dark:text-gray-200 dark:hover:bg-sky-900/30">
+            <button
+              key={item}
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                if (item === 'Modify Type') onModifyType();
+              }}
+              className="block h-9 w-full px-4 text-left text-[12px] text-gray-700 hover:bg-sky-50 hover:text-sky-700 dark:text-gray-200 dark:hover:bg-sky-900/30"
+            >
               {item}
             </button>
           ))}
@@ -279,7 +550,7 @@ function ActionsMenu() {
   );
 }
 
-function HeaderSummary({ asset }: { asset: Asset }) {
+function HeaderSummary({ asset, onUserClick }: { asset: Asset; onUserClick: () => void }) {
   const productTypeName = asset.productType?.displayName || '-';
   const userLabel = asset.isLoanable ? 'Loaned to User' : 'Assigned To User';
   return (
@@ -291,14 +562,19 @@ function HeaderSummary({ asset }: { asset: Asset }) {
         <h1 className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{asset.name || '-'}</h1>
         <p className="mt-1 text-[11px] text-gray-600 dark:text-gray-400">{asset.product || '-'} <span className="text-gray-400">(Asset / {productTypeName})</span></p>
       </div>
-      <div className="w-full text-[11px] text-gray-600 dark:text-gray-400 sm:ml-10 sm:w-auto">
-        {userLabel}: <span className="font-medium text-sky-600 dark:text-sky-300">{asset.user || '-'}</span>
-      </div>
+      {asset.user && (
+        <div className="w-full text-[11px] text-gray-600 dark:text-gray-400 sm:ml-10 sm:w-auto">
+          {userLabel}:{' '}
+          <button type="button" onClick={onUserClick} className="font-medium text-sky-600 hover:underline dark:text-sky-300">
+            {asset.user}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-function RightSidebar({ asset, onAssetStateClick }: { asset: Asset; onAssetStateClick: () => void }) {
+function RightSidebar({ asset, onAssetStateClick, onUserClick }: { asset: Asset; onAssetStateClick: () => void; onUserClick: () => void }) {
   const productTypeName = asset.productType?.displayName || 'Asset';
   return (
     <aside className="w-full shrink-0 border-t border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 lg:w-72 lg:border-l lg:border-t-0">
@@ -323,7 +599,11 @@ function RightSidebar({ asset, onAssetStateClick }: { asset: Asset; onAssetState
         <div className="flex items-center gap-3">
           <UserCircle size={36} className="text-gray-300 dark:text-gray-600" />
           <div className="min-w-0">
-            <p className="truncate text-[11px] font-semibold text-gray-900 dark:text-gray-100">{asset.user || '-'}</p>
+            {asset.user ? (
+              <button type="button" onClick={onUserClick} className="block max-w-full truncate text-left text-[11px] font-semibold text-gray-900 hover:text-sky-600 hover:underline dark:text-gray-100 dark:hover:text-sky-300">
+                {asset.user}
+              </button>
+            ) : <p className="truncate text-[11px] font-semibold text-gray-900 dark:text-gray-100">-</p>}
             <p className="text-[11px] text-gray-500 dark:text-gray-400">-</p>
           </div>
         </div>
@@ -1228,7 +1508,13 @@ export default function AssetDetailPage() {
   const [assignOpen,   setAssignOpen]   = useState(false);
   const [assignMode,   setAssignMode]   = useState<AssignModalMode>('assign');
   const [assignSaving, setAssignSaving] = useState(false);
+  const [modifyTypeOpen, setModifyTypeOpen] = useState(false);
+  const [modifyTypeSaving, setModifyTypeSaving] = useState(false);
   const [stateList,    setStateList]    = useState<NamedOption[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductTypeOption[]>([]);
+  const [products, setProducts] = useState<ProductOption[]>([]);
+  const [userDrawerOpen, setUserDrawerOpen] = useState(false);
+  const { toasts, showToast, removeToast } = useToast();
 
   function load() {
     if (!assetId) return;
@@ -1237,6 +1523,14 @@ export default function AssetDetailPage() {
   }
   useEffect(() => { if (assetId) load(); }, [assetId, refreshKey]);
   useEffect(() => { getAllAssetStates().then(setStateList).catch(console.error); }, []);
+  useEffect(() => {
+    Promise.all([getAllProductTypes(), getAllProducts()])
+      .then(([types, productItems]) => {
+        setProductTypes(types);
+        setProducts(productItems);
+      })
+      .catch(console.error);
+  }, []);
 
   async function handleAssignSave(values: AssignValues) {
     if (!asset) return;
@@ -1260,7 +1554,28 @@ export default function AssetDetailPage() {
     finally { setAssignSaving(false); }
   }
 
+  async function handleModifyTypeSave(values: { productTypeId: number; productId: number }) {
+    if (!assetId) return;
+    setModifyTypeSaving(true);
+    try {
+      const updated = await modifyAssetType(assetId, values);
+      setAsset(updated);
+      setAsset(await getAsset(assetId));
+      setModifyTypeOpen(false);
+      showToast('Asset type updated successfully.');
+    } catch (error) {
+      console.error(error);
+      showToast('Failed to update asset type.', 'error');
+    } finally {
+      setModifyTypeSaving(false);
+    }
+  }
+
   function goToTab(key: string) { navigate(`/assets/detail?asset-product-type-id=${ptId}&asset-id=${assetId}&tab=${key}`); }
+  const userDetailsId = asset?.assignedUserId || asset?.user || null;
+  function openUserDrawer() {
+    if (userDetailsId) setUserDrawerOpen(true);
+  }
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 size={32} className="animate-spin text-brand-500" /></div>;
   if (!asset) return <div className="flex flex-col items-center justify-center h-64 text-gray-400"><p className="text-lg font-medium">Asset not found</p><button onClick={() => navigate(-1)} className="mt-3 text-brand-600 hover:underline text-sm">Go back</button></div>;
@@ -1271,13 +1586,13 @@ export default function AssetDetailPage() {
         <SmallButton onClick={() => navigate(`/assets/list${ptId ? `?asset-product-type-id=${ptId}` : ''}`)}><ArrowLeft size={13} /></SmallButton>
         <SmallButton onClick={() => navigate(`/assets/edit/${asset.id}`)}><Pencil size={12} /> Edit</SmallButton>
         <SmallButton onClick={() => { setAssignMode('assign'); setAssignOpen(true); }}>Assign</SmallButton>
-        <ActionsMenu />
+        <ActionsMenu onModifyType={() => setModifyTypeOpen(true)} />
         <SmallButton><Play size={12} /> Scan Now</SmallButton>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
         <main className="min-h-0 min-w-0 flex-1 overflow-auto scrollbar-thin">
-          <HeaderSummary asset={asset} />
+          <HeaderSummary asset={asset} onUserClick={openUserDrawer} />
 
           <div className="border-b border-gray-200 bg-white px-3 dark:border-gray-700 dark:bg-gray-900">
             <nav className="flex gap-6 overflow-x-auto scrollbar-thin">
@@ -1302,10 +1617,21 @@ export default function AssetDetailPage() {
             {activeTab === 'history'       && <HistoryContent asset={asset} refreshKey={refreshKey} />}
           </div>
         </main>
-        <RightSidebar asset={asset} onAssetStateClick={() => { setAssignMode('state'); setAssignOpen(true); }} />
+        <RightSidebar asset={asset} onAssetStateClick={() => { setAssignMode('state'); setAssignOpen(true); }} onUserClick={openUserDrawer} />
       </div>
 
       <AssignModal open={assignOpen} mode={assignMode} onClose={() => setAssignOpen(false)} asset={asset} stateList={stateList} onSave={handleAssignSave} saving={assignSaving} />
+      <ModifyTypeModal
+        open={modifyTypeOpen}
+        asset={asset}
+        productTypes={productTypes}
+        products={products}
+        saving={modifyTypeSaving}
+        onClose={() => { if (!modifyTypeSaving) setModifyTypeOpen(false); }}
+        onSave={handleModifyTypeSave}
+      />
+      <UserDetailsDrawer userId={userDetailsId} isOpen={userDrawerOpen} onClose={() => setUserDrawerOpen(false)} />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

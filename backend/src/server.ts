@@ -23,6 +23,7 @@ import licenseAgreementRoutes from './routes/licenseAgreementRoutes';
 import globalSoftwareLicenseRoutes from './routes/globalSoftwareLicenseRoutes';
 import servicePackRoutes from './routes/servicePackRoutes';
 import softwareSummaryRoutes from './routes/softwareSummaryRoutes';
+import userRoutes from './routes/userRoutes';
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -59,6 +60,7 @@ app.use('/api/software-types',          softwareTypeRoutes);
 app.use('/api/software-categories',     softwareCategoryRoutes);
 app.use('/api/software-license-types',  softwareLicenseTypeRoutes);
 app.use('/api/asset-states',            assetStateRoutes);
+app.use('/api/users',                   userRoutes);
 app.use('/api/manufacturers',                                  manufacturerRoutes);
 app.use('/api/softwares',                                      softwareRoutes);
 app.use('/api/softwares/:softwareId/licenses',                 softwareLicenseRoutes);

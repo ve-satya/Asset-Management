@@ -51,5 +51,8 @@ export const createAsset = (data: unknown): Promise<Asset> =>
 export const updateAsset = (id: number | string, data: unknown): Promise<Asset> =>
   axios.put(`${BASE}/${id}`, data).then((r) => r.data);
 
+export const modifyAssetType = (id: number | string, data: unknown): Promise<Asset> =>
+  axios.put(`${BASE}/${id}/modify-type`, data).then((r) => r.data);
+
 export const deleteAsset = (id: number | string): Promise<{ message: string }> =>
   axios.delete(`${BASE}/${id}`).then((r) => r.data);
