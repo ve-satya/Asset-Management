@@ -376,9 +376,10 @@ function ProductVendorPanel({
           <Trash2 size={14} />
         </button>
         <div className="flex h-7 items-center gap-0 text-sm text-gray-700 dark:text-gray-300">
-          <select className="h-7 w-[72px] border border-gray-300 bg-white pl-3 pr-8 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800">
-            <option>25</option>
-          </select>
+          <button type="button" className="inline-flex h-7 w-[72px] items-center justify-between border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+            <span>25</span>
+            <ChevronDown size={15} />
+          </button>
           <span className="-ml-px flex h-7 items-center border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-800">0 - {rows.length} of {rows.length}</span>
           <button type="button" disabled className="-ml-px inline-flex h-7 w-9 cursor-not-allowed items-center justify-center border border-gray-300 bg-white text-gray-300 dark:border-gray-600 dark:bg-gray-800"><ChevronLeft size={16} /></button>
           <button type="button" disabled className="-ml-px inline-flex h-7 w-9 cursor-not-allowed items-center justify-center border border-gray-300 bg-white text-gray-300 dark:border-gray-600 dark:bg-gray-800"><ChevronRight size={16} /></button>
@@ -500,7 +501,7 @@ export default function ProductTable() {
   function toggleAssociations(row: Product) {
     const nextId = expandedProductId === row.id ? null : row.id;
     setExpandedProductId(nextId);
-    if (nextId && !associations[nextId]) loadAssociations(nextId);
+    if (nextId) loadAssociations(nextId);
   }
 
   function openAssociationModal(product: Product, record: ProductVendorAssociation | null = null) {
