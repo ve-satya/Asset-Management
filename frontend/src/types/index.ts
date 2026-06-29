@@ -250,6 +250,23 @@ export interface Product {
   manufacturer?: { id: number; name: string } | null;
 }
 
+export interface ProductVendorAssociation {
+  id: number;
+  productId: number;
+  vendorId: number;
+  price: number;
+  taxRate: number | null;
+  warrantyYears: number;
+  warrantyMonths: number;
+  maintenanceVendorId: number | null;
+  comments: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  vendor?: { id: number; name: string };
+  maintenanceVendor?: { id: number; name: string } | null;
+}
+
 export interface Vendor {
   id: number;
   name: string;

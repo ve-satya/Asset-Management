@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Product, PaginatedResponse } from '../types';
+import type { Product, ProductVendorAssociation, PaginatedResponse } from '../types';
 
 const BASE = '/api/products';
 
@@ -20,6 +20,15 @@ export const updateProduct = (id: number | string, data: unknown): Promise<Produ
 
 export const deleteProduct = (id: number | string): Promise<{ message: string }> =>
   axios.delete(`${BASE}/${id}`).then((r) => r.data);
+
+export const getProductVendorAssociations = (productId: number | string): Promise<ProductVendorAssociation[]> =>
+  axios.get(`${BASE}/${productId}/vendor-associations`).then((r) => r.data.data);
+
+export const createProductVendorAssociation = (productId: number | string, data: unknown): Promise<ProductVendorAssociation> =>
+  axios.post(`${BASE}/${productId}/vendor-associations`, data).then((r) => r.data);
+
+export const updateProductVendorAssociation = (productId: number | string, associationId: number | string, data: unknown): Promise<ProductVendorAssociation> =>
+  axios.put(`${BASE}/${productId}/vendor-associations/${associationId}`, data).then((r) => r.data);
 
 export const uploadProductImage = (id: number | string, file: File): Promise<Product> => {
   const fd = new FormData();
