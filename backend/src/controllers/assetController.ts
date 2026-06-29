@@ -642,6 +642,104 @@ async function updateAsset(req: Request, res: Response, next: NextFunction): Pro
   } catch (err) { next(err); }
 }
 
+async function modifyAssetType(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    const productTypeId = parseInt(String(req.body.productTypeId || ''), 10);
+    const productId = parseInt(String(req.body.productId || ''), 10);
+
+    if (!productTypeId || Number.isNaN(productTypeId)) {
+      res.status(400).json({ error: 'Product Type is required.' });
+      return;
+    }
+    if (!productId || Number.isNaN(productId)) {
+      res.status(400).json({ error: 'Product is required.' });
+      return;
+    }
+
+    const [asset, productType, product] = await Promise.all([
+      prisma.asset.findUnique({ where: { id }, include: { productType: { select: { displayName: true } }, dynamicFieldValues: { include: { field: { select: { fieldName: true } } } } } }),
+      prisma.productType.findUnique({ where: { id: productTypeId }, select: { id: true, displayName: true, isActive: true } }),
+      prisma.product.findUnique({ where: { id: productId }, select: { id: true, name: true, productTypeId: true, isActive: true } }),
+    ]);
+
+    if (!asset) {
+      res.status(404).json({ error: 'Asset not found.' });
+      return;
+    }
+    if (!productType || !productType.isActive) {
+      res.status(404).json({ error: 'Product Type not found.' });
+      return;
+    }
+    if (!product || !product.isActive || product.productTypeId !== productTypeId) {
+      res.status(400).json({ error: 'Selected product does not belong to the selected Product Type.' });
+      return;
+    }
+
+    const actor = changedBy(req, req.body);
+    const changedOn = new Date();
+    const updated = await prisma.$transaction(async (tx) => {
+      const item = await tx.asset.update({
+        where: { id },
+        data: {
+          productTypeId,
+          productId,
+          product: product.name,
+        },
+        include: {
+          productType: { select: { displayName: true, id: true } },
+          productRef: { select: { id: true, name: true } },
+          vendorRef: { select: { id: true, name: true } },
+          stateRef: { select: { id: true, name: true } },
+          associatedAsset: { select: { id: true, name: true, assetTag: true } },
+          dynamicFieldValues: {
+            include: {
+              field: {
+                select: {
+                  id: true,
+                  fieldName: true,
+                  fieldKey: true,
+                  fieldType: true,
+                  sectionName: true,
+                  productTypeId: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const historyRows: Prisma.AssetHistoryCreateManyInput[] = [];
+      if (asset.productTypeId !== productTypeId) {
+        historyRows.push({
+          assetId: id,
+          actionType: 'Updated',
+          changedBy: actor,
+          changedOn,
+          fieldName: 'Product Type',
+          oldValue: asset.productType?.displayName || String(asset.productTypeId),
+          newValue: productType.displayName,
+        });
+      }
+      if (asset.productId !== productId || asset.product !== product.name) {
+        historyRows.push({
+          assetId: id,
+          actionType: 'Updated',
+          changedBy: actor,
+          changedOn,
+          fieldName: 'Product',
+          oldValue: asset.product || (asset.productId ? String(asset.productId) : null),
+          newValue: product.name,
+        });
+      }
+      if (historyRows.length) await tx.assetHistory.createMany({ data: historyRows });
+      return item;
+    });
+
+    res.json(updated);
+  } catch (err) { next(err); }
+}
+
 async function deleteAsset(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const id = parseInt(String(req.params.id), 10);
@@ -1079,4 +1177,4 @@ async function saveDynamicFieldValues(tx: TransactionClient, assetId: number, bo
   }
 }
 
-export { getAssets, getAsset, createAsset, updateAsset, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, deleteAssetRelationship, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets };
+export { getAssets, getAsset, createAsset, updateAsset, modifyAssetType, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, deleteAssetRelationship, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets };
