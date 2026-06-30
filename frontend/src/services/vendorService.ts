@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Vendor, PaginatedResponse, NamedOption } from '../types';
+import type { Vendor, PaginatedResponse, NamedOption, ProductVendorAssociation } from '../types';
 
 const BASE = '/api/vendors';
 
@@ -11,6 +11,9 @@ export const getAllVendors = (): Promise<NamedOption[]> =>
 
 export const getVendor    = (id: number | string): Promise<Vendor> =>
   axios.get(`${BASE}/${id}`).then((r) => r.data);
+
+export const getVendorProductAssociations = (vendorId: number | string): Promise<ProductVendorAssociation[]> =>
+  axios.get(`${BASE}/${vendorId}/product-associations`).then((r) => r.data.data);
 
 export const createVendor = (data: unknown): Promise<Vendor> =>
   axios.post(BASE, data).then((r) => r.data);
