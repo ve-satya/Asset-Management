@@ -1,6 +1,7 @@
 import express from 'express';
 import { body } from 'express-validator';
 import { getVendors, getVendor, getAllVendors, createVendor, updateVendor, deleteVendor } from '../controllers/vendorController';
+import { getVendorProductAssociations } from '../controllers/productVendorAssociationController';
 
 const router = express.Router();
 
@@ -9,6 +10,7 @@ const validators = [body('name').trim().notEmpty().withMessage('Name is required
 router.get('/all',    getAllVendors);
 router.get('/options', getAllVendors);
 router.get('/',       getVendors);
+router.get('/:vendorId/product-associations', getVendorProductAssociations);
 router.get('/:id',    getVendor);
 router.post('/',      validators, createVendor);
 router.put('/:id',    validators, updateVendor);

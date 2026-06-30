@@ -1,16 +1,22 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlignJustify, ChevronDown, ChevronLeft, ChevronRight,
   Columns3, Loader2, Pencil, Plus, Search, Trash2, X,
 } from 'lucide-react';
-import { deleteVendor, getVendors } from '../../services/vendorService';
+import {
+  createProductVendorAssociation,
+  getAllProducts,
+  updateProductVendorAssociation,
+} from '../../services/productService';
+import { deleteVendor, getAllVendors, getVendorProductAssociations, getVendors } from '../../services/vendorService';
 import useDebounce from '../../hooks/useDebounce';
 import ConfirmDialog from '../common/ConfirmDialog';
 import VendorForm from './VendorForm';
-import type { PaginationMeta, Vendor } from '../../types';
+import type { NamedOption, PaginationMeta, ProductVendorAssociation, Vendor } from '../../types';
 
 interface ColDef { key: keyof Vendor; label: string; }
+type ProductOption = { id: number; name: string; productTypeId?: number };
 
 const ALL_COLUMNS: ColDef[] = [
   { key: 'id',            label: 'ID' },
@@ -315,6 +321,250 @@ function ToolbarPagination({
   );
 }
 
+function vendorProductWarrantyLabel(row: ProductVendorAssociation) {
+  return `${row.warrantyYears || 0} years,${row.warrantyMonths || 0} months`;
+}
+
+function VendorProductAssociationModal({
+  vendor,
+  record,
+  products,
+  vendors,
+  onClose,
+  onSaved,
+}: {
+  vendor: Vendor;
+  record: ProductVendorAssociation | null;
+  products: ProductOption[];
+  vendors: NamedOption[];
+  onClose: () => void;
+  onSaved: (addAnother?: boolean) => void;
+}) {
+  const isEdit = Boolean(record);
+  const [form, setForm] = useState({
+    productId: record?.productId ? String(record.productId) : '',
+    price: record ? String(Number(record.price).toFixed(2)) : '0.00',
+    taxRate: record?.taxRate !== null && record?.taxRate !== undefined ? String(Number(record.taxRate).toFixed(2)) : '0.00',
+    warrantyYears: record ? String(record.warrantyYears) : '0',
+    warrantyMonths: record ? String(record.warrantyMonths) : '0',
+    maintenanceVendorId: record?.maintenanceVendorId ? String(record.maintenanceVendorId) : '',
+    comments: record?.comments ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function set(key: string, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  async function save(addAnother = false) {
+    const nextErrors: Record<string, string> = {};
+    if (!form.productId) nextErrors.productId = 'Product is required.';
+    if (!form.price) nextErrors.price = 'Price is required.';
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    setSaving(true);
+    try {
+      const productId = parseInt(form.productId, 10);
+      const payload = {
+        vendorId: vendor.id,
+        price: parseFloat(form.price) || 0,
+        taxRate: form.taxRate === '' ? null : parseFloat(form.taxRate) || 0,
+        warrantyYears: parseInt(form.warrantyYears, 10) || 0,
+        warrantyMonths: parseInt(form.warrantyMonths, 10) || 0,
+        maintenanceVendorId: form.maintenanceVendorId ? parseInt(form.maintenanceVendorId, 10) : null,
+        comments: form.comments,
+      };
+      if (record) await updateProductVendorAssociation(productId, record.id, payload);
+      else await createProductVendorAssociation(productId, payload);
+      onSaved(addAnother);
+      if (addAnother) {
+        setForm({
+          productId: '',
+          price: '0.00',
+          taxRate: '0.00',
+          warrantyYears: '0',
+          warrantyMonths: '0',
+          maintenanceVendorId: '',
+          comments: '',
+        });
+      } else {
+        onClose();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const input = 'h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100';
+  const label = 'w-48 shrink-0 pt-2 text-right text-sm text-gray-600 dark:text-gray-300';
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+      <div className="flex w-full max-w-3xl flex-col border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{isEdit ? 'Edit Vendor-Product association' : 'New Vendor-Product association'}</h2>
+          <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-4 px-5 py-8">
+          <div className="flex gap-4">
+            <label className={label}><span className="text-red-500">*</span> Vendor</label>
+            <div className="flex-1 pt-2 text-sm text-gray-700 dark:text-gray-200">{vendor.name}</div>
+          </div>
+          <div className="flex gap-4">
+            <label className={label}><span className="text-red-500">*</span> Product</label>
+            <div className="flex-1">
+              <select value={form.productId} onChange={(event) => set('productId', event.target.value)} className={input}>
+                <option value="">--Select Product--</option>
+                {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+              </select>
+              {errors.productId && <p className="mt-1 text-xs text-red-500">{errors.productId}</p>}
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <label className={label}><span className="text-red-500">*</span> Price ($)</label>
+            <div className="flex-1">
+              <input value={form.price} onChange={(event) => set('price', event.target.value)} className={input} />
+              {errors.price && <p className="mt-1 text-xs text-red-500">{errors.price}</p>}
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <label className={label}>Tax Rate (%)</label>
+            <input value={form.taxRate} onChange={(event) => set('taxRate', event.target.value)} className={input} />
+          </div>
+          <div className="flex gap-4">
+            <label className={label}>Warranty Period</label>
+            <div className="flex flex-1 items-center gap-3">
+              <input value={form.warrantyYears} onChange={(event) => set('warrantyYears', event.target.value)} className="h-9 w-20 border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" />
+              <span className="text-sm text-gray-600 dark:text-gray-300">Years</span>
+              <input value={form.warrantyMonths} onChange={(event) => set('warrantyMonths', event.target.value)} className="h-9 w-20 border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" />
+              <span className="text-sm text-gray-600 dark:text-gray-300">Months</span>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <label className={label}>Maintenance Vendor</label>
+            <select value={form.maintenanceVendorId} onChange={(event) => set('maintenanceVendorId', event.target.value)} className={input}>
+              <option value="">--Select Maintenance Vendor--</option>
+              {vendors.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </div>
+          <div className="flex gap-4">
+            <label className={label}>Comments</label>
+            <textarea value={form.comments} onChange={(event) => set('comments', event.target.value)} rows={4} className={`${input} h-24 resize-none py-2`} />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-3 border-t border-gray-200 px-4 py-4 dark:border-gray-700">
+          <button type="button" disabled={saving} onClick={() => save(false)} className="inline-flex h-9 items-center gap-2 rounded-full bg-blue-600 px-6 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+            {saving && <Loader2 size={15} className="animate-spin" />}
+            {saving ? (isEdit ? 'Updating...' : 'Saving...') : (isEdit ? 'Update' : 'Save')}
+          </button>
+          {!isEdit && (
+            <button type="button" disabled={saving} onClick={() => save(true)} className="inline-flex h-9 items-center gap-2 rounded-full border border-gray-300 bg-white px-5 text-sm text-gray-800 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+              {saving && <Loader2 size={15} className="animate-spin" />}
+              {saving ? 'Saving...' : 'Save and Add New'}
+            </button>
+          )}
+          <button type="button" onClick={onClose} className="h-9 rounded-full border border-gray-300 bg-gray-50 px-6 text-sm text-gray-800 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function VendorProductPanel({
+  vendor,
+  rows,
+  loading,
+  onAssociate,
+  onEdit,
+}: {
+  vendor: Vendor;
+  rows: ProductVendorAssociation[];
+  loading: boolean;
+  onAssociate: () => void;
+  onEdit: (row: ProductVendorAssociation) => void;
+}) {
+  return (
+    <div className="border-x border-b border-yellow-100 bg-yellow-50 px-4 pb-5 pt-0 dark:border-yellow-900/50 dark:bg-yellow-950/20">
+      <div className="bg-white dark:bg-gray-900">
+        <div className="flex border-b border-gray-200 dark:border-gray-700">
+          <button type="button" className="h-10 border-b-2 border-blue-500 px-4 text-sm font-medium text-blue-600 dark:text-blue-400">
+            Product
+          </button>
+          <button type="button" className="h-10 px-4 text-sm text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">
+            Service
+          </button>
+        </div>
+        <div className="flex items-center gap-3 bg-white px-3 py-2 dark:bg-gray-900">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Products associated with {vendor.name}</h3>
+          <button type="button" onClick={onAssociate} className="h-7 border border-gray-300 bg-white px-3 text-sm text-gray-800 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+            Associate Product
+          </button>
+          <button type="button" className="inline-flex h-7 w-9 items-center justify-center border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+            <Search size={15} />
+          </button>
+          <button type="button" disabled className="inline-flex h-7 w-14 cursor-not-allowed items-center justify-center border border-gray-300 bg-white text-gray-300 dark:border-gray-600 dark:bg-gray-800">
+            Delete
+          </button>
+          <div className="flex h-7 items-center gap-0 text-sm text-gray-700 dark:text-gray-300">
+            <button type="button" className="inline-flex h-7 w-[60px] items-center justify-between border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+              <span>25</span>
+              <ChevronDown size={15} />
+            </button>
+            <span className="-ml-px flex h-7 items-center border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-800">{rows.length ? 1 : 0} - {rows.length} of {rows.length}</span>
+            <button type="button" disabled className="-ml-px inline-flex h-7 w-9 cursor-not-allowed items-center justify-center border border-gray-300 bg-white text-gray-300 dark:border-gray-600 dark:bg-gray-800"><ChevronLeft size={16} /></button>
+            <button type="button" disabled className="-ml-px inline-flex h-7 w-9 cursor-not-allowed items-center justify-center border border-gray-300 bg-white text-gray-300 dark:border-gray-600 dark:bg-gray-800"><ChevronRight size={16} /></button>
+          </div>
+        </div>
+
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+              <th className="w-10 px-3 py-2 text-left"><input type="checkbox" className="rounded border-gray-300 text-blue-600" /></th>
+              <th className="w-14 px-3 py-2 text-left" />
+              <th className="px-3 py-2 text-left">Product</th>
+              <th className="px-3 py-2 text-left">Price</th>
+              <th className="px-3 py-2 text-left">Warranty Period</th>
+              <th className="px-3 py-2 text-left">Comments</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={6} className="py-8 text-center"><Loader2 size={22} className="mx-auto animate-spin text-brand-500" /></td></tr>
+            ) : rows.length === 0 ? (
+              <tr><td colSpan={6} className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">No data available</td></tr>
+            ) : rows.map((row) => (
+              <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/60">
+                <td className="px-3 py-2"><input type="checkbox" className="rounded border-gray-300 text-blue-600" /></td>
+                <td className="px-3 py-2 text-gray-400"><AlignJustify size={14} /></td>
+                <td className="px-3 py-2">
+                  <button type="button" onClick={() => onEdit(row)} className="text-blue-600 hover:underline dark:text-blue-400">{row.product?.name ?? '-'}</button>
+                </td>
+                <td className="px-3 py-2">{Number(row.price).toFixed(2)} ($)</td>
+                <td className="px-3 py-2">{vendorProductWarrantyLabel(row)}</td>
+                <td className="px-3 py-2">{row.comments || '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function VendorTable() {
   const [data, setData] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(false);
@@ -334,6 +584,13 @@ export default function VendorTable() {
   const [deleteTarget, setDeleteTarget] = useState<Vendor | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [expandedVendorId, setExpandedVendorId] = useState<number | null>(null);
+  const [productAssociationLoading, setProductAssociationLoading] = useState<Record<number, boolean>>({});
+  const [productAssociations, setProductAssociations] = useState<Record<number, ProductVendorAssociation[]>>({});
+  const [products, setProducts] = useState<ProductOption[]>([]);
+  const [vendors, setVendors] = useState<NamedOption[]>([]);
+  const [associationVendor, setAssociationVendor] = useState<Vendor | null>(null);
+  const [editingProductAssociation, setEditingProductAssociation] = useState<ProductVendorAssociation | null>(null);
   const [colWidths, setColWidths] = useState<Record<string, number>>(() => {
     try {
       const stored = localStorage.getItem(LS_KEY + '_widths');
@@ -345,6 +602,10 @@ export default function VendorTable() {
 
   useEffect(() => { localStorage.setItem(LS_KEY, JSON.stringify(visibleCols)); }, [visibleCols]);
   useEffect(() => { localStorage.setItem(LS_KEY + '_widths', JSON.stringify(colWidths)); }, [colWidths]);
+  useEffect(() => {
+    getAllProducts().then(setProducts).catch(console.error);
+    getAllVendors().then(setVendors).catch(console.error);
+  }, []);
 
   function startResize(key: string, event: React.MouseEvent) {
     event.preventDefault();
@@ -389,7 +650,22 @@ export default function VendorTable() {
 
   function renderCell(row: Vendor, key: keyof Vendor) {
     const value = row[key];
-    if (key === 'name') return <span className="font-medium text-gray-800 dark:text-gray-200">{row.name}</span>;
+    if (key === 'name') {
+      const expanded = expandedVendorId === row.id;
+      return (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => toggleProductAssociations(row)}
+            className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-400 bg-white text-gray-600 hover:border-blue-500 hover:text-blue-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+            title={expanded ? 'Collapse products' : 'Expand products'}
+          >
+            <ChevronDown size={14} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+          </button>
+          <span className="font-medium text-gray-800 dark:text-gray-200">{row.name}</span>
+        </div>
+      );
+    }
     if (key === 'currency') return <span className="text-brand-600 dark:text-brand-400">{row.currency || '-'}</span>;
     if (key === 'website') {
       return row.website
@@ -400,6 +676,38 @@ export default function VendorTable() {
       return <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${row.isActive ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{row.isActive ? 'Yes' : 'No'}</span>;
     }
     return <span>{String(value ?? '-')}</span>;
+  }
+
+  async function loadProductAssociations(vendorId: number) {
+    setProductAssociationLoading((prev) => ({ ...prev, [vendorId]: true }));
+    try {
+      const rows = await getVendorProductAssociations(vendorId);
+      setProductAssociations((prev) => ({ ...prev, [vendorId]: rows }));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setProductAssociationLoading((prev) => ({ ...prev, [vendorId]: false }));
+    }
+  }
+
+  function toggleProductAssociations(row: Vendor) {
+    const nextId = expandedVendorId === row.id ? null : row.id;
+    setExpandedVendorId(nextId);
+    if (nextId) loadProductAssociations(nextId);
+  }
+
+  function openProductAssociationModal(vendor: Vendor, record: ProductVendorAssociation | null = null) {
+    setAssociationVendor(vendor);
+    setEditingProductAssociation(record);
+  }
+
+  function closeProductAssociationModal() {
+    setAssociationVendor(null);
+    setEditingProductAssociation(null);
+  }
+
+  function handleProductAssociationSaved() {
+    if (associationVendor) loadProductAssociations(associationVendor.id);
   }
 
   async function handleConfirmDelete() {
@@ -511,20 +819,35 @@ export default function VendorTable() {
             ) : data.length === 0 ? (
               <tr><td colSpan={visibleDefs.length + 1} className="py-16 text-center text-gray-400 dark:text-gray-500">No vendors found.</td></tr>
             ) : data.map((row) => (
-              <tr key={row.id} className="group transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                <td className="w-8 px-2 py-2.5">
-                  <RowMenu
-                    row={row}
-                    onEdit={(record) => { setEditRecord(record); setFormOpen(true); }}
-                    onDelete={(record) => setDeleteTarget(record)}
-                  />
-                </td>
-                {visibleDefs.map((col) => (
-                  <td key={col.key} className="px-3 py-2.5 text-gray-700 dark:text-gray-300">
-                    {renderCell(row, col.key)}
+              <Fragment key={row.id}>
+                <tr className={`group transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50 ${expandedVendorId === row.id ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}>
+                  <td className="w-8 px-2 py-2.5">
+                    <RowMenu
+                      row={row}
+                      onEdit={(record) => { setEditRecord(record); setFormOpen(true); }}
+                      onDelete={(record) => setDeleteTarget(record)}
+                    />
                   </td>
-                ))}
-              </tr>
+                  {visibleDefs.map((col) => (
+                    <td key={col.key} className="px-3 py-2.5 text-gray-700 dark:text-gray-300">
+                      {renderCell(row, col.key)}
+                    </td>
+                  ))}
+                </tr>
+                {expandedVendorId === row.id && (
+                  <tr className="bg-yellow-50 dark:bg-yellow-950/20">
+                    <td colSpan={visibleDefs.length + 1} className="p-0">
+                      <VendorProductPanel
+                        vendor={row}
+                        rows={productAssociations[row.id] || []}
+                        loading={Boolean(productAssociationLoading[row.id])}
+                        onAssociate={() => openProductAssociationModal(row)}
+                        onEdit={(record) => openProductAssociationModal(row, record)}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -558,6 +881,17 @@ export default function VendorTable() {
           </div>
         </div>,
         document.body
+      )}
+
+      {associationVendor && (
+        <VendorProductAssociationModal
+          vendor={associationVendor}
+          record={editingProductAssociation}
+          products={products}
+          vendors={vendors}
+          onClose={closeProductAssociationModal}
+          onSaved={handleProductAssociationSaved}
+        />
       )}
 
       <ConfirmDialog

@@ -263,6 +263,7 @@ export interface ProductVendorAssociation {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  product?: { id: number; name: string };
   vendor?: { id: number; name: string };
   maintenanceVendor?: { id: number; name: string } | null;
 }

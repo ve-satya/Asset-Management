@@ -21,6 +21,21 @@ export async function getProductVendorAssociations(req: Request, res: Response, 
   } catch (err) { next(err); }
 }
 
+export async function getVendorProductAssociations(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const vendorId = parseInt(String(req.params.vendorId), 10);
+    const items = await (prisma as any).productVendorAssociation.findMany({
+      where: { vendorId, isActive: true },
+      include: {
+        product: { select: { id: true, name: true } },
+        maintenanceVendor: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ data: items });
+  } catch (err) { next(err); }
+}
+
 export async function createProductVendorAssociation(req: Request, res: Response, next: NextFunction): Promise<void> {
   const errors = validationResult(req);
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
