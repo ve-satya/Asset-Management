@@ -878,13 +878,14 @@ export default function AssetList() {
         : null;
       const selectedState = stateFilter ? stateList.find((state) => state.name === stateFilter) : null;
       const scopeLabel = selectedProductType?.displayName ? singularExportScope(selectedProductType.displayName) : 'assets';
+      const exportColumns = ['name', ...visibleCols.filter((column) => column !== 'name')];
       const params: Record<string, unknown> = {
         format,
         search,
         isActive: 'true',
         title: exportTitle,
         fileScope: scopeLabel,
-        columns: visibleCols.join(','),
+        columns: exportColumns.join(','),
       };
       if (selectedPtId) params.productTypeId = selectedPtId;
       if (selectedCategory) params.assetCategory = selectedCategory;

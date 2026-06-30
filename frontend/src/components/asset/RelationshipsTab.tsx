@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { createAssetRelationship, deleteAssetRelationship, getAssetRelationships, getAssets } from '../../services/assetService';
+import { attachAssetRelationships, createAssetRelationship, deleteAssetRelationship, getAssetRelationships, getAssets } from '../../services/assetService';
 import type { Asset, AssetRelationshipsResponse, AssetRelationshipType } from '../../types';
 import AddRelationshipModal from './AddRelationshipModal';
 import RelationshipDiagram from './RelationshipDiagram';
@@ -13,7 +13,7 @@ const EMPTY_RELATIONSHIPS: AssetRelationshipsResponse = {
   attachedAssets: [],
 };
 
-export default function RelationshipsTab({ asset, onAssign }: { asset: Asset; onAssign: () => void }) {
+export default function RelationshipsTab({ asset, onAssign, refreshKey = 0 }: { asset: Asset; onAssign: () => void; refreshKey?: number }) {
   const [relationships, setRelationships] = useState<AssetRelationshipsResponse>(EMPTY_RELATIONSHIPS);
   const [assetOptions, setAssetOptions] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +35,7 @@ export default function RelationshipsTab({ asset, onAssign }: { asset: Asset; on
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => { load(); }, [asset.id, asset.user, asset.department, asset.associatedAssetId, asset.site, asset.isLoanable, asset.updatedAt]);
+  useEffect(() => { load(); }, [asset.id, asset.user, asset.department, asset.associatedAssetId, asset.site, asset.isLoanable, asset.updatedAt, refreshKey]);
 
   function openModal(type: AssetRelationshipType) {
     setModalType(type);
@@ -51,6 +51,12 @@ export default function RelationshipsTab({ asset, onAssign }: { asset: Asset; on
           latest = await createAssetRelationship(asset.id, { relationshipType: 'ConnectedAsset', relatedAssetId });
         }
         if (latest) setRelationships(latest);
+        return true;
+      }
+      if (payload.relationshipType === 'AttachedAsset' && Array.isArray(payload.relatedAssetIds)) {
+        const updated = await attachAssetRelationships(asset.id, payload);
+        setRelationships(updated);
+        setModalOpen(false);
         return true;
       }
       const updated = await createAssetRelationship(asset.id, payload);
@@ -94,7 +100,7 @@ export default function RelationshipsTab({ asset, onAssign }: { asset: Asset; on
         type={modalType}
         currentAssetId={asset.id}
         assets={assetOptions}
-        excludedAssetIds={relationships.connectedAssets.map((row) => row.relatedAssetId)}
+        excludedAssetIds={(modalType === 'AttachedAsset' ? relationships.attachedAssets : relationships.connectedAssets).map((row) => row.relatedAssetId)}
         saving={saving}
         onClose={() => setModalOpen(false)}
         onSave={saveRelationship}
