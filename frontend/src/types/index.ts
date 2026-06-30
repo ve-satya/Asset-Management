@@ -83,6 +83,17 @@ export interface AssetCost {
   createdBy: string | null;
 }
 
+export interface AssetAttachment {
+  id: number;
+  assetId: number;
+  originalName: string;
+  storedFilename: string;
+  mimeType: string | null;
+  fileSize: number;
+  uploadedBy: string | null;
+  uploadedOn: string;
+}
+
 export interface AssetCostSummary {
   purchaseCost: number;
   operationalCost: number;

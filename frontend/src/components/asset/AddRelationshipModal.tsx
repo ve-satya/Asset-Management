@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, MoreHorizontal, RefreshCw, Search, TableProperties, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, CheckCircle2, ChevronLeft, ChevronRight, Loader2, MoreHorizontal, RefreshCw, Search, TableProperties, X } from 'lucide-react';
 import { getAssets } from '../../services/assetService';
 import { getAllAssetStates } from '../../services/assetStateService';
 import { getAllProducts } from '../../services/productService';
@@ -42,8 +42,8 @@ export default function AddRelationshipModal({ open, type, currentAssetId, asset
 
   if (!open) return null;
 
-  if (type === 'ConnectedAsset') {
-    return <ConnectAssetsModal currentAssetId={currentAssetId} excludedAssetIds={excludedAssetIds} saving={saving} onClose={onClose} onSave={onSave} />;
+  if (type === 'ConnectedAsset' || type === 'AttachedAsset') {
+    return <AssetPickerRelationshipModal type={type} currentAssetId={currentAssetId} excludedAssetIds={excludedAssetIds} saving={saving} onClose={onClose} onSave={onSave} />;
   }
 
   const isAssetRelation = type === 'ConnectedAsset' || type === 'AttachedAsset';
@@ -131,7 +131,7 @@ interface PaginationState {
   totalPages: number;
 }
 
-function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose, onSave }: { currentAssetId: number; excludedAssetIds: number[]; saving: boolean; onClose: () => void; onSave: (payload: Record<string, unknown>) => void | boolean | Promise<void | boolean> }) {
+function AssetPickerRelationshipModal({ type, currentAssetId, excludedAssetIds, saving, onClose, onSave }: { type: 'ConnectedAsset' | 'AttachedAsset'; currentAssetId: number; excludedAssetIds: number[]; saving: boolean; onClose: () => void; onSave: (payload: Record<string, unknown>) => void | boolean | Promise<void | boolean> }) {
   const [rows, setRows] = useState<Asset[]>([]);
   const [productTypes, setProductTypes] = useState<ProductTypeOption[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
@@ -139,11 +139,19 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
   const [productTypeId, setProductTypeId] = useState('');
   const [productName, setProductName] = useState('');
   const [assetState, setAssetState] = useState('');
+  const [search, setSearch] = useState('');
+  const [showAttachedOnly, setShowAttachedOnly] = useState(false);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [locallyConnectedIds, setLocallyConnectedIds] = useState<number[]>([]);
   const [toastVisible, setToastVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState<PaginationState>({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
+  const isAttach = type === 'AttachedAsset';
+  const title = isAttach ? 'Attach Assets' : 'Connect Assets';
+  const actionLabel = isAttach ? 'Attach' : 'Connect';
+  const attachedLinkLabel = isAttach ? 'View Attached Assets' : 'Connected Assets';
 
   const filteredProducts = useMemo(() => {
     if (!productTypeId) return products;
@@ -151,7 +159,9 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
   }, [productTypeId, products]);
 
   const excludedIds = useMemo(() => new Set([currentAssetId, ...excludedAssetIds, ...locallyConnectedIds]), [currentAssetId, excludedAssetIds, locallyConnectedIds]);
-  const visibleRows = rows.filter((asset) => !excludedIds.has(asset.id));
+  const visibleRows = showAttachedOnly
+    ? rows.filter((asset) => excludedAssetIds.includes(asset.id))
+    : rows.filter((asset) => !excludedIds.has(asset.id));
   const visibleIds = visibleRows.map((asset) => asset.id);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const rangeStart = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1;
@@ -174,17 +184,19 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
       page: pagination.page,
       pageSize: pagination.pageSize,
       isActive: 'true',
-      sortBy: 'name',
-      sortDirection: 'asc',
+      sortBy,
+      sortOrder: sortDirection,
+      sortDirection,
     };
     if (productTypeId) params.productTypeId = productTypeId;
     if (productName) params.product = productName;
     if (assetState) params.assetState = assetState;
+    if (search.trim()) params.search = search.trim();
 
     getAssets(params)
       .then((result) => {
         if (!isCurrent) return;
-        setRows(result.data.filter((asset) => !excludedIds.has(asset.id)));
+        setRows(result.data);
         setPagination(result.pagination);
       })
       .catch(console.error)
@@ -193,7 +205,7 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
       });
 
     return () => { isCurrent = false; };
-  }, [pagination.page, pagination.pageSize, productTypeId, productName, assetState, excludedIds]);
+  }, [pagination.page, pagination.pageSize, productTypeId, productName, assetState, search, sortBy, sortDirection, excludedIds, showAttachedOnly]);
 
   function toggleRow(id: number) {
     setSelectedIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]);
@@ -213,16 +225,30 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
   async function connectSelected() {
     if (!selectedIds.length) return;
     const idsToConnect = selectedIds;
-    const result = await onSave({ relationshipType: 'ConnectedAsset', relatedAssetIds: idsToConnect });
+    const result = await onSave({ relationshipType: type, relatedAssetIds: idsToConnect });
     if (result === false) return;
     setLocallyConnectedIds((prev) => Array.from(new Set([...prev, ...idsToConnect])));
     setSelectedIds([]);
+    if (isAttach) {
+      onClose();
+      return;
+    }
     setToastVisible(true);
     window.setTimeout(() => setToastVisible(false), 2500);
   }
 
   function resetPageForFilter(callback: () => void) {
     callback();
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  }
+
+  function sortColumn(column: string) {
+    if (sortBy !== column) {
+      setSortBy(column);
+      setSortDirection('asc');
+    } else {
+      setSortDirection((direction) => direction === 'asc' ? 'desc' : 'asc');
+    }
     setPagination((prev) => ({ ...prev, page: 1 }));
   }
 
@@ -239,7 +265,7 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
           </div>
         )}
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-gray-200 px-3 dark:border-gray-700">
-          <h2 className="text-base font-medium text-gray-900 dark:text-gray-100">Connect Assets</h2>
+          <h2 className="text-base font-medium text-gray-900 dark:text-gray-100">{title}</h2>
           <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-white" aria-label="Close">
             <X size={17} />
           </button>
@@ -279,20 +305,26 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
 
         <div className="flex shrink-0 flex-col gap-2 px-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            {selectedIds.length > 0 && (
-              <>
-                <div className="inline-flex h-7 items-center border border-sky-300 bg-white text-xs text-sky-700 dark:border-sky-800 dark:bg-gray-900 dark:text-sky-300">
-                  <span className="px-2">Selected Records ({selectedIds.length})</span>
-                  <button type="button" onClick={resetSelection} className="flex h-full w-7 items-center justify-center border-l border-sky-200 text-red-600 hover:bg-red-50 dark:border-sky-800 dark:hover:bg-red-950/30" aria-label="Clear selected assets">
-                    <X size={14} />
-                  </button>
-                </div>
-                <button type="button" onClick={connectSelected} disabled={saving} className="inline-flex h-7 items-center gap-2 bg-sky-600 px-4 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50">
-                  {saving && <Loader2 size={13} className="animate-spin" />} Connect
+            <div className="inline-flex h-7 items-center border border-sky-300 bg-white text-xs text-sky-700 dark:border-sky-800 dark:bg-gray-900 dark:text-sky-300">
+              <span className="px-2">Selected Records ({selectedIds.length})</span>
+              {selectedIds.length > 0 && (
+                <button type="button" onClick={resetSelection} className="flex h-full w-7 items-center justify-center border-l border-sky-200 text-red-600 hover:bg-red-50 dark:border-sky-800 dark:hover:bg-red-950/30" aria-label="Clear selected assets">
+                  <X size={14} />
                 </button>
-              </>
-            )}
-            <ToolbarIcon title="Search"><Search size={15} /></ToolbarIcon>
+              )}
+            </div>
+            <button type="button" onClick={connectSelected} disabled={saving || selectedIds.length === 0} className="inline-flex h-7 items-center gap-2 bg-sky-600 px-4 text-xs font-medium text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50">
+              {saving && <Loader2 size={13} className="animate-spin" />} {actionLabel}
+            </button>
+            <div className="inline-flex h-7 items-center border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+              <span className="flex h-full w-8 items-center justify-center text-gray-500 dark:text-gray-300"><Search size={15} /></span>
+              <input
+                value={search}
+                onChange={(event) => resetPageForFilter(() => setSearch(event.target.value))}
+                placeholder="Search..."
+                className="h-full w-32 border-l border-gray-200 bg-transparent px-2 text-xs text-gray-900 outline-none dark:border-gray-700 dark:text-gray-100 sm:w-44"
+              />
+            </div>
             <ToolbarIcon title="Select columns"><TableProperties size={15} /></ToolbarIcon>
             <ToolbarIcon title="Refresh" onClick={() => setPagination((prev) => ({ ...prev }))}><RefreshCw size={15} /></ToolbarIcon>
             <select
@@ -307,7 +339,9 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
             <ToolbarIcon title="Previous" onClick={() => setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))} disabled={pagination.page <= 1}><ChevronLeft size={15} /></ToolbarIcon>
             <ToolbarIcon title="Next" onClick={() => setPagination((prev) => ({ ...prev, page: Math.min(prev.totalPages || 1, prev.page + 1) }))} disabled={pagination.page >= pagination.totalPages}><ChevronRight size={15} /></ToolbarIcon>
           </div>
-          <button type="button" className="text-xs font-medium text-sky-600 hover:underline dark:text-sky-300">Connected Assets</button>
+          <button type="button" onClick={() => resetPageForFilter(() => setShowAttachedOnly((value) => !value))} className="text-xs font-medium text-sky-600 hover:underline dark:text-sky-300">
+            {showAttachedOnly ? 'View Available Assets' : attachedLinkLabel}
+          </button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-3 pb-3">
@@ -317,17 +351,17 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
                 <th className="w-9 px-2 py-2 font-normal">
                   <input type="checkbox" checked={allVisibleSelected} onChange={toggleAllVisible} className="rounded border-gray-300 text-sky-600 focus:ring-sky-500" />
                 </th>
-                <th className="w-40 border-r border-gray-200 px-2 py-2 font-normal dark:border-gray-700">Asset Name</th>
-                <th className="w-40 border-r border-gray-200 px-2 py-2 font-normal dark:border-gray-700">Product Type</th>
-                <th className="w-44 border-r border-gray-200 px-2 py-2 font-normal dark:border-gray-700">Product</th>
-                <th className="w-36 border-r border-gray-200 px-2 py-2 font-normal dark:border-gray-700">Asset State</th>
-                <th className="w-36 border-r border-gray-200 px-2 py-2 font-normal dark:border-gray-700">Barcode</th>
-                <th className="w-40 border-r border-gray-200 px-2 py-2 font-normal dark:border-gray-700">User</th>
-                <th className="w-40 border-r border-gray-200 px-2 py-2 font-normal dark:border-gray-700">Department</th>
-                <th className="w-40 border-r border-gray-200 px-2 py-2 font-normal dark:border-gray-700">Associated To As...</th>
-                <th className="w-40 border-r border-gray-200 px-2 py-2 font-normal dark:border-gray-700">Site</th>
-                <th className="w-40 border-r border-gray-200 px-2 py-2 font-normal dark:border-gray-700">Purchase Cost ($)</th>
-                <th className="w-40 px-2 py-2 font-normal">Vendor</th>
+                <SortHeader label="Asset Name" column="name" sortBy={sortBy} sortDirection={sortDirection} onSort={sortColumn} className="w-40" />
+                <SortHeader label="Product Type" column="productType" sortBy={sortBy} sortDirection={sortDirection} onSort={sortColumn} className="w-40" />
+                <SortHeader label="Product" column="product" sortBy={sortBy} sortDirection={sortDirection} onSort={sortColumn} className="w-44" />
+                <SortHeader label="Asset State" column="assetState" sortBy={sortBy} sortDirection={sortDirection} onSort={sortColumn} className="w-36" />
+                <SortHeader label="Barcode" column="barcode" sortBy={sortBy} sortDirection={sortDirection} onSort={sortColumn} className="w-36" />
+                <SortHeader label="User" column="user" sortBy={sortBy} sortDirection={sortDirection} onSort={sortColumn} className="w-40" />
+                <SortHeader label="Department" column="department" sortBy={sortBy} sortDirection={sortDirection} onSort={sortColumn} className="w-40" />
+                <SortHeader label="Associated To As..." column="associatedToAssets" sortBy={sortBy} sortDirection={sortDirection} onSort={sortColumn} className="w-40" />
+                <SortHeader label="Site" column="site" sortBy={sortBy} sortDirection={sortDirection} onSort={sortColumn} className="w-40" />
+                <SortHeader label="Purchase Cost ($)" column="purchaseCost" sortBy={sortBy} sortDirection={sortDirection} onSort={sortColumn} className="w-40" />
+                <SortHeader label="Vendor" column="vendor" sortBy={sortBy} sortDirection={sortDirection} onSort={sortColumn} className="w-40" last />
               </tr>
             </thead>
             <tbody className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -359,6 +393,27 @@ function ConnectAssetsModal({ currentAssetId, excludedAssetIds, saving, onClose,
         </div>
       </div>
     </div>
+  );
+}
+
+function SortHeader({ label, column, sortBy, sortDirection, onSort, className = '', last = false }: { label: string; column: string; sortBy: string; sortDirection: 'asc' | 'desc'; onSort: (column: string) => void; className?: string; last?: boolean }) {
+  const active = sortBy === column;
+  const Icon = !active ? ArrowUpDown : sortDirection === 'asc' ? ArrowUp : ArrowDown;
+  const orderTitle = active && sortDirection === 'desc' ? 'Descending order' : 'Ascending order';
+  return (
+    <th className={`${className} ${last ? '' : 'border-r border-gray-200 dark:border-gray-700'} px-2 py-2 font-normal ${active ? 'bg-sky-50 dark:bg-sky-900/20' : ''}`}>
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className={`group flex w-full items-center justify-between gap-2 truncate text-left uppercase tracking-normal hover:text-sky-600 dark:hover:text-sky-300 ${active ? 'font-medium text-sky-600 dark:text-sky-300' : ''}`}
+        title={`Sort by ${label}`}
+      >
+        <span className="min-w-0 truncate">{label}</span>
+        <span title={orderTitle} className="shrink-0">
+          <Icon size={13} className={`${active ? 'text-sky-600 dark:text-sky-300' : 'text-gray-400 group-hover:text-sky-500'}`} />
+        </span>
+      </button>
+    </th>
   );
 }
 

@@ -1,21 +1,25 @@
-import { useState, useEffect, useRef, ReactNode, useMemo } from 'react';
+import { useState, useEffect, useRef, ReactNode, useMemo, ChangeEvent, DragEvent } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Box, CalendarDays, ChevronDown, Cpu, Info, Link, Loader2, Monitor, Pencil, Play, Plus, RefreshCw, Router, Search, Trash2, UserCircle, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, Box, CalendarDays, ChevronDown, Cpu, Download, FileText, Info, Link, Loader2, Monitor, Paperclip, Pencil, Play, Plus, Printer, RefreshCw, Router, Search, Trash2, UserCircle, UserPlus, X } from 'lucide-react';
 import DynamicAssetDetailsSection from '../components/asset/DynamicAssetDetailsSection';
 import RelationshipsTab from '../components/asset/RelationshipsTab';
-import { createAssetCost, deleteAssetCost, getAsset, getAssetContracts, getAssetCosts, getAssetHistory, modifyAssetType, updateAsset, updateAssetCost } from '../services/assetService';
+import AddRelationshipModal from '../components/asset/AddRelationshipModal';
+import { attachAssetRelationships, copyAsset, createAssetCost, deleteAssetAttachment, deleteAssetCost, downloadAssetAttachment, getAsset, getAssetAttachments, getAssetContracts, getAssetCosts, getAssetHistory, getAssetRelationships, modifyAssetType, previewAssetAttachmentUrl, updateAsset, updateAssetCost, uploadAssetAttachments } from '../services/assetService';
 import { getAllAssetStates } from '../services/assetStateService';
 import { getAllProductTypes } from '../services/productTypeService';
 import { getAllProducts } from '../services/productService';
 import { ToastContainer, useToast } from '../components/common/Toast';
 import UserDetailsDrawer from '../components/user/UserDetailsDrawer';
-import type { Asset, AssetContract, AssetCost, AssetFinancialsResponse, AssetHistoryItem, NamedOption, PaginationMeta, ProductTypeOption } from '../types';
+import type { Asset, AssetAttachment, AssetContract, AssetCost, AssetFinancialsResponse, AssetHistoryItem, NamedOption, PaginationMeta, ProductTypeOption } from '../types';
 
 const MAIN_TABS      = [{ key: 'asset-detail', label: 'Asset Details' }, { key: 'relationships', label: 'Relationships' }, { key: 'contracts', label: 'Contracts' }, { key: 'financials', label: 'Financials' }, { key: 'associations', label: 'Associations' }, { key: 'history', label: 'History' }];
 const HISTORY_SUBTABS = [{ key: 'ownership', label: 'Asset Ownership History' }, { key: 'asset', label: 'Asset History' }];
 const FINANCIAL_SUBTABS = [{ key: 'cost', label: 'Cost' }, { key: 'depreciation', label: 'Depreciation Details' }];
 const COST_FACTORS = ['Disposal Cost', 'Move/Change Cost', 'Others', 'Service Cost'];
 const DEPRECIATION_METHODS = ['Declining Balance', 'Double Declining Balance', 'Straight Line', 'Sum Of The Years Digit'];
+const ATTACHMENT_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.html,.png,.jpg,.jpeg,.zip';
+const ATTACHMENT_EXTENSIONS = new Set(['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'html', 'png', 'jpg', 'jpeg', 'zip']);
+const ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024;
 const USERS = ['nitin agarwal', 'praveen ranjan', 'rahul sharma', 'priya patel'];
 const DEPARTMENTS = ['IT', 'HR', 'Finance', 'Operations', 'Administration', 'Marketing', 'Sales', 'Facilities'];
 const SITES = ['noida', 'NSEZ', 'nsez', 'delhi', 'mumbai'];
@@ -53,6 +57,35 @@ function fmtDate(d: string | null | undefined) {
 }
 function currency(value: number | null | undefined) {
   return Number(value || 0).toFixed(2);
+}
+function fileSizeText(size: number | null | undefined) {
+  const bytes = Number(size || 0);
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)}KB`;
+  return `${bytes}B`;
+}
+function fileExtension(name: string) {
+  const parts = name.split('.');
+  return parts.length > 1 ? parts.pop()!.toLowerCase() : '';
+}
+function previewKind(name: string) {
+  const ext = fileExtension(name);
+  if (['pdf', 'html', 'htm', 'txt', 'csv', 'png', 'jpg', 'jpeg'].includes(ext)) return 'frame';
+  return 'unsupported';
+}
+function blobFilename(disposition: string | undefined, fallback: string) {
+  const match = disposition?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+  return match ? decodeURIComponent(match[1].replace(/"/g, '')) : fallback;
+}
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 function costDateText(value: string | null | undefined) {
   if (!value) return '-';
@@ -368,6 +401,85 @@ function ModifyTypeModal({
   );
 }
 
+function CopyAssetModal({
+  open,
+  saving,
+  onClose,
+  onCopy,
+}: {
+  open: boolean;
+  saving: boolean;
+  onClose: () => void;
+  onCopy: (numberOfCopies: number) => void;
+}) {
+  const [value, setValue] = useState('');
+  const count = Number(value);
+  const error = !value.trim()
+    ? 'Number of Copies is required.'
+    : (!Number.isInteger(count) || count < 1 || count > 100)
+      ? 'Enter a positive number between 1 and 100.'
+      : '';
+  const canCopy = !saving && !error;
+
+  useEffect(() => {
+    if (open) setValue('');
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !saving) onClose();
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [open, saving, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+      <div className="relative z-10 flex w-full max-w-[540px] flex-col border border-gray-300 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex h-11 items-center justify-between border-b border-gray-200 px-3 dark:border-gray-700">
+          <h2 className="text-sm font-medium text-gray-950 dark:text-gray-100">Copy Asset</h2>
+          <button type="button" onClick={onClose} disabled={saving} className="flex h-6 w-6 items-center justify-center text-gray-500 hover:text-gray-900 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-100" aria-label="Close">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="px-3 py-3">
+          <div className="mb-8 flex items-center gap-2 border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-gray-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-gray-100">
+            <Info size={15} className="shrink-0 fill-sky-500 text-white" />
+            <span>Enter the number of copies to make of the selected asset.</span>
+          </div>
+          <label className="grid grid-cols-1 items-start gap-2 sm:grid-cols-[132px_minmax(0,1fr)] sm:gap-3">
+            <span className="text-xs text-gray-700 dark:text-gray-300 sm:pt-2"><span className="mr-1 text-red-500">*</span>Number of Copies</span>
+            <span>
+              <input
+                autoFocus
+                type="number"
+                min={1}
+                max={100}
+                step={1}
+                value={value}
+                onChange={(event) => setValue(event.target.value)}
+                className={`h-8 w-full border bg-white px-2 text-xs text-gray-900 outline-none dark:bg-gray-900 dark:text-gray-100 ${error && value ? 'border-red-400 focus:border-red-500' : 'border-gray-300 focus:border-sky-400 dark:border-gray-700'}`}
+              />
+              {error && <span className="mt-1 block text-[11px] text-red-600 dark:text-red-300">{error}</span>}
+            </span>
+          </label>
+        </div>
+        <div className="flex h-12 items-center justify-center gap-2 border-t border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/80">
+          <button type="button" onClick={() => canCopy && onCopy(count)} disabled={!canCopy} className="flex h-7 items-center gap-2 rounded-full bg-sky-600 px-5 text-xs font-medium text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50">
+            {saving && <Loader2 size={13} className="animate-spin" />} Copy
+          </button>
+          <button type="button" onClick={onClose} disabled={saving} className="h-7 rounded-full border border-gray-300 bg-white px-5 text-xs text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AssignModal({ open, mode, onClose, asset, stateList, onSave, saving }: { open: boolean; mode: AssignModalMode; onClose: () => void; asset: Asset; stateList: NamedOption[]; onSave: (values: AssignValues) => void; saving: boolean }) {
   const [form, setForm] = useState<AssignValues>({
     assetStateId: '',
@@ -514,7 +626,7 @@ function SmallButton({ children, onClick }: { children: ReactNode; onClick?: () 
   );
 }
 
-function ActionsMenu({ onModifyType }: { onModifyType: () => void }) {
+function ActionsMenu({ onModifyType, onCopyAsset, onAttachDocuments, onAttachAsset, onConfigureDepreciation }: { onModifyType: () => void; onCopyAsset: () => void; onAttachDocuments: () => void; onAttachAsset: () => void; onConfigureDepreciation: () => void }) {
   const [open, setOpen] = useState(false);
   const items = [
     'Modify Type',
@@ -538,6 +650,10 @@ function ActionsMenu({ onModifyType }: { onModifyType: () => void }) {
               onClick={() => {
                 setOpen(false);
                 if (item === 'Modify Type') onModifyType();
+                if (item === 'Copy Asset') onCopyAsset();
+                if (item === 'Attach Documents') onAttachDocuments();
+                if (item === 'Attach Asset') onAttachAsset();
+                if (item === 'Configure Depreciation') onConfigureDepreciation();
               }}
               className="block h-9 w-full px-4 text-left text-[12px] text-gray-700 hover:bg-sky-50 hover:text-sky-700 dark:text-gray-200 dark:hover:bg-sky-900/30"
             >
@@ -574,8 +690,27 @@ function HeaderSummary({ asset, onUserClick }: { asset: Asset; onUserClick: () =
   );
 }
 
-function RightSidebar({ asset, onAssetStateClick, onUserClick }: { asset: Asset; onAssetStateClick: () => void; onUserClick: () => void }) {
+function RightSidebar({
+  asset,
+  attachments,
+  attachmentsLoading,
+  onAssetStateClick,
+  onUserClick,
+  onDownloadAttachment,
+  onPreviewAttachment,
+  onDeleteAttachment,
+}: {
+  asset: Asset;
+  attachments: AssetAttachment[];
+  attachmentsLoading: boolean;
+  onAssetStateClick: () => void;
+  onUserClick: () => void;
+  onDownloadAttachment: (attachment: AssetAttachment) => void;
+  onPreviewAttachment: (attachment: AssetAttachment) => void;
+  onDeleteAttachment: (attachment: AssetAttachment) => void;
+}) {
   const productTypeName = asset.productType?.displayName || 'Asset';
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   return (
     <aside className="w-full shrink-0 border-t border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 lg:w-72 lg:border-l lg:border-t-0">
       <div className="border-b border-gray-200 p-3 dark:border-gray-700">
@@ -593,6 +728,24 @@ function RightSidebar({ asset, onAssetStateClick, onUserClick }: { asset: Asset;
       <div className="space-y-2 border-b border-gray-200 p-3 text-[11px] dark:border-gray-700">
         <SideRow label="Asset State" value={asset.assetState} highlight onClick={onAssetStateClick} />
         <SideRow label="Is Loaned" value={asset.isLoanable ? 'Yes' : 'No'} />
+        <div className="relative grid grid-cols-[96px_1fr] gap-2">
+          <span className="text-gray-700 dark:text-gray-300">Attachments</span>
+          <button type="button" onClick={() => setAttachmentsOpen((value) => !value)} className="flex items-center gap-1 text-left font-semibold text-sky-600 hover:underline dark:text-sky-300">
+            <span>:</span>
+            {attachmentsLoading ? <Loader2 size={13} className="animate-spin" /> : <Paperclip size={13} />}
+            <span>({attachments.length})</span>
+            <ChevronDown size={12} className={`transition-transform ${attachmentsOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {attachmentsOpen && (
+            <AttachedDocumentsPopup
+              attachments={attachments}
+              onPreview={onPreviewAttachment}
+              onDownload={onDownloadAttachment}
+              onDelete={onDeleteAttachment}
+              onDownloadAll={() => attachments.forEach(onDownloadAttachment)}
+            />
+          )}
+        </div>
       </div>
 
       <div className="border-b border-gray-200 p-4 dark:border-gray-700">
@@ -633,6 +786,39 @@ function RightSidebar({ asset, onAssetStateClick, onUserClick }: { asset: Asset;
   );
 }
 
+function AttachedDocumentsPopup({ attachments, onPreview, onDownload, onDelete, onDownloadAll }: { attachments: AssetAttachment[]; onPreview: (attachment: AssetAttachment) => void; onDownload: (attachment: AssetAttachment) => void; onDelete: (attachment: AssetAttachment) => void; onDownloadAll: () => void }) {
+  return (
+    <div className="absolute left-0 top-7 z-40 w-72 rounded border border-gray-300 bg-white text-[11px] shadow-xl dark:border-gray-700 dark:bg-gray-900">
+      <div className="border-b border-gray-200 px-3 py-2 font-semibold text-gray-900 dark:border-gray-700 dark:text-gray-100">Attached Documents</div>
+      <div className="max-h-64 overflow-y-auto py-1 scrollbar-thin">
+        {attachments.length ? attachments.map((attachment) => (
+          <div key={attachment.id} className="group flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+            <FileText size={20} className="shrink-0 text-sky-600 dark:text-sky-300" />
+            <div className="min-w-0 flex-1">
+              <span className="block truncate font-medium text-gray-900 dark:text-gray-100">{attachment.originalName}</span>
+              <span className="text-gray-500 dark:text-gray-400">{fileSizeText(attachment.fileSize)}</span>
+              <div className="mt-1 hidden gap-3 group-hover:flex">
+                <button type="button" onClick={() => onPreview(attachment)} className="text-sky-600 hover:underline dark:text-sky-300">Preview</button>
+                <button type="button" onClick={() => onDownload(attachment)} className="text-sky-600 hover:underline dark:text-sky-300">Download</button>
+              </div>
+            </div>
+            <button type="button" onClick={() => onDelete(attachment)} className="hidden h-7 w-7 items-center justify-center text-gray-400 hover:text-red-600 group-hover:flex" title="Delete document" aria-label={`Delete ${attachment.originalName}`}>
+              <Trash2 size={14} />
+            </button>
+          </div>
+        )) : (
+          <div className="px-3 py-6 text-center text-gray-500 dark:text-gray-400">No documents attached</div>
+        )}
+      </div>
+      <div className="flex justify-end border-t border-gray-200 px-2 py-2 dark:border-gray-700">
+        <button type="button" onClick={onDownloadAll} disabled={!attachments.length} className="inline-flex h-7 items-center gap-1 rounded-full border border-gray-300 bg-white px-3 text-[11px] text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+          <Download size={13} /> Download all
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SideRow({ label, value, highlight, onClick }: { label: string; value: string | number | null | undefined; highlight?: boolean; onClick?: () => void }) {
   const display = value != null && value !== '' ? String(value) : '-';
   return (
@@ -647,7 +833,29 @@ function SideRow({ label, value, highlight, onClick }: { label: string; value: s
   );
 }
 
-function AssetDetailContent({ asset, onAssetStateClick }: { asset: Asset; onAssetStateClick: () => void }) {
+function AssetDetailContent({
+  asset,
+  attachments,
+  uploading,
+  onAssetStateClick,
+  onBrowseFiles,
+  onDropFiles,
+  onPreviewAttachment,
+  onDownloadAttachment,
+  onDeleteAttachment,
+  onDownloadAllAttachments,
+}: {
+  asset: Asset;
+  attachments: AssetAttachment[];
+  uploading: boolean;
+  onAssetStateClick: () => void;
+  onBrowseFiles: () => void;
+  onDropFiles: (files: File[]) => void;
+  onPreviewAttachment: (attachment: AssetAttachment) => void;
+  onDownloadAttachment: (attachment: AssetAttachment) => void;
+  onDeleteAttachment: (attachment: AssetAttachment) => void;
+  onDownloadAllAttachments: () => void;
+}) {
   return (
     <>
       <Section title="Asset Details"><Grid2>
@@ -703,7 +911,172 @@ function AssetDetailContent({ asset, onAssetStateClick }: { asset: Asset; onAsse
         productTypeId={asset.productTypeId}
         savedValues={asset.dynamicFieldValues}
       />
+      <AssetAttachmentsSection
+        attachments={attachments}
+        uploading={uploading}
+        onBrowseFiles={onBrowseFiles}
+        onDropFiles={onDropFiles}
+        onPreview={onPreviewAttachment}
+        onDownload={onDownloadAttachment}
+        onDelete={onDeleteAttachment}
+        onDownloadAll={onDownloadAllAttachments}
+      />
     </>
+  );
+}
+
+function AssetAttachmentsSection({ attachments, uploading, onBrowseFiles, onDropFiles, onPreview, onDownload, onDelete, onDownloadAll }: { attachments: AssetAttachment[]; uploading: boolean; onBrowseFiles: () => void; onDropFiles: (files: File[]) => void; onPreview: (attachment: AssetAttachment) => void; onDownload: (attachment: AssetAttachment) => void; onDelete: (attachment: AssetAttachment) => void; onDownloadAll: () => void }) {
+  const [dragActive, setDragActive] = useState(false);
+
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setDragActive(false);
+    const files = Array.from(event.dataTransfer.files || []);
+    if (files.length) onDropFiles(files);
+  }
+
+  return (
+    <section>
+      <div className="flex items-center gap-3 border-b border-gray-200 px-3 pb-2 pt-3 dark:border-gray-700">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Attachments</h3>
+        <button type="button" onClick={onDownloadAll} disabled={!attachments.length} className="text-[11px] font-medium text-sky-600 hover:underline disabled:cursor-not-allowed disabled:text-gray-400 dark:text-sky-300">
+          Download all
+        </button>
+      </div>
+      <div className="px-3 py-4">
+        <div className="flex min-h-8 flex-wrap gap-2">
+          {attachments.length ? attachments.map((attachment) => (
+            <AttachmentChip key={attachment.id} attachment={attachment} onPreview={onPreview} onDownload={onDownload} onDelete={onDelete} />
+          )) : <span className="text-[11px] text-gray-500 dark:text-gray-400">No documents attached</span>}
+        </div>
+        <div
+          onDragOver={(event) => { event.preventDefault(); setDragActive(true); }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={handleDrop}
+          className={`mt-8 flex min-h-9 items-center justify-center border border-dashed px-3 text-[12px] dark:border-gray-700 ${dragActive ? 'border-sky-400 bg-sky-50 dark:bg-sky-950/30' : 'border-gray-200 bg-white dark:bg-gray-900'}`}
+        >
+          {uploading ? (
+            <span className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-300"><Loader2 size={14} className="animate-spin" />Uploading...</span>
+          ) : (
+            <span className="text-gray-700 dark:text-gray-300">
+              <Paperclip size={14} className="mr-1 inline align-[-2px]" />
+              <button type="button" onClick={onBrowseFiles} className="font-medium text-sky-600 hover:underline dark:text-sky-300">Browse Files</button>
+              {' '}or Drag files here [ Max size: 10 MB. ]
+            </span>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AttachmentChip({ attachment, onPreview, onDownload, onDelete }: { attachment: AssetAttachment; onPreview: (attachment: AssetAttachment) => void; onDownload: (attachment: AssetAttachment) => void; onDelete: (attachment: AssetAttachment) => void }) {
+  const uploadedBy = attachment.uploadedBy || '-';
+  const uploadedOn = fmt(attachment.uploadedOn) || '-';
+  return (
+    <div className="group relative inline-flex h-8 max-w-[260px] items-center border border-gray-300 bg-gray-50 text-[11px] dark:border-gray-700 dark:bg-gray-800">
+      <button
+        type="button"
+        onClick={(event) => { event.stopPropagation(); onDownload(attachment); }}
+        title="Download"
+        aria-label={`Download ${attachment.originalName}`}
+        className="hidden h-full w-7 shrink-0 items-center justify-center border-r border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-sky-600 group-hover:flex dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-sky-300"
+      >
+        <Download size={14} />
+      </button>
+      <button
+        type="button"
+        onClick={() => onPreview(attachment)}
+        className="flex min-w-0 items-center gap-2 px-2 text-left"
+        title={`Preview ${attachment.originalName}`}
+      >
+        <FileText size={15} className="shrink-0 text-sky-600 dark:text-sky-300" />
+        <span className="truncate font-medium text-gray-900 dark:text-gray-100">{attachment.originalName}</span>
+      </button>
+      <button
+        type="button"
+        onClick={(event) => { event.stopPropagation(); onDelete(attachment); }}
+        title="Delete"
+        aria-label={`Delete ${attachment.originalName}`}
+        className="hidden h-full w-7 shrink-0 items-center justify-center border-l border-gray-300 text-gray-500 hover:bg-gray-100 hover:text-red-600 group-hover:flex dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-red-300"
+      >
+        <X size={14} />
+      </button>
+      <div className="pointer-events-none absolute left-8 top-full z-30 mt-1 hidden w-56 border border-gray-300 bg-white px-3 py-2 text-[11px] leading-4 text-gray-700 shadow-lg group-hover:block dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+        <p className="font-semibold">Name :</p>
+        <p className="break-words">{attachment.originalName}</p>
+        <p><span className="font-semibold">Size :</span> {fileSizeText(attachment.fileSize)}</p>
+        <p><span className="font-semibold">By :</span> {uploadedBy}</p>
+        <p><span className="font-semibold">On :</span> {uploadedOn}</p>
+      </div>
+    </div>
+  );
+}
+
+function AttachmentPreviewOverlay({ assetId, attachment, onClose, onDownload }: { assetId: number; attachment: AssetAttachment; onClose: () => void; onDownload: (attachment: AssetAttachment) => void }) {
+  const frameRef = useRef<HTMLIFrameElement | null>(null);
+  const kind = previewKind(attachment.originalName);
+  const previewUrl = previewAssetAttachmentUrl(assetId, attachment.id);
+  const supported = kind !== 'unsupported';
+
+  useEffect(() => {
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  function printPreview() {
+    if (!supported) return;
+    const frame = frameRef.current;
+    try {
+      frame?.contentWindow?.focus();
+      frame?.contentWindow?.print();
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[90] bg-black/80 text-white">
+      <div className="flex h-11 items-center justify-between bg-[#111] px-5 shadow-lg">
+        <div className="flex min-w-0 items-center gap-2 text-[12px]">
+          <FileText size={18} className="shrink-0 text-sky-300" />
+          <span className="truncate">{attachment.originalName}</span>
+        </div>
+        <div className="absolute left-1/2 -translate-x-1/2 text-[13px] text-gray-300">{supported ? '1 / 1' : '-'}</div>
+        <div className="flex items-center gap-4 text-[12px]">
+          <button type="button" onClick={() => onDownload(attachment)} className="inline-flex items-center gap-1 font-medium hover:text-sky-200">
+            <Download size={16} /> Download
+          </button>
+          <button type="button" onClick={printPreview} disabled={!supported} className="inline-flex items-center gap-1 font-medium hover:text-sky-200 disabled:cursor-not-allowed disabled:opacity-50">
+            <Printer size={16} /> Print
+          </button>
+          <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center text-white hover:text-sky-200" aria-label="Close preview">
+            <X size={26} />
+          </button>
+        </div>
+      </div>
+      <div className="h-[calc(100vh-44px)] overflow-auto bg-black/75 p-4">
+        <div className="mx-auto flex min-h-full w-full max-w-[calc(100vw-96px)] items-start justify-center">
+          {supported ? (
+            <div className="h-[calc(100vh-84px)] w-full overflow-auto bg-white shadow-2xl">
+              <iframe ref={frameRef} src={previewUrl} title={attachment.originalName} className="h-full min-h-[720px] w-full border-0 bg-white" />
+            </div>
+          ) : (
+            <div className="mt-20 flex min-h-64 w-full max-w-xl flex-col items-center justify-center bg-white px-6 py-10 text-center text-gray-700 shadow-2xl">
+              <FileText size={42} className="mb-4 text-gray-400" />
+              <p className="text-sm font-semibold text-gray-900">Preview not available for this file type.</p>
+              <p className="mt-2 text-xs text-gray-500">{attachment.originalName}</p>
+              <button type="button" onClick={() => onDownload(attachment)} className="mt-5 inline-flex h-8 items-center gap-2 rounded-full bg-sky-600 px-4 text-xs font-medium text-white hover:bg-sky-700">
+                <Download size={14} /> Download
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -803,15 +1176,21 @@ function TablePager({ pagination, onChange }: { pagination: PaginationMeta; onCh
   );
 }
 
-function AssetFinancialsTab({ asset }: { asset: Asset }) {
+function AssetFinancialsTab({
+  asset,
+  depreciationConfig,
+  onConfigureDepreciation,
+}: {
+  asset: Asset;
+  depreciationConfig: DepreciationConfig | null;
+  onConfigureDepreciation: (initialConfig: DepreciationConfig | null) => void;
+}) {
   const [subTab, setSubTab] = useState<'cost' | 'depreciation'>('cost');
   const [data, setData] = useState<AssetFinancialsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editCost, setEditCost] = useState<AssetCost | null>(null);
   const [saving, setSaving] = useState(false);
-  const [depreciationModalOpen, setDepreciationModalOpen] = useState(false);
-  const [depreciationConfig, setDepreciationConfig] = useState<DepreciationConfig | null>(null);
 
   function load() {
     setLoading(true);
@@ -905,20 +1284,10 @@ function AssetFinancialsTab({ asset }: { asset: Asset }) {
         <DepreciationDetails
           config={configuredDepreciation}
           loading={loading}
-          onConfigure={() => setDepreciationModalOpen(true)}
+          onConfigure={() => onConfigureDepreciation(configuredDepreciation)}
         />
       )}
       <CostModal open={modalOpen} cost={editCost} saving={saving} onClose={() => { setModalOpen(false); setEditCost(null); }} onSave={saveCost} />
-      <ConfigureDepreciationModal
-        open={depreciationModalOpen}
-        asset={asset}
-        initialConfig={configuredDepreciation}
-        onClose={() => setDepreciationModalOpen(false)}
-        onSave={(config) => {
-          setDepreciationConfig(config);
-          setDepreciationModalOpen(false);
-        }}
-      />
     </div>
   );
 }
@@ -1261,14 +1630,14 @@ function buildDepreciationSchedule(config: DepreciationConfig, scheduleType: 'an
 
 function ConfigureDepreciationModal({ open, asset, initialConfig, onClose, onSave }: { open: boolean; asset: Asset; initialConfig: DepreciationConfig | null; onClose: () => void; onSave: (config: DepreciationConfig) => void }) {
   const [form, setForm] = useState({ purchaseCost: '', acquisitionDate: '', method: '', usefulLifeYears: '5' });
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!open) return;
-    setError('');
+    setErrors({});
     setForm({
       purchaseCost: currency(initialConfig?.purchaseCost ?? asset.purchaseCost ?? 0),
-      acquisitionDate: initialConfig?.acquisitionDate || inputDateValue(asset.acquisitionDate),
+      acquisitionDate: initialConfig?.acquisitionDate || (asset.acquisitionDate ? inputDateValue(asset.acquisitionDate) : ''),
       method: initialConfig?.method || '',
       usefulLifeYears: String(initialConfig?.usefulLifeYears || 5),
     });
@@ -1277,11 +1646,15 @@ function ConfigureDepreciationModal({ open, asset, initialConfig, onClose, onSav
   if (!open) return null;
 
   function save() {
-    if (form.purchaseCost === '' || Number.isNaN(Number(form.purchaseCost)) || Number(form.purchaseCost) < 0) { setError('Purchase Cost is required.'); return; }
-    if (!form.acquisitionDate) { setError('Acquisition Date is required.'); return; }
-    if (!form.method) { setError('Depreciation Method is required.'); return; }
+    const nextErrors: Record<string, string> = {};
+    const purchaseCost = Number(form.purchaseCost);
+    if (form.purchaseCost.trim() === '' || Number.isNaN(purchaseCost) || purchaseCost < 0) nextErrors.purchaseCost = 'Purchase Cost is required.';
+    if (!form.acquisitionDate) nextErrors.acquisitionDate = 'Acquisition Date is required.';
+    if (!form.method) nextErrors.method = 'Depreciation Method is required.';
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
     onSave({
-      purchaseCost: Number(form.purchaseCost),
+      purchaseCost,
       acquisitionDate: form.acquisitionDate,
       method: form.method,
       usefulLifeYears: Math.max(1, Number(form.usefulLifeYears) || 5),
@@ -1296,13 +1669,28 @@ function ConfigureDepreciationModal({ open, asset, initialConfig, onClose, onSav
           <h2 className="text-sm font-medium text-gray-950 dark:text-gray-100">Configure Depreciation</h2>
           <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-white" aria-label="Close"><X size={16} /></button>
         </div>
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 text-xs scrollbar-thin sm:px-6">
-          {error && <p className="ml-[178px] text-red-600">{error}</p>}
-          <DepreciationModalRow label="Purchase Cost($)" required>
-            <input type="number" min="0" step="0.01" value={form.purchaseCost} onChange={(event) => setForm((prev) => ({ ...prev, purchaseCost: event.target.value }))} className="h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4 text-xs scrollbar-thin sm:px-6">
+          <DepreciationModalRow label="Purchase Cost ($)" required error={errors.purchaseCost}>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.purchaseCost}
+              onChange={(event) => {
+                setForm((prev) => ({ ...prev, purchaseCost: event.target.value }));
+                setErrors((prev) => ({ ...prev, purchaseCost: '' }));
+              }}
+              className="h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            />
           </DepreciationModalRow>
-          <DepreciationModalRow label="Acquisition Date" required>
-            <DateInputWithIcon value={form.acquisitionDate} onChange={(value) => setForm((prev) => ({ ...prev, acquisitionDate: value }))} />
+          <DepreciationModalRow label="Acquisition Date" required error={errors.acquisitionDate}>
+            <DateInputWithIcon
+              value={form.acquisitionDate}
+              onChange={(value) => {
+                setForm((prev) => ({ ...prev, acquisitionDate: value }));
+                setErrors((prev) => ({ ...prev, acquisitionDate: '' }));
+              }}
+            />
           </DepreciationModalRow>
           <DepreciationModalRow label="Configure Depreciation" required>
             <label className="flex h-8 items-center gap-2 text-xs text-gray-900 dark:text-gray-100">
@@ -1310,8 +1698,18 @@ function ConfigureDepreciationModal({ open, asset, initialConfig, onClose, onSav
               For this asset
             </label>
           </DepreciationModalRow>
-          <DepreciationModalRow label="Depreciation Method" required>
-            <SearchableOptionSelect options={DEPRECIATION_METHODS} value={form.method} placeholder="--Choose Depreciation Method--" onChange={(value) => setForm((prev) => ({ ...prev, method: value }))} />
+          <DepreciationModalRow label="Depreciation Method" required error={errors.method}>
+            <select
+              value={form.method}
+              onChange={(event) => {
+                setForm((prev) => ({ ...prev, method: event.target.value }));
+                setErrors((prev) => ({ ...prev, method: '' }));
+              }}
+              className={`h-8 w-full border border-gray-300 bg-white px-2 text-xs outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 ${form.method ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400'}`}
+            >
+              <option value="">--Choose Depreciation Method--</option>
+              {DEPRECIATION_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
+            </select>
           </DepreciationModalRow>
         </div>
         <div className="sticky bottom-0 flex shrink-0 justify-center gap-3 border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
@@ -1323,11 +1721,14 @@ function ConfigureDepreciationModal({ open, asset, initialConfig, onClose, onSav
   );
 }
 
-function DepreciationModalRow({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
+function DepreciationModalRow({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: ReactNode }) {
   return (
-    <label className="grid grid-cols-1 items-start gap-1 sm:grid-cols-[166px_minmax(0,1fr)] sm:gap-3">
+    <label className="grid grid-cols-1 items-start gap-1 sm:grid-cols-[190px_minmax(0,1fr)] sm:gap-3">
       <span className="text-left text-xs text-gray-700 dark:text-gray-300 sm:pt-2 sm:text-right">{required && <span className="mr-1 text-red-500">*</span>}{label}</span>
-      <span>{children}</span>
+      <span className="min-w-0">
+        {children}
+        {error && <span className="mt-1 block text-[11px] text-red-600">{error}</span>}
+      </span>
     </label>
   );
 }
@@ -1502,6 +1903,7 @@ export default function AssetDetailPage() {
   const ptId      = searchParams.get('asset-product-type-id');
   const activeTab = searchParams.get('tab') || 'asset-detail';
   const refreshKey = searchParams.get('refresh') || '';
+  const documentInputRef = useRef<HTMLInputElement | null>(null);
 
   const [asset,        setAsset]        = useState<Asset | null>(null);
   const [loading,      setLoading]      = useState(true);
@@ -1510,6 +1912,20 @@ export default function AssetDetailPage() {
   const [assignSaving, setAssignSaving] = useState(false);
   const [modifyTypeOpen, setModifyTypeOpen] = useState(false);
   const [modifyTypeSaving, setModifyTypeSaving] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copySaving, setCopySaving] = useState(false);
+  const [attachAssetOpen, setAttachAssetOpen] = useState(false);
+  const [attachAssetSaving, setAttachAssetSaving] = useState(false);
+  const [attachedAssetIds, setAttachedAssetIds] = useState<number[]>([]);
+  const [relationshipsRefreshKey, setRelationshipsRefreshKey] = useState(0);
+  const [attachments, setAttachments] = useState<AssetAttachment[]>([]);
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
+  const [documentsUploading, setDocumentsUploading] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState<AssetAttachment | null>(null);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState('');
+  const [depreciationModalOpen, setDepreciationModalOpen] = useState(false);
+  const [depreciationConfig, setDepreciationConfig] = useState<DepreciationConfig | null>(null);
+  const [depreciationInitialConfig, setDepreciationInitialConfig] = useState<DepreciationConfig | null>(null);
   const [stateList,    setStateList]    = useState<NamedOption[]>([]);
   const [productTypes, setProductTypes] = useState<ProductTypeOption[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
@@ -1531,6 +1947,15 @@ export default function AssetDetailPage() {
       })
       .catch(console.error);
   }, []);
+  function loadAttachments() {
+    if (!assetId) return;
+    setAttachmentsLoading(true);
+    getAssetAttachments(assetId)
+      .then(setAttachments)
+      .catch(console.error)
+      .finally(() => setAttachmentsLoading(false));
+  }
+  useEffect(() => { if (assetId) loadAttachments(); }, [assetId]);
 
   async function handleAssignSave(values: AssignValues) {
     if (!asset) return;
@@ -1571,6 +1996,139 @@ export default function AssetDetailPage() {
     }
   }
 
+  async function handleCopyAsset(numberOfCopies: number) {
+    if (!asset) return;
+    setCopySaving(true);
+    try {
+      await copyAsset(asset.id, { numberOfCopies });
+      setCopyOpen(false);
+      showToast('Asset copied successfully.');
+      navigate(`/assets/list?asset-product-type-id=${asset.productTypeId}`);
+    } catch (error) {
+      console.error(error);
+      showToast('Failed to copy asset.', 'error');
+    } finally {
+      setCopySaving(false);
+    }
+  }
+
+  function openDocumentPicker() {
+    if (documentsUploading) return;
+    documentInputRef.current?.click();
+  }
+
+  function validateDocuments(files: File[]) {
+    for (const file of files) {
+      const ext = fileExtension(file.name);
+      if (!ATTACHMENT_EXTENSIONS.has(ext)) return `${file.name} is not a supported document type.`;
+      if (file.size > ATTACHMENT_MAX_SIZE) return `${file.name} exceeds the 10 MB file size limit.`;
+    }
+    return '';
+  }
+
+  async function uploadDocumentFiles(files: File[]) {
+    if (!asset || !files.length) return;
+    const validationError = validateDocuments(files);
+    if (validationError) {
+      showToast(validationError, 'error');
+      return;
+    }
+    setDocumentsUploading(true);
+    try {
+      const updated = await uploadAssetAttachments(asset.id, files);
+      setAttachments(updated);
+      setHistoryRefreshKey(String(Date.now()));
+      showToast('Document(s) uploaded successfully.');
+    } catch (error) {
+      console.error(error);
+      showToast('Failed to upload document(s).', 'error');
+    } finally {
+      setDocumentsUploading(false);
+    }
+  }
+
+  async function handleDocumentSelect(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    await uploadDocumentFiles(files);
+  }
+
+  function handlePreviewAttachment(attachment: AssetAttachment) {
+    if (!asset) return;
+    setPreviewAttachment(attachment);
+  }
+
+  async function handleDownloadAttachment(attachment: AssetAttachment) {
+    if (!asset) return;
+    try {
+      const response = await downloadAssetAttachment(asset.id, attachment.id);
+      const filename = blobFilename(response.headers['content-disposition'], attachment.originalName);
+      downloadBlob(response.data, filename);
+    } catch (error) {
+      console.error(error);
+      showToast('Failed to download document.', 'error');
+    }
+  }
+
+  async function handleDeleteAttachment(attachment: AssetAttachment) {
+    if (!asset) return;
+    if (!window.confirm(`Delete attachment "${attachment.originalName}"?`)) return;
+    try {
+      await deleteAssetAttachment(asset.id, attachment.id);
+      setAttachments((prev) => prev.filter((item) => item.id !== attachment.id));
+      setPreviewAttachment((current) => current?.id === attachment.id ? null : current);
+      setHistoryRefreshKey(String(Date.now()));
+      showToast('Document deleted successfully.');
+    } catch (error) {
+      console.error(error);
+      showToast('Failed to delete document.', 'error');
+    }
+  }
+
+  async function openAttachAssetModal() {
+    if (!asset) return;
+    setAttachAssetOpen(true);
+    try {
+      const relationships = await getAssetRelationships(asset.id);
+      setAttachedAssetIds(relationships.attachedAssets.map((row) => row.relatedAssetId));
+    } catch (error) {
+      console.error(error);
+      setAttachedAssetIds([]);
+    }
+  }
+
+  async function handleAttachAssets(payload: Record<string, unknown>) {
+    if (!asset) return false;
+    const relatedAssetIds = Array.isArray(payload.relatedAssetIds) ? payload.relatedAssetIds : [];
+    setAttachAssetSaving(true);
+    try {
+      const updated = await attachAssetRelationships(asset.id, { relatedAssetIds, relationshipType: 'AttachedAsset' });
+      setAttachedAssetIds(updated.attachedAssets.map((row) => row.relatedAssetId));
+      setRelationshipsRefreshKey((value) => value + 1);
+      setAttachAssetOpen(false);
+      showToast('Assets attached successfully.');
+      return true;
+    } catch (error) {
+      console.error(error);
+      showToast('Failed to attach assets.', 'error');
+      return false;
+    } finally {
+      setAttachAssetSaving(false);
+    }
+  }
+
+  function openDepreciationModal(initialConfig: DepreciationConfig | null = depreciationConfig) {
+    setDepreciationInitialConfig(initialConfig);
+    setDepreciationModalOpen(true);
+  }
+
+  function handleDepreciationSave(config: DepreciationConfig) {
+    setDepreciationConfig(config);
+    setDepreciationInitialConfig(config);
+    setDepreciationModalOpen(false);
+    showToast('Depreciation configured successfully.');
+  }
+
   function goToTab(key: string) { navigate(`/assets/detail?asset-product-type-id=${ptId}&asset-id=${assetId}&tab=${key}`); }
   const userDetailsId = asset?.assignedUserId || asset?.user || null;
   function openUserDrawer() {
@@ -1586,7 +2144,9 @@ export default function AssetDetailPage() {
         <SmallButton onClick={() => navigate(`/assets/list${ptId ? `?asset-product-type-id=${ptId}` : ''}`)}><ArrowLeft size={13} /></SmallButton>
         <SmallButton onClick={() => navigate(`/assets/edit/${asset.id}`)}><Pencil size={12} /> Edit</SmallButton>
         <SmallButton onClick={() => { setAssignMode('assign'); setAssignOpen(true); }}>Assign</SmallButton>
-        <ActionsMenu onModifyType={() => setModifyTypeOpen(true)} />
+        <ActionsMenu onModifyType={() => setModifyTypeOpen(true)} onCopyAsset={() => setCopyOpen(true)} onAttachDocuments={openDocumentPicker} onAttachAsset={openAttachAssetModal} onConfigureDepreciation={() => openDepreciationModal()} />
+        {documentsUploading && <span className="inline-flex h-7 items-center gap-1 text-[11px] text-gray-600 dark:text-gray-300"><Loader2 size={13} className="animate-spin" />Uploading...</span>}
+        <input ref={documentInputRef} type="file" accept={ATTACHMENT_ACCEPT} multiple className="hidden" onChange={handleDocumentSelect} />
         <SmallButton><Play size={12} /> Scan Now</SmallButton>
       </div>
 
@@ -1609,15 +2169,37 @@ export default function AssetDetailPage() {
           </div>
 
           <div>
-            {activeTab === 'asset-detail'  && <AssetDetailContent asset={asset} onAssetStateClick={() => { setAssignMode('state'); setAssignOpen(true); }} />}
-            {activeTab === 'relationships' && <RelationshipsTab asset={asset} onAssign={() => { setAssignMode('assign'); setAssignOpen(true); }} />}
+            {activeTab === 'asset-detail'  && (
+              <AssetDetailContent
+                asset={asset}
+                attachments={attachments}
+                uploading={documentsUploading}
+                onAssetStateClick={() => { setAssignMode('state'); setAssignOpen(true); }}
+                onBrowseFiles={openDocumentPicker}
+                onDropFiles={uploadDocumentFiles}
+                onPreviewAttachment={handlePreviewAttachment}
+                onDownloadAttachment={handleDownloadAttachment}
+                onDeleteAttachment={handleDeleteAttachment}
+                onDownloadAllAttachments={() => attachments.forEach(handleDownloadAttachment)}
+              />
+            )}
+            {activeTab === 'relationships' && <RelationshipsTab asset={asset} refreshKey={relationshipsRefreshKey} onAssign={() => { setAssignMode('assign'); setAssignOpen(true); }} />}
             {activeTab === 'contracts'     && <AssetContractsTab assetId={asset.id} />}
-            {activeTab === 'financials'    && <AssetFinancialsTab asset={asset} />}
+            {activeTab === 'financials'    && <AssetFinancialsTab asset={asset} depreciationConfig={depreciationConfig} onConfigureDepreciation={openDepreciationModal} />}
             {activeTab === 'associations'  && <EmptyCard title="Associations" />}
-            {activeTab === 'history'       && <HistoryContent asset={asset} refreshKey={refreshKey} />}
+            {activeTab === 'history'       && <HistoryContent asset={asset} refreshKey={`${refreshKey}:${historyRefreshKey}`} />}
           </div>
         </main>
-        <RightSidebar asset={asset} onAssetStateClick={() => { setAssignMode('state'); setAssignOpen(true); }} onUserClick={openUserDrawer} />
+        <RightSidebar
+          asset={asset}
+          attachments={attachments}
+          attachmentsLoading={attachmentsLoading || documentsUploading}
+          onAssetStateClick={() => { setAssignMode('state'); setAssignOpen(true); }}
+          onUserClick={openUserDrawer}
+          onDownloadAttachment={handleDownloadAttachment}
+          onPreviewAttachment={handlePreviewAttachment}
+          onDeleteAttachment={handleDeleteAttachment}
+        />
       </div>
 
       <AssignModal open={assignOpen} mode={assignMode} onClose={() => setAssignOpen(false)} asset={asset} stateList={stateList} onSave={handleAssignSave} saving={assignSaving} />
@@ -1630,6 +2212,32 @@ export default function AssetDetailPage() {
         onClose={() => { if (!modifyTypeSaving) setModifyTypeOpen(false); }}
         onSave={handleModifyTypeSave}
       />
+      <CopyAssetModal open={copyOpen} saving={copySaving} onClose={() => { if (!copySaving) setCopyOpen(false); }} onCopy={handleCopyAsset} />
+      <AddRelationshipModal
+        open={attachAssetOpen}
+        type="AttachedAsset"
+        currentAssetId={asset.id}
+        assets={[]}
+        excludedAssetIds={attachedAssetIds}
+        saving={attachAssetSaving}
+        onClose={() => { if (!attachAssetSaving) setAttachAssetOpen(false); }}
+        onSave={handleAttachAssets}
+      />
+      <ConfigureDepreciationModal
+        open={depreciationModalOpen}
+        asset={asset}
+        initialConfig={depreciationInitialConfig || depreciationConfig}
+        onClose={() => setDepreciationModalOpen(false)}
+        onSave={handleDepreciationSave}
+      />
+      {previewAttachment && (
+        <AttachmentPreviewOverlay
+          assetId={asset.id}
+          attachment={previewAttachment}
+          onClose={() => setPreviewAttachment(null)}
+          onDownload={handleDownloadAttachment}
+        />
+      )}
       <UserDetailsDrawer userId={userDetailsId} isOpen={userDrawerOpen} onClose={() => setUserDrawerOpen(false)} />
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>

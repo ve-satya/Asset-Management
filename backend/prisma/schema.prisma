@@ -283,8 +283,25 @@ model Asset {
   serviceRelationships AssetServiceRelationship[]
   contracts AssetContract[]
   costs AssetCost[]
+  attachments AssetAttachment[]
 
   @@map("assets")
+}
+
+model AssetAttachment {
+  id             Int      @id @default(autoincrement())
+  assetId        Int      @map("asset_id")
+  originalName   String   @map("original_name")
+  storedFilename String   @map("stored_filename")
+  mimeType       String?  @map("mime_type")
+  fileSize       Int      @map("file_size")
+  uploadedBy     String?  @map("uploaded_by")
+  uploadedOn     DateTime @default(now()) @map("uploaded_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, uploadedOn])
+  @@map("asset_attachments")
 }
 
 model AssetContract {

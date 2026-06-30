@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { getAssets, getAsset, createAsset, updateAsset, modifyAssetType, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, deleteAssetRelationship, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets } from '../controllers/assetController';
+import { getAssets, getAsset, createAsset, copyAsset, updateAsset, modifyAssetType, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, attachAssetRelationships, deleteAssetRelationship, getAssetAttachments, uploadAssetAttachmentsMiddleware, uploadAssetAttachments, downloadAssetAttachment, previewAssetAttachment, deleteAssetAttachment, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets } from '../controllers/assetController';
 
 const router = express.Router();
 
@@ -15,11 +15,18 @@ const validators = [
 
 router.get('/',    getAssets);
 router.get('/export', exportAssets);
+router.post('/:id/copy', copyAsset);
 router.put('/:id/modify-type', modifyAssetType);
 router.get('/:id/history', getAssetHistory);
 router.get('/:id/relationships', getAssetRelationships);
+router.post('/:id/relationships/attach-assets', attachAssetRelationships);
 router.post('/:id/relationships', createAssetRelationship);
 router.delete('/:id/relationships/:relationshipId', deleteAssetRelationship);
+router.get('/:id/attachments', getAssetAttachments);
+router.post('/:id/attachments', uploadAssetAttachmentsMiddleware, uploadAssetAttachments);
+router.get('/:id/attachments/:attachmentId/download', downloadAssetAttachment);
+router.get('/:id/attachments/:attachmentId/preview', previewAssetAttachment);
+router.delete('/:id/attachments/:attachmentId', deleteAssetAttachment);
 router.get('/:id/contracts', getAssetContracts);
 router.post('/:id/contracts', createAssetContract);
 router.delete('/:id/contracts/:contractId', deleteAssetContract);
