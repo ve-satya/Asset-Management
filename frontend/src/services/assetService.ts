@@ -57,6 +57,9 @@ export const deleteAssetContract = (contractId: number | string): Promise<{ mess
 export const getAssetCosts = (id: number | string): Promise<AssetFinancialsResponse> =>
   axios.get(`${BASE}/${id}/costs`).then((r) => r.data);
 
+export const saveAssetDepreciation = (id: number | string, data: unknown): Promise<AssetFinancialsResponse['depreciation']> =>
+  axios.put(`${BASE}/${id}/depreciation`, data).then((r) => r.data);
+
 export const createAssetCost = (id: number | string, data: unknown): Promise<unknown> =>
   axios.post(`${BASE}/${id}/costs`, data).then((r) => r.data);
 

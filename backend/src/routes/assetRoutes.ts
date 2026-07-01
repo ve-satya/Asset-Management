@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { getAssets, getAsset, createAsset, copyAsset, updateAsset, modifyAssetType, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, attachAssetRelationships, deleteAssetRelationship, getAssetAttachments, uploadAssetAttachmentsMiddleware, uploadAssetAttachments, downloadAssetAttachment, previewAssetAttachment, deleteAssetAttachment, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets } from '../controllers/assetController';
+import { getAssets, getAsset, createAsset, copyAsset, updateAsset, modifyAssetType, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, attachAssetRelationships, deleteAssetRelationship, getAssetAttachments, uploadAssetAttachmentsMiddleware, uploadAssetAttachments, downloadAssetAttachment, previewAssetAttachment, deleteAssetAttachment, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, saveAssetDepreciation, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets } from '../controllers/assetController';
 
 const router = express.Router();
 
@@ -32,6 +32,7 @@ router.post('/:id/contracts', createAssetContract);
 router.delete('/:id/contracts/:contractId', deleteAssetContract);
 router.delete('/contracts/:contractId', deleteAssetContract);
 router.get('/:id/costs', getAssetCosts);
+router.put('/:id/depreciation', saveAssetDepreciation);
 router.post('/:id/costs', createAssetCost);
 router.put('/:id/costs/:costId', updateAssetCost);
 router.delete('/:id/costs/:costId', deleteAssetCost);

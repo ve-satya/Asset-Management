@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, CheckCircle2, ChevronLeft, ChevronRight, Loader2, MoreHorizontal, RefreshCw, Search, TableProperties, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Loader2, MoreHorizontal, RefreshCw, Search, TableProperties, X } from 'lucide-react';
 import { getAssets } from '../../services/assetService';
 import { getAllAssetStates } from '../../services/assetStateService';
 import { getAllProducts } from '../../services/productService';
@@ -148,6 +148,7 @@ function AssetPickerRelationshipModal({ type, currentAssetId, excludedAssetIds, 
   const [toastVisible, setToastVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState<PaginationState>({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
+  const [pageSizeOpen, setPageSizeOpen] = useState(false);
   const isAttach = type === 'AttachedAsset';
   const title = isAttach ? 'Attach Assets' : 'Connect Assets';
   const actionLabel = isAttach ? 'Attach' : 'Connect';
@@ -327,13 +328,38 @@ function AssetPickerRelationshipModal({ type, currentAssetId, excludedAssetIds, 
             </div>
             <ToolbarIcon title="Select columns"><TableProperties size={15} /></ToolbarIcon>
             <ToolbarIcon title="Refresh" onClick={() => setPagination((prev) => ({ ...prev }))}><RefreshCw size={15} /></ToolbarIcon>
-            <select
-              value={pagination.pageSize}
-              onChange={(event) => setPagination((prev) => ({ ...prev, pageSize: Number(event.target.value), page: 1 }))}
-              className="h-7 w-14 border border-gray-200 bg-white px-2 text-xs text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-            >
-              {[10, 25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
-            </select>
+            <div className="relative h-7 w-14" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPageSizeOpen(false); }}>
+              <button
+                type="button"
+                onClick={() => setPageSizeOpen((value) => !value)}
+                className="flex h-7 w-full items-center justify-between border border-gray-200 bg-white px-2 text-left text-xs text-gray-900 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+                aria-haspopup="listbox"
+                aria-expanded={pageSizeOpen}
+              >
+                <span>{pagination.pageSize}</span>
+                <ChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
+              </button>
+              {pageSizeOpen && (
+                <div className="absolute left-0 top-full z-30 mt-1 w-full border border-gray-300 bg-white shadow-md dark:border-gray-700 dark:bg-gray-900" role="listbox">
+                  {[10, 25, 50, 100].map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setPagination((prev) => ({ ...prev, pageSize: size, page: 1 }));
+                        setPageSizeOpen(false);
+                      }}
+                      className={`block h-7 w-full px-2 text-left text-xs hover:bg-sky-50 dark:hover:bg-gray-800 ${pagination.pageSize === size ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-200' : 'text-gray-900 dark:text-gray-100'}`}
+                      role="option"
+                      aria-selected={pagination.pageSize === size}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <span className="text-xs text-gray-500 dark:text-gray-400">{rangeStart} - {rangeEnd}</span>
             <MoreHorizontal size={16} className="text-gray-400" />
             <ToolbarIcon title="Previous" onClick={() => setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))} disabled={pagination.page <= 1}><ChevronLeft size={15} /></ToolbarIcon>

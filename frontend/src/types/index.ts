@@ -112,6 +112,10 @@ export interface AssetDepreciationDetails {
   depreciationMethod: string;
   purchaseDate: string | null;
   usefulLifeYears: number;
+  usefulLifeMonths?: number | null;
+  calculationMode?: string | null;
+  depreciationPercent?: number | null;
+  salvageValue?: number | null;
   supportedMethods: string[];
 }
 
