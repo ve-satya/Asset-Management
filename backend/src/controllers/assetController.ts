@@ -147,6 +147,56 @@ function money(value: unknown) {
   return Number.isFinite(amount) ? amount : 0;
 }
 
+function positiveNumber(value: unknown) {
+  const amount = parseFloat(String(value ?? ''));
+  return Number.isFinite(amount) && amount > 0 ? amount : null;
+}
+
+function optionalNonNegativeNumber(value: unknown) {
+  if (value === undefined || value === null || String(value).trim() === '') return null;
+  const amount = parseFloat(String(value));
+  return Number.isFinite(amount) && amount >= 0 ? amount : null;
+}
+
+function optionalPositiveInt(value: unknown) {
+  if (value === undefined || value === null || String(value).trim() === '') return null;
+  const amount = parseInt(String(value), 10);
+  return Number.isFinite(amount) && amount > 0 ? amount : null;
+}
+
+function depreciationHistoryText(value: unknown, fieldName: string) {
+  if (value === undefined || value === null || value === '') return null;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === 'number' && ['Purchase Cost($)', 'Salvage Value($)', 'Decline Percent/Year(%)', 'Depreciation Percent/Year(%)'].includes(fieldName)) return value.toFixed(2);
+  return String(value);
+}
+
+function depreciationResponse(config: {
+  purchaseCost: number;
+  acquisitionDate: Date;
+  method: string;
+  calculationMode: string | null;
+  usefulLifeMonths: number | null;
+  depreciationPercent: number | null;
+  salvageValue: number | null;
+}) {
+  const purchaseCost = config.purchaseCost;
+  return {
+    purchaseCost,
+    currentBookValue: purchaseCost,
+    depreciationAmount: 0,
+    depreciationPercentage: 0,
+    depreciationMethod: config.method,
+    purchaseDate: config.acquisitionDate,
+    usefulLifeYears: config.usefulLifeMonths ? config.usefulLifeMonths / 12 : 0,
+    usefulLifeMonths: config.usefulLifeMonths,
+    calculationMode: config.calculationMode,
+    depreciationPercent: config.depreciationPercent,
+    salvageValue: config.salvageValue,
+    supportedMethods: ['Declining Balance', 'Double Declining Balance', 'Straight Line', 'Sum Of The Years Digit'],
+  };
+}
+
 type HistoryAsset = Prisma.AssetGetPayload<{
   include: {
     dynamicFieldValues: {
@@ -1152,8 +1202,8 @@ async function attachAssetRelationships(req: Request, res: Response, next: NextF
 
     const uniqueIds: number[] = Array.from(new Set<number>(
       relatedAssetIds
-        .map((id) => parseInt(String(id), 10))
-        .filter((id) => Number.isInteger(id) && id > 0 && id !== assetId),
+        .map((id: unknown) => parseInt(String(id), 10))
+        .filter((id: number) => Number.isInteger(id) && id > 0 && id !== assetId),
     ));
     if (!uniqueIds.length) { res.status(400).json({ error: 'Related assets are required.' }); return; }
 
@@ -1381,12 +1431,101 @@ function depreciationDetails(asset: { purchaseCost: number | null; acquisitionDa
   };
 }
 
+async function saveAssetDepreciation(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const assetId = parseInt(String(req.params.id), 10);
+    const asset = await prisma.asset.findUnique({
+      where: { id: assetId },
+      select: { id: true, depreciationConfig: true },
+    });
+    if (!asset) { res.status(404).json({ error: 'Asset not found.' }); return; }
+
+    const purchaseCost = positiveNumber(req.body.purchaseCost);
+    const acquisitionDate = optionalDate(req.body.acquisitionDate);
+    const method = String(req.body.method || '').trim();
+    const calculationMode = String(req.body.calculationMode || 'life').trim() || 'life';
+    const usefulLifeMonths = optionalPositiveInt(req.body.usefulLifeMonths);
+    const depreciationPercent = optionalNonNegativeNumber(req.body.depreciationPercent);
+    const salvageValue = optionalNonNegativeNumber(req.body.salvageValue);
+    const methods = new Set(['Declining Balance', 'Double Declining Balance', 'Straight Line', 'Sum Of The Years Digit']);
+
+    if (purchaseCost == null) { res.status(400).json({ error: 'Purchase Cost is required.' }); return; }
+    if (!acquisitionDate) { res.status(400).json({ error: 'Acquisition Date is required.' }); return; }
+    if (!methods.has(method)) { res.status(400).json({ error: 'Depreciation Method is required.' }); return; }
+    if (salvageValue != null && salvageValue > purchaseCost) { res.status(400).json({ error: 'Salvage Value cannot exceed Purchase Cost.' }); return; }
+    if (calculationMode === 'percent') {
+      if (depreciationPercent == null || depreciationPercent <= 0 || depreciationPercent > 100) { res.status(400).json({ error: 'Depreciation Percent is required.' }); return; }
+    } else if (!usefulLifeMonths) {
+      res.status(400).json({ error: 'Useful Life is required.' }); return;
+    }
+
+    const actor = changedBy(req, req.body);
+    const changedOn = new Date();
+    const before = asset.depreciationConfig;
+    const afterValues = {
+      purchaseCost,
+      acquisitionDate,
+      method,
+      calculationMode,
+      usefulLifeMonths: calculationMode === 'percent' ? null : usefulLifeMonths,
+      depreciationPercent: calculationMode === 'percent' ? depreciationPercent : null,
+      salvageValue,
+    };
+
+    const saved = await prisma.$transaction(async (tx) => {
+      const config = await tx.assetDepreciationConfig.upsert({
+        where: { assetId },
+        create: { assetId, ...afterValues, configuredBy: actor },
+        update: { ...afterValues, configuredBy: actor },
+      });
+      await tx.asset.update({
+        where: { id: assetId },
+        data: { purchaseCost, acquisitionDate },
+      });
+
+      const fields: Array<{ label: string; oldValue: unknown; newValue: unknown }> = [
+        { label: 'Purchase Cost($)', oldValue: before?.purchaseCost, newValue: purchaseCost },
+        { label: 'Acquisition Date', oldValue: before?.acquisitionDate, newValue: acquisitionDate },
+        { label: 'Depreciation Method', oldValue: before?.method, newValue: method },
+        { label: 'Useful Life', oldValue: before?.calculationMode === 'percent' ? null : before?.usefulLifeMonths ? `${before.usefulLifeMonths} month(s)` : null, newValue: afterValues.calculationMode === 'percent' ? null : afterValues.usefulLifeMonths ? `${afterValues.usefulLifeMonths} month(s)` : null },
+        { label: 'Decline Percent/Year(%)', oldValue: before?.method === 'Declining Balance' && before?.calculationMode === 'percent' ? before.depreciationPercent : null, newValue: method === 'Declining Balance' && afterValues.calculationMode === 'percent' ? afterValues.depreciationPercent : null },
+        { label: 'Depreciation Percent/Year(%)', oldValue: before?.method !== 'Declining Balance' && before?.calculationMode === 'percent' ? before.depreciationPercent : null, newValue: method !== 'Declining Balance' && afterValues.calculationMode === 'percent' ? afterValues.depreciationPercent : null },
+        { label: 'Salvage Value($)', oldValue: before?.salvageValue, newValue: salvageValue },
+      ];
+      const historyRows = fields.flatMap((field) => {
+        const oldValue = depreciationHistoryText(field.oldValue, field.label);
+        const newValue = depreciationHistoryText(field.newValue, field.label);
+        if (oldValue === newValue) return [];
+        return [{
+          assetId,
+          actionType: 'Configure Depreciation',
+          changedBy: actor,
+          changedOn,
+          fieldName: field.label,
+          oldValue,
+          newValue,
+          comments: null,
+        }];
+      });
+      if (historyRows.length) await tx.assetHistory.createMany({ data: historyRows });
+      return config;
+    });
+
+    res.json(depreciationResponse(saved));
+  } catch (err) { next(err); }
+}
+
 async function getAssetCosts(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const assetId = parseInt(String(req.params.id), 10);
     const asset = await prisma.asset.findUnique({
       where: { id: assetId },
-      select: { id: true, purchaseCost: true, acquisitionDate: true },
+      select: {
+        id: true,
+        purchaseCost: true,
+        acquisitionDate: true,
+        depreciationConfig: true,
+      },
     });
     if (!asset) { res.status(404).json({ error: 'Asset not found.' }); return; }
     const items = await prisma.assetCost.findMany({ where: { assetId }, orderBy: { costDate: 'desc' } });
@@ -1394,7 +1533,7 @@ async function getAssetCosts(req: Request, res: Response, next: NextFunction): P
     const operationalCost = items.filter((item) => ['Move/Change Cost', 'Service Cost', 'Others', 'Operational Cost', 'Maintenance Cost', 'Repair Cost', 'Upgrade Cost', 'Other'].includes(item.costFactor)).reduce((sum, item) => sum + item.costAmount, 0);
     const disposalCost = items.filter((item) => item.costFactor === 'Disposal Cost').reduce((sum, item) => sum + item.costAmount, 0);
     const purchaseCost = purchaseCostRowsTotal || asset.purchaseCost || 0;
-    const depreciation = depreciationDetails(asset);
+    const depreciation = asset.depreciationConfig ? depreciationResponse(asset.depreciationConfig) : depreciationDetails(asset);
     const currentBookValue = depreciation?.currentBookValue ?? purchaseCost;
     const tco = purchaseCost + operationalCost + disposalCost;
 
@@ -1560,4 +1699,4 @@ async function saveDynamicFieldValues(tx: TransactionClient, assetId: number, bo
   }
 }
 
-export { getAssets, getAsset, createAsset, copyAsset, updateAsset, modifyAssetType, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, attachAssetRelationships, deleteAssetRelationship, getAssetAttachments, uploadAssetAttachments, downloadAssetAttachment, previewAssetAttachment, deleteAssetAttachment, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets };
+export { getAssets, getAsset, createAsset, copyAsset, updateAsset, modifyAssetType, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, attachAssetRelationships, deleteAssetRelationship, getAssetAttachments, uploadAssetAttachments, downloadAssetAttachment, previewAssetAttachment, deleteAssetAttachment, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, saveAssetDepreciation, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets };

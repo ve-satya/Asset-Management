@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, ReactNode, useMemo, ChangeEvent, DragEvent } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Box, CalendarDays, ChevronDown, Cpu, Download, FileText, Info, Link, Loader2, Monitor, Paperclip, Pencil, Play, Plus, Printer, RefreshCw, Router, Search, Trash2, UserCircle, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, Box, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Cpu, Download, FileText, Info, Link, Loader2, Monitor, Paperclip, Pencil, Play, Plus, Printer, RefreshCw, Router, Search, TableProperties, Trash2, UserCircle, UserPlus, X } from 'lucide-react';
 import DynamicAssetDetailsSection from '../components/asset/DynamicAssetDetailsSection';
 import RelationshipsTab from '../components/asset/RelationshipsTab';
 import AddRelationshipModal from '../components/asset/AddRelationshipModal';
-import { attachAssetRelationships, copyAsset, createAssetCost, deleteAssetAttachment, deleteAssetCost, downloadAssetAttachment, getAsset, getAssetAttachments, getAssetContracts, getAssetCosts, getAssetHistory, getAssetRelationships, modifyAssetType, previewAssetAttachmentUrl, updateAsset, updateAssetCost, uploadAssetAttachments } from '../services/assetService';
+import { attachAssetRelationships, copyAsset, createAssetCost, deleteAssetAttachment, deleteAssetCost, downloadAssetAttachment, getAsset, getAssetAttachments, getAssetContracts, getAssetCosts, getAssetHistory, getAssetRelationships, modifyAssetType, previewAssetAttachmentUrl, saveAssetDepreciation, updateAsset, updateAssetCost, uploadAssetAttachments } from '../services/assetService';
 import { getAllAssetStates } from '../services/assetStateService';
 import { getAllProductTypes } from '../services/productTypeService';
 import { getAllProducts } from '../services/productService';
@@ -43,6 +43,18 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 function Grid2({ children }: { children: ReactNode }) { return <div className="grid grid-cols-1 gap-x-16 gap-y-3 xl:grid-cols-2">{children}</div>; }
 function EmptyCard({ title }: { title: string }) { return <div className="border-b border-gray-200 bg-white p-6 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">{title}</div>; }
+type AssociationKey = 'requests' | 'problems' | 'changes' | 'releases';
+const ASSOCIATION_SECTIONS: Array<{ key: AssociationKey; title: string; emptyText: string }> = [
+  { key: 'requests', title: 'Associated Requests', emptyText: 'No associated requests available' },
+  { key: 'problems', title: 'Associated Problems', emptyText: 'No associated problems available' },
+  { key: 'changes', title: 'Associated Changes', emptyText: 'No associated changes available' },
+  { key: 'releases', title: 'Associated Releases', emptyText: 'No associated releases available' },
+];
+function normalizeAssetDetailTab(value: string | null) {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'association') return 'associations';
+  return MAIN_TABS.some((tab) => tab.key === normalized) ? normalized : 'asset-detail';
+}
 function fmt(d: string | null | undefined) {
   if (!d) return null;
   const date = new Date(d);
@@ -57,6 +69,31 @@ function fmtDate(d: string | null | undefined) {
 }
 function currency(value: number | null | undefined) {
   return Number(value || 0).toFixed(2);
+}
+function depreciationDateTime(value: string | null | undefined) {
+  if (!value) return '-';
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).replace(',', '').toUpperCase();
+}
+function usefulLifeMonthsText(config: DepreciationConfig) {
+  const months = Math.max(1, Math.round(config.usefulLifeMonths || config.usefulLifeYears * 12 || 0));
+  return `${months} month(s)`;
+}
+function remainingLifeText(months: number) {
+  const safeMonths = Math.max(0, Math.round(months));
+  const years = Math.floor(safeMonths / 12);
+  const remainingMonths = safeMonths % 12;
+  if (years && remainingMonths) return `${years} year(s), ${remainingMonths} month(s)`;
+  if (years) return `${years} year(s)`;
+  return `${remainingMonths} month(s)`;
 }
 function fileSizeText(size: number | null | undefined) {
   const bytes = Number(size || 0);
@@ -116,6 +153,10 @@ function displayTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
   return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
+function apiErrorMessage(error: unknown, fallback: string) {
+  const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+  return responseData?.error || responseData?.message || fallback;
 }
 function displayHistoryValue(fieldName: string | null, value: string | null) {
   if (value == null || value === '') return '-';
@@ -614,15 +655,50 @@ function ProductTypeIcon({ name }: { name?: string | null }) {
   return <Icon size={32} className="text-sky-400" />;
 }
 
-function SmallButton({ children, onClick }: { children: ReactNode; onClick?: () => void }) {
+function SmallButton({ children, onClick, disabled }: { children: ReactNode; onClick?: () => void; disabled?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-7 items-center gap-1 border border-gray-300 bg-white px-2 text-[11px] text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+      disabled={disabled}
+      className="inline-flex h-7 items-center gap-1 border border-gray-300 bg-white px-2 text-[11px] text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
     >
       {children}
     </button>
+  );
+}
+
+function CompactPageSizeDropdown({ value, open, onOpenChange, onChange }: { value: number; open: boolean; onOpenChange: (open: boolean) => void; onChange: (value: number) => void }) {
+  return (
+    <div className="relative h-7 w-14" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onOpenChange(false); }}>
+      <button
+        type="button"
+        onClick={() => onOpenChange(!open)}
+        className="flex h-7 w-full items-center justify-between border border-gray-300 bg-white px-2 text-left text-[11px] text-gray-900 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span>{value}</span>
+        <ChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-1 w-full border border-gray-300 bg-white shadow-md dark:border-gray-700 dark:bg-gray-900" role="listbox">
+          {[10, 25, 50, 100].map((size) => (
+            <button
+              key={size}
+              type="button"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => { onChange(size); onOpenChange(false); }}
+              className={`block h-7 w-full px-2 text-left text-[11px] hover:bg-sky-50 dark:hover:bg-gray-800 ${value === size ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-200' : 'text-gray-900 dark:text-gray-100'}`}
+              role="option"
+              aria-selected={value === size}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -922,6 +998,715 @@ function AssetDetailContent({
         onDownloadAll={onDownloadAllAttachments}
       />
     </>
+  );
+}
+
+function AssociationsContent() {
+  const [openSections, setOpenSections] = useState<Record<AssociationKey, boolean>>({
+    requests: false,
+    problems: false,
+    changes: false,
+    releases: false,
+  });
+  const counts: Record<AssociationKey, number> = {
+    requests: 0,
+    problems: ASSOCIATED_PROBLEM_ROWS.length,
+    changes: ASSOCIATED_CHANGE_ROWS.length,
+    releases: ASSOCIATED_RELEASE_ROWS.length,
+  };
+
+  return (
+    <div className="min-h-[520px] bg-white px-5 py-4 dark:bg-gray-900">
+      <div className="space-y-3">
+        {ASSOCIATION_SECTIONS.map((section) => {
+          const open = openSections[section.key];
+          return (
+            <section key={section.key} className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+              <button
+                type="button"
+                onClick={() => setOpenSections((prev) => ({ ...prev, [section.key]: !prev[section.key] }))}
+                className="flex h-9 w-full items-center gap-2 px-3 text-left text-[12px] font-semibold text-gray-900 hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-gray-800"
+                aria-expanded={open}
+              >
+                <ChevronRight size={14} className={`shrink-0 text-gray-500 transition-transform dark:text-gray-400 ${open ? 'rotate-90' : ''}`} />
+                <span>{section.title} ({counts[section.key]})</span>
+              </button>
+              {open && (
+                section.key === 'requests'
+                  ? <AssociatedRequestsPanel />
+                  : section.key === 'problems'
+                    ? <AssociatedProblemsPanel />
+                    : section.key === 'changes'
+                      ? <AssociatedChangesPanel />
+                      : section.key === 'releases'
+                        ? <AssociatedReleasesPanel />
+                  : (
+                    <div className="border-t border-gray-200 px-8 py-4 text-[12px] text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                      {section.emptyText}
+                    </div>
+                  )
+              )}
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+type AssociatedRequestStatusFilter = 'all' | 'pending' | 'completed';
+interface AssociatedRequestRow {
+  id: string;
+  subject?: string;
+  requester: string;
+  status: 'Pending' | 'Completed';
+  createdDate: string;
+  createdBy?: string;
+  contactNumber?: string;
+}
+const ASSOCIATED_REQUEST_COLUMNS = [
+  { key: 'id', label: 'Request ID' },
+  { key: 'subject', label: 'Subject' },
+  { key: 'requester', label: 'Requester' },
+  { key: 'status', label: 'Status' },
+  { key: 'createdDate', label: 'Created Date' },
+  { key: 'createdBy', label: 'Created By' },
+  { key: 'contactNumber', label: 'Additional Contact Number' },
+] as const;
+type AssociatedRequestColumnKey = typeof ASSOCIATED_REQUEST_COLUMNS[number]['key'];
+
+function AssociatedRequestsPanel() {
+  const [statusFilter, setStatusFilter] = useState<AssociatedRequestStatusFilter>('pending');
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [pageSize, setPageSize] = useState(25);
+  const [pageSizeOpen, setPageSizeOpen] = useState(false);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const [columnQuery, setColumnQuery] = useState('');
+  const [visibleColumns, setVisibleColumns] = useState<AssociatedRequestColumnKey[]>(['id', 'requester', 'status', 'createdDate']);
+  const [draftColumns, setDraftColumns] = useState<AssociatedRequestColumnKey[]>(visibleColumns);
+  const [page, setPage] = useState(1);
+  const rows: AssociatedRequestRow[] = [];
+  const filteredRows = rows.filter((row) => {
+    if (statusFilter === 'pending' && row.status !== 'Pending') return false;
+    if (statusFilter === 'completed' && row.status !== 'Completed') return false;
+    const query = search.trim().toLowerCase();
+    if (!query) return true;
+    return [row.id, row.requester, row.status, row.createdDate].some((value) => value.toLowerCase().includes(query));
+  });
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const visibleRows = filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const rangeStart = filteredRows.length ? (safePage - 1) * pageSize + 1 : 0;
+  const rangeEnd = Math.min(safePage * pageSize, filteredRows.length);
+
+  useEffect(() => { setPage(1); }, [statusFilter, search, pageSize]);
+  useEffect(() => { if (columnsOpen) { setDraftColumns(visibleColumns); setColumnQuery(''); } }, [columnsOpen, visibleColumns]);
+  const shownColumnDefs = ASSOCIATED_REQUEST_COLUMNS.filter((column) => visibleColumns.includes(column.key));
+  const filteredColumnDefs = ASSOCIATED_REQUEST_COLUMNS.filter((column) => column.label.toLowerCase().includes(columnQuery.trim().toLowerCase()));
+
+  function requestCell(row: AssociatedRequestRow, key: AssociatedRequestColumnKey) {
+    const value = row[key];
+    return value == null || value === '' ? '-' : String(value);
+  }
+
+  return (
+    <div className="border-t border-gray-200 px-3 pb-80 pt-3 dark:border-gray-700">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <div className="relative h-7 w-44 shrink-0" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setStatusOpen(false); }}>
+          <button
+            type="button"
+            onClick={() => setStatusOpen((value) => !value)}
+            className="flex h-7 w-full items-center justify-between border border-gray-200 bg-white px-2 text-left text-[12px] text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+            aria-haspopup="listbox"
+            aria-expanded={statusOpen}
+          >
+            <span className="min-w-0 truncate">
+              {statusFilter === 'all' ? 'All Requests' : statusFilter === 'completed' ? 'Completed Requests' : 'Pending Requests'}
+            </span>
+            <ChevronDown size={12} className="ml-2 shrink-0 text-gray-500 dark:text-gray-400" />
+          </button>
+          {statusOpen && (
+            <div className="absolute left-0 top-full z-30 mt-1 w-full border border-gray-300 bg-white shadow-md dark:border-gray-700 dark:bg-gray-900" role="listbox">
+              {[
+                { value: 'all' as const, label: 'All Requests' },
+                { value: 'pending' as const, label: 'Pending Requests' },
+                { value: 'completed' as const, label: 'Completed Requests' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => { setStatusFilter(option.value); setStatusOpen(false); }}
+                  className={`block h-7 w-full px-2 text-left text-[12px] hover:bg-sky-50 dark:hover:bg-gray-800 ${statusFilter === option.value ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-200' : 'text-gray-900 dark:text-gray-100'}`}
+                  role="option"
+                  aria-selected={statusFilter === option.value}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="inline-flex h-7 items-center border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+          <span className="flex h-full w-8 items-center justify-center text-gray-500 dark:text-gray-300"><Search size={15} /></span>
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search..."
+            className="h-full w-36 border-l border-gray-200 bg-transparent px-2 text-[12px] text-gray-900 outline-none dark:border-gray-700 dark:text-gray-100 sm:w-48"
+          />
+        </div>
+        <div className="relative" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setColumnsOpen(false); }}>
+          <button type="button" onClick={() => setColumnsOpen((value) => !value)} className="flex h-7 w-8 items-center justify-center border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800" aria-label="Add / Remove Columns" title="Add / Remove Columns">
+            <TableProperties size={15} />
+          </button>
+          {columnsOpen && (
+            <div className="absolute left-0 top-full z-30 mt-1 w-56 border border-gray-300 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900">
+              <div className="p-2">
+                <div className="relative">
+                  <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+                  <input
+                    value={columnQuery}
+                    onChange={(event) => setColumnQuery(event.target.value)}
+                    className="h-8 w-full border border-sky-400 bg-white pl-7 pr-2 text-[12px] text-gray-900 outline-none dark:bg-gray-900 dark:text-gray-100"
+                    aria-label="Search columns"
+                  />
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto scrollbar-thin">
+                {filteredColumnDefs.map((column) => (
+                  <label key={column.key} className="flex h-9 items-center gap-2 border-t border-gray-100 px-4 text-[12px] text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                    <input
+                      type="checkbox"
+                      checked={draftColumns.includes(column.key)}
+                      onChange={() => setDraftColumns((prev) => prev.includes(column.key) ? prev.filter((item) => item !== column.key) : [...prev, column.key])}
+                      className="rounded border-gray-300 text-sky-600 focus:ring-sky-500"
+                    />
+                    {column.label}
+                  </label>
+                ))}
+                {!filteredColumnDefs.length && <p className="border-t border-gray-100 px-4 py-3 text-[12px] text-gray-500 dark:border-gray-800">No columns found</p>}
+              </div>
+              <div className="flex justify-center gap-2 border-t border-gray-200 px-3 py-3 dark:border-gray-700">
+                <button
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => { setVisibleColumns(draftColumns.length ? draftColumns : visibleColumns); setColumnsOpen(false); }}
+                  className="h-7 rounded-full bg-sky-600 px-4 text-[12px] font-semibold text-white hover:bg-sky-700"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => { setDraftColumns(visibleColumns); setColumnsOpen(false); }}
+                  className="h-7 rounded-full border border-gray-300 bg-white px-4 text-[12px] text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+        <CompactPageSizeDropdown value={pageSize} open={pageSizeOpen} onOpenChange={setPageSizeOpen} onChange={setPageSize} />
+        <span className="border-l border-gray-200 pl-2 text-[11px] text-gray-500 dark:border-gray-700">{rangeStart} - {rangeEnd} of {filteredRows.length}</span>
+        <SmallButton onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={safePage <= 1}><ChevronLeft size={15} /></SmallButton>
+        <SmallButton onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={safePage >= totalPages}><ChevronRight size={15} /></SmallButton>
+      </div>
+      <table className="w-full border-collapse text-[12px]">
+        <thead className="bg-gray-50 uppercase text-gray-900 dark:bg-gray-800 dark:text-gray-100">
+          <tr className="border-y border-gray-200 dark:border-gray-700">
+            {shownColumnDefs.map((column, index) => (
+              <th key={column.key} className={`${index === shownColumnDefs.length - 1 ? '' : 'border-r border-gray-200 dark:border-gray-700'} px-2 py-2 text-left font-normal`}>
+                {column.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {visibleRows.length ? visibleRows.map((row) => (
+            <tr key={row.id} className="border-b border-gray-100 dark:border-gray-800">
+              {shownColumnDefs.map((column) => <td key={column.key} className="px-2 py-2">{requestCell(row, column.key)}</td>)}
+            </tr>
+          )) : (
+            <tr>
+              <td colSpan={Math.max(1, shownColumnDefs.length)} className="h-12 text-center text-[12px] text-gray-900 dark:text-gray-100">No data available</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+type AssociatedProblemFilter = 'open' | 'closed' | 'all';
+interface AssociatedProblemRow {
+  id: string;
+  title: string;
+  reportedBy: string;
+  technician: string;
+  category: string;
+  priority: string;
+  status: 'Open' | 'Closed';
+  urgency: string;
+}
+const ASSOCIATED_PROBLEM_ROWS: AssociatedProblemRow[] = [];
+const ASSOCIATED_PROBLEM_COLUMNS = [
+  { key: 'id', label: 'Problem ID' },
+  { key: 'title', label: 'Title' },
+  { key: 'reportedBy', label: 'Reported By' },
+  { key: 'technician', label: 'Technician' },
+  { key: 'category', label: 'Category' },
+  { key: 'priority', label: 'Priority' },
+  { key: 'status', label: 'Status' },
+  { key: 'urgency', label: 'Urgency' },
+] as const;
+type AssociatedProblemColumnKey = typeof ASSOCIATED_PROBLEM_COLUMNS[number]['key'];
+
+function AssociatedProblemsPanel() {
+  const [problemFilter, setProblemFilter] = useState<AssociatedProblemFilter>('open');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [pageSize, setPageSize] = useState(25);
+  const [pageSizeOpen, setPageSizeOpen] = useState(false);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const [columnQuery, setColumnQuery] = useState('');
+  const [visibleColumns, setVisibleColumns] = useState<AssociatedProblemColumnKey[]>(['id', 'title', 'reportedBy', 'technician', 'category', 'priority', 'status', 'urgency']);
+  const [draftColumns, setDraftColumns] = useState<AssociatedProblemColumnKey[]>(visibleColumns);
+  const [page, setPage] = useState(1);
+  const filteredRows = ASSOCIATED_PROBLEM_ROWS.filter((row) => {
+    if (problemFilter === 'open' && row.status !== 'Open') return false;
+    if (problemFilter === 'closed' && row.status !== 'Closed') return false;
+    const query = search.trim().toLowerCase();
+    if (!query) return true;
+    return [row.id, row.title, row.reportedBy, row.technician, row.category, row.priority, row.status, row.urgency].some((value) => value.toLowerCase().includes(query));
+  });
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const visibleRows = filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const rangeStart = filteredRows.length ? (safePage - 1) * pageSize + 1 : 0;
+  const rangeEnd = Math.min(safePage * pageSize, filteredRows.length);
+  const shownColumnDefs = ASSOCIATED_PROBLEM_COLUMNS.filter((column) => visibleColumns.includes(column.key));
+  const filteredColumnDefs = ASSOCIATED_PROBLEM_COLUMNS.filter((column) => column.label.toLowerCase().includes(columnQuery.trim().toLowerCase()));
+
+  useEffect(() => { setPage(1); }, [problemFilter, search, pageSize]);
+  useEffect(() => { if (columnsOpen) { setDraftColumns(visibleColumns); setColumnQuery(''); } }, [columnsOpen, visibleColumns]);
+
+  function problemCell(row: AssociatedProblemRow, key: AssociatedProblemColumnKey) {
+    const value = row[key];
+    return value == null || value === '' ? '-' : String(value);
+  }
+
+  return (
+    <div className="border-t border-gray-200 px-3 pb-64 pt-3 dark:border-gray-700">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <div className="relative h-7 w-36 shrink-0" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFilterOpen(false); }}>
+          <button
+            type="button"
+            onClick={() => setFilterOpen((value) => !value)}
+            className="flex h-7 w-full items-center justify-between border border-gray-200 bg-white px-2 text-left text-[12px] text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+            aria-haspopup="listbox"
+            aria-expanded={filterOpen}
+          >
+            <span className="min-w-0 truncate">{problemFilter === 'closed' ? 'Close Problems' : problemFilter === 'all' ? 'All Problems' : 'Open Problems'}</span>
+            <ChevronDown size={12} className="ml-2 shrink-0 text-gray-500 dark:text-gray-400" />
+          </button>
+          {filterOpen && (
+            <div className="absolute left-0 top-full z-30 mt-1 w-full border border-gray-300 bg-white shadow-md dark:border-gray-700 dark:bg-gray-900" role="listbox">
+              {[
+                { value: 'open' as const, label: 'Open Problems' },
+                { value: 'closed' as const, label: 'Close Problems' },
+                { value: 'all' as const, label: 'All Problems' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => { setProblemFilter(option.value); setFilterOpen(false); }}
+                  className={`block h-7 w-full px-2 text-left text-[12px] hover:bg-sky-50 dark:hover:bg-gray-800 ${problemFilter === option.value ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-200' : 'text-gray-900 dark:text-gray-100'}`}
+                  role="option"
+                  aria-selected={problemFilter === option.value}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="inline-flex h-7 items-center border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+          <span className="flex h-full w-8 items-center justify-center text-gray-500 dark:text-gray-300"><Search size={15} /></span>
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search..."
+            className="h-full w-36 border-l border-gray-200 bg-transparent px-2 text-[12px] text-gray-900 outline-none dark:border-gray-700 dark:text-gray-100 sm:w-48"
+          />
+        </div>
+        <div className="relative" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setColumnsOpen(false); }}>
+          <button type="button" onClick={() => setColumnsOpen((value) => !value)} className="flex h-7 w-8 items-center justify-center border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800" aria-label="Add / Remove Columns" title="Add / Remove Columns">
+            <TableProperties size={15} />
+          </button>
+          {columnsOpen && (
+            <div className="absolute left-0 top-full z-30 mt-1 w-56 border border-gray-300 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900">
+              <div className="p-2">
+                <div className="relative">
+                  <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+                  <input value={columnQuery} onChange={(event) => setColumnQuery(event.target.value)} className="h-8 w-full border border-sky-400 bg-white pl-7 pr-2 text-[12px] text-gray-900 outline-none dark:bg-gray-900 dark:text-gray-100" aria-label="Search columns" />
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto scrollbar-thin">
+                {filteredColumnDefs.map((column) => (
+                  <label key={column.key} className="flex h-9 items-center gap-2 border-t border-gray-100 px-4 text-[12px] text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                    <input type="checkbox" checked={draftColumns.includes(column.key)} onChange={() => setDraftColumns((prev) => prev.includes(column.key) ? prev.filter((item) => item !== column.key) : [...prev, column.key])} className="rounded border-gray-300 text-sky-600 focus:ring-sky-500" />
+                    {column.label}
+                  </label>
+                ))}
+                {!filteredColumnDefs.length && <p className="border-t border-gray-100 px-4 py-3 text-[12px] text-gray-500 dark:border-gray-800">No columns found</p>}
+              </div>
+              <div className="flex justify-center gap-2 border-t border-gray-200 px-3 py-3 dark:border-gray-700">
+                <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setVisibleColumns(draftColumns.length ? draftColumns : visibleColumns); setColumnsOpen(false); }} className="h-7 rounded-full bg-sky-600 px-4 text-[12px] font-semibold text-white hover:bg-sky-700">Save</button>
+                <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setDraftColumns(visibleColumns); setColumnsOpen(false); }} className="h-7 rounded-full border border-gray-300 bg-white px-4 text-[12px] text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+        <CompactPageSizeDropdown value={pageSize} open={pageSizeOpen} onOpenChange={setPageSizeOpen} onChange={setPageSize} />
+        <span className="border-l border-gray-200 pl-2 text-[11px] text-gray-500 dark:border-gray-700">{rangeStart} - {rangeEnd} of {filteredRows.length}</span>
+        <SmallButton onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={safePage <= 1}><ChevronLeft size={15} /></SmallButton>
+        <SmallButton onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={safePage >= totalPages}><ChevronRight size={15} /></SmallButton>
+      </div>
+      <table className="w-full border-collapse text-[12px]">
+        <thead className="bg-gray-50 uppercase text-gray-900 dark:bg-gray-800 dark:text-gray-100">
+          <tr className="border-y border-gray-200 dark:border-gray-700">
+            {shownColumnDefs.map((column, index) => <th key={column.key} className={`${index === shownColumnDefs.length - 1 ? '' : 'border-r border-gray-200 dark:border-gray-700'} px-2 py-2 text-left font-normal`}>{column.label}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {visibleRows.length ? visibleRows.map((row) => (
+            <tr key={row.id} className="border-b border-gray-100 dark:border-gray-800">
+              {shownColumnDefs.map((column) => <td key={column.key} className="px-2 py-2">{problemCell(row, column.key)}</td>)}
+            </tr>
+          )) : (
+            <tr><td colSpan={Math.max(1, shownColumnDefs.length)} className="h-12 text-center text-[12px] text-gray-900 dark:text-gray-100">No data available</td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+type AssociatedChangeFilter = 'all' | 'open' | 'completed';
+interface AssociatedChangeRow {
+  id: string;
+  title: string;
+  changeType: string;
+  changeOwner: string;
+  category: string;
+  priority: string;
+  status: 'Open' | 'Closed';
+  stage: string;
+}
+const ASSOCIATED_CHANGE_ROWS: AssociatedChangeRow[] = [];
+const ASSOCIATED_CHANGE_COLUMNS = [
+  { key: 'id', label: 'ID' },
+  { key: 'title', label: 'Title' },
+  { key: 'changeType', label: 'Change Type' },
+  { key: 'changeOwner', label: 'Change Owner' },
+  { key: 'category', label: 'Category' },
+  { key: 'priority', label: 'Priority' },
+  { key: 'status', label: 'Status' },
+  { key: 'stage', label: 'Stage' },
+] as const;
+type AssociatedChangeColumnKey = typeof ASSOCIATED_CHANGE_COLUMNS[number]['key'];
+
+function AssociatedChangesPanel() {
+  const [changeFilter, setChangeFilter] = useState<AssociatedChangeFilter>('open');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [pageSize, setPageSize] = useState(25);
+  const [pageSizeOpen, setPageSizeOpen] = useState(false);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const [columnQuery, setColumnQuery] = useState('');
+  const [visibleColumns, setVisibleColumns] = useState<AssociatedChangeColumnKey[]>(['id', 'title', 'changeType', 'changeOwner', 'category', 'priority', 'status', 'stage']);
+  const [draftColumns, setDraftColumns] = useState<AssociatedChangeColumnKey[]>(visibleColumns);
+  const [page, setPage] = useState(1);
+  const filteredRows = ASSOCIATED_CHANGE_ROWS.filter((row) => {
+    if (changeFilter === 'open' && row.status !== 'Open') return false;
+    if (changeFilter === 'completed' && row.status !== 'Closed') return false;
+    const query = search.trim().toLowerCase();
+    if (!query) return true;
+    return [row.id, row.title, row.changeType, row.changeOwner, row.category, row.priority, row.status, row.stage].some((value) => value.toLowerCase().includes(query));
+  });
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const visibleRows = filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const rangeStart = filteredRows.length ? (safePage - 1) * pageSize + 1 : 0;
+  const rangeEnd = Math.min(safePage * pageSize, filteredRows.length);
+  const shownColumnDefs = ASSOCIATED_CHANGE_COLUMNS.filter((column) => visibleColumns.includes(column.key));
+  const filteredColumnDefs = ASSOCIATED_CHANGE_COLUMNS.filter((column) => column.label.toLowerCase().includes(columnQuery.trim().toLowerCase()));
+
+  useEffect(() => { setPage(1); }, [changeFilter, search, pageSize]);
+  useEffect(() => { if (columnsOpen) { setDraftColumns(visibleColumns); setColumnQuery(''); } }, [columnsOpen, visibleColumns]);
+
+  function changeCell(row: AssociatedChangeRow, key: AssociatedChangeColumnKey) {
+    const value = row[key];
+    return value == null || value === '' ? '-' : String(value);
+  }
+
+  return (
+    <div className="border-t border-gray-200 px-3 pb-64 pt-3 dark:border-gray-700">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <div className="relative h-7 w-36 shrink-0" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFilterOpen(false); }}>
+          <button
+            type="button"
+            onClick={() => setFilterOpen((value) => !value)}
+            className="flex h-7 w-full items-center justify-between border border-gray-200 bg-white px-2 text-left text-[12px] text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+            aria-haspopup="listbox"
+            aria-expanded={filterOpen}
+          >
+            <span className="min-w-0 truncate">{changeFilter === 'all' ? 'All Changes' : changeFilter === 'completed' ? 'Completed Changes' : 'Open Changes'}</span>
+            <ChevronDown size={12} className="ml-2 shrink-0 text-gray-500 dark:text-gray-400" />
+          </button>
+          {filterOpen && (
+            <div className="absolute left-0 top-full z-30 mt-1 w-full border border-gray-300 bg-white shadow-md dark:border-gray-700 dark:bg-gray-900" role="listbox">
+              {[
+                { value: 'all' as const, label: 'All Changes' },
+                { value: 'open' as const, label: 'Open Changes' },
+                { value: 'completed' as const, label: 'Completed Changes' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => { setChangeFilter(option.value); setFilterOpen(false); }}
+                  className={`block h-7 w-full px-2 text-left text-[12px] hover:bg-sky-50 dark:hover:bg-gray-800 ${changeFilter === option.value ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-200' : 'text-gray-900 dark:text-gray-100'}`}
+                  role="option"
+                  aria-selected={changeFilter === option.value}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="inline-flex h-7 items-center border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+          <span className="flex h-full w-8 items-center justify-center text-gray-500 dark:text-gray-300"><Search size={15} /></span>
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search..."
+            className="h-full w-36 border-l border-gray-200 bg-transparent px-2 text-[12px] text-gray-900 outline-none dark:border-gray-700 dark:text-gray-100 sm:w-48"
+          />
+        </div>
+        <div className="relative" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setColumnsOpen(false); }}>
+          <button type="button" onClick={() => setColumnsOpen((value) => !value)} className="flex h-7 w-8 items-center justify-center border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800" aria-label="Add / Remove Columns" title="Add / Remove Columns">
+            <TableProperties size={15} />
+          </button>
+          {columnsOpen && (
+            <div className="absolute left-0 top-full z-30 mt-1 w-56 border border-gray-300 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900">
+              <div className="p-2">
+                <div className="relative">
+                  <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+                  <input value={columnQuery} onChange={(event) => setColumnQuery(event.target.value)} className="h-8 w-full border border-sky-400 bg-white pl-7 pr-2 text-[12px] text-gray-900 outline-none dark:bg-gray-900 dark:text-gray-100" aria-label="Search columns" />
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto scrollbar-thin">
+                {filteredColumnDefs.map((column) => (
+                  <label key={column.key} className="flex h-9 items-center gap-2 border-t border-gray-100 px-4 text-[12px] text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                    <input type="checkbox" checked={draftColumns.includes(column.key)} onChange={() => setDraftColumns((prev) => prev.includes(column.key) ? prev.filter((item) => item !== column.key) : [...prev, column.key])} className="rounded border-gray-300 text-sky-600 focus:ring-sky-500" />
+                    {column.label}
+                  </label>
+                ))}
+                {!filteredColumnDefs.length && <p className="border-t border-gray-100 px-4 py-3 text-[12px] text-gray-500 dark:border-gray-800">No columns found</p>}
+              </div>
+              <div className="flex justify-center gap-2 border-t border-gray-200 px-3 py-3 dark:border-gray-700">
+                <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setVisibleColumns(draftColumns.length ? draftColumns : visibleColumns); setColumnsOpen(false); }} className="h-7 rounded-full bg-sky-600 px-4 text-[12px] font-semibold text-white hover:bg-sky-700">Save</button>
+                <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setDraftColumns(visibleColumns); setColumnsOpen(false); }} className="h-7 rounded-full border border-gray-300 bg-white px-4 text-[12px] text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+        <CompactPageSizeDropdown value={pageSize} open={pageSizeOpen} onOpenChange={setPageSizeOpen} onChange={setPageSize} />
+        <span className="border-l border-gray-200 pl-2 text-[11px] text-gray-500 dark:border-gray-700">{rangeStart} - {rangeEnd} of {filteredRows.length}</span>
+        <SmallButton onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={safePage <= 1}><ChevronLeft size={15} /></SmallButton>
+        <SmallButton onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={safePage >= totalPages}><ChevronRight size={15} /></SmallButton>
+      </div>
+      <table className="w-full border-collapse text-[12px]">
+        <thead className="bg-gray-50 uppercase text-gray-900 dark:bg-gray-800 dark:text-gray-100">
+          <tr className="border-y border-gray-200 dark:border-gray-700">
+            {shownColumnDefs.map((column, index) => <th key={column.key} className={`${index === shownColumnDefs.length - 1 ? '' : 'border-r border-gray-200 dark:border-gray-700'} px-2 py-2 text-left font-normal`}>{column.label}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {visibleRows.length ? visibleRows.map((row) => (
+            <tr key={row.id} className="border-b border-gray-100 dark:border-gray-800">
+              {shownColumnDefs.map((column) => <td key={column.key} className="px-2 py-2">{changeCell(row, column.key)}</td>)}
+            </tr>
+          )) : (
+            <tr><td colSpan={Math.max(1, shownColumnDefs.length)} className="h-12 text-center text-[12px] text-gray-900 dark:text-gray-100">No data available</td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+type AssociatedReleaseFilter = 'all' | 'open' | 'closed';
+interface AssociatedReleaseRow {
+  id: string;
+  title: string;
+  type: string;
+  stage: string;
+  status: 'Open' | 'Closed';
+  priority: string;
+  releaseEngineer: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+}
+const ASSOCIATED_RELEASE_ROWS: AssociatedReleaseRow[] = [];
+const ASSOCIATED_RELEASE_COLUMNS = [
+  { key: 'id', label: 'ID' },
+  { key: 'title', label: 'Title' },
+  { key: 'type', label: 'Type' },
+  { key: 'stage', label: 'Stage' },
+  { key: 'status', label: 'Status' },
+  { key: 'priority', label: 'Priority' },
+  { key: 'releaseEngineer', label: 'Release Engineer' },
+  { key: 'scheduledStart', label: 'Scheduled Start' },
+  { key: 'scheduledEnd', label: 'Scheduled End' },
+] as const;
+type AssociatedReleaseColumnKey = typeof ASSOCIATED_RELEASE_COLUMNS[number]['key'];
+
+function AssociatedReleasesPanel() {
+  const [releaseFilter, setReleaseFilter] = useState<AssociatedReleaseFilter>('open');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [pageSize, setPageSize] = useState(25);
+  const [pageSizeOpen, setPageSizeOpen] = useState(false);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const [columnQuery, setColumnQuery] = useState('');
+  const [visibleColumns, setVisibleColumns] = useState<AssociatedReleaseColumnKey[]>(['id', 'title', 'type', 'stage', 'status', 'priority', 'releaseEngineer', 'scheduledStart', 'scheduledEnd']);
+  const [draftColumns, setDraftColumns] = useState<AssociatedReleaseColumnKey[]>(visibleColumns);
+  const [page, setPage] = useState(1);
+  const filteredRows = ASSOCIATED_RELEASE_ROWS.filter((row) => {
+    if (releaseFilter === 'open' && row.status !== 'Open') return false;
+    if (releaseFilter === 'closed' && row.status !== 'Closed') return false;
+    const query = search.trim().toLowerCase();
+    if (!query) return true;
+    return [row.id, row.title, row.type, row.stage, row.status, row.priority, row.releaseEngineer, row.scheduledStart, row.scheduledEnd].some((value) => value.toLowerCase().includes(query));
+  });
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const visibleRows = filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const rangeStart = filteredRows.length ? (safePage - 1) * pageSize + 1 : 0;
+  const rangeEnd = Math.min(safePage * pageSize, filteredRows.length);
+  const shownColumnDefs = ASSOCIATED_RELEASE_COLUMNS.filter((column) => visibleColumns.includes(column.key));
+  const filteredColumnDefs = ASSOCIATED_RELEASE_COLUMNS.filter((column) => column.label.toLowerCase().includes(columnQuery.trim().toLowerCase()));
+
+  useEffect(() => { setPage(1); }, [releaseFilter, search, pageSize]);
+  useEffect(() => { if (columnsOpen) { setDraftColumns(visibleColumns); setColumnQuery(''); } }, [columnsOpen, visibleColumns]);
+
+  function releaseCell(row: AssociatedReleaseRow, key: AssociatedReleaseColumnKey) {
+    const value = row[key];
+    return value == null || value === '' ? '-' : String(value);
+  }
+
+  return (
+    <div className="border-t border-gray-200 px-3 pb-64 pt-3 dark:border-gray-700">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <div className="relative h-7 w-40 shrink-0" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFilterOpen(false); }}>
+          <button
+            type="button"
+            onClick={() => setFilterOpen((value) => !value)}
+            className="flex h-7 w-full items-center justify-between border border-gray-200 bg-white px-2 text-left text-[12px] text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
+            aria-haspopup="listbox"
+            aria-expanded={filterOpen}
+          >
+            <span className="min-w-0 truncate">{releaseFilter === 'all' ? 'All Releases' : releaseFilter === 'closed' ? 'Close Releases' : 'All Open Releases'}</span>
+            <ChevronDown size={12} className="ml-2 shrink-0 text-gray-500 dark:text-gray-400" />
+          </button>
+          {filterOpen && (
+            <div className="absolute left-0 top-full z-30 mt-1 w-full border border-gray-300 bg-white shadow-md dark:border-gray-700 dark:bg-gray-900" role="listbox">
+              {[
+                { value: 'all' as const, label: 'All Releases' },
+                { value: 'open' as const, label: 'All Open Releases' },
+                { value: 'closed' as const, label: 'Close Releases' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => { setReleaseFilter(option.value); setFilterOpen(false); }}
+                  className={`block h-7 w-full px-2 text-left text-[12px] hover:bg-sky-50 dark:hover:bg-gray-800 ${releaseFilter === option.value ? 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-200' : 'text-gray-900 dark:text-gray-100'}`}
+                  role="option"
+                  aria-selected={releaseFilter === option.value}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="inline-flex h-7 items-center border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+          <span className="flex h-full w-8 items-center justify-center text-gray-500 dark:text-gray-300"><Search size={15} /></span>
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search..."
+            className="h-full w-36 border-l border-gray-200 bg-transparent px-2 text-[12px] text-gray-900 outline-none dark:border-gray-700 dark:text-gray-100 sm:w-48"
+          />
+        </div>
+        <div className="relative" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setColumnsOpen(false); }}>
+          <button type="button" onClick={() => setColumnsOpen((value) => !value)} className="flex h-7 w-8 items-center justify-center border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800" aria-label="Add / Remove Columns" title="Add / Remove Columns">
+            <TableProperties size={15} />
+          </button>
+          {columnsOpen && (
+            <div className="absolute left-0 top-full z-30 mt-1 w-56 border border-gray-300 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900">
+              <div className="p-2">
+                <div className="relative">
+                  <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+                  <input value={columnQuery} onChange={(event) => setColumnQuery(event.target.value)} className="h-8 w-full border border-sky-400 bg-white pl-7 pr-2 text-[12px] text-gray-900 outline-none dark:bg-gray-900 dark:text-gray-100" aria-label="Search columns" />
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto scrollbar-thin">
+                {filteredColumnDefs.map((column) => (
+                  <label key={column.key} className="flex h-9 items-center gap-2 border-t border-gray-100 px-4 text-[12px] text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                    <input type="checkbox" checked={draftColumns.includes(column.key)} onChange={() => setDraftColumns((prev) => prev.includes(column.key) ? prev.filter((item) => item !== column.key) : [...prev, column.key])} className="rounded border-gray-300 text-sky-600 focus:ring-sky-500" />
+                    {column.label}
+                  </label>
+                ))}
+                {!filteredColumnDefs.length && <p className="border-t border-gray-100 px-4 py-3 text-[12px] text-gray-500 dark:border-gray-800">No columns found</p>}
+              </div>
+              <div className="flex justify-center gap-2 border-t border-gray-200 px-3 py-3 dark:border-gray-700">
+                <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setVisibleColumns(draftColumns.length ? draftColumns : visibleColumns); setColumnsOpen(false); }} className="h-7 rounded-full bg-sky-600 px-4 text-[12px] font-semibold text-white hover:bg-sky-700">Save</button>
+                <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setDraftColumns(visibleColumns); setColumnsOpen(false); }} className="h-7 rounded-full border border-gray-300 bg-white px-4 text-[12px] text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+        <CompactPageSizeDropdown value={pageSize} open={pageSizeOpen} onOpenChange={setPageSizeOpen} onChange={setPageSize} />
+        <span className="border-l border-gray-200 pl-2 text-[11px] text-gray-500 dark:border-gray-700">{rangeStart} - {rangeEnd} of {filteredRows.length}</span>
+        <SmallButton onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={safePage <= 1}><ChevronLeft size={15} /></SmallButton>
+        <SmallButton onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={safePage >= totalPages}><ChevronRight size={15} /></SmallButton>
+      </div>
+      <table className="w-full border-collapse text-[12px]">
+        <thead className="bg-gray-50 uppercase text-gray-900 dark:bg-gray-800 dark:text-gray-100">
+          <tr className="border-y border-gray-200 dark:border-gray-700">
+            {shownColumnDefs.map((column, index) => <th key={column.key} className={`${index === shownColumnDefs.length - 1 ? '' : 'border-r border-gray-200 dark:border-gray-700'} px-2 py-2 text-left font-normal`}>{column.label}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {visibleRows.length ? visibleRows.map((row) => (
+            <tr key={row.id} className="border-b border-gray-100 dark:border-gray-800">
+              {shownColumnDefs.map((column) => <td key={column.key} className="px-2 py-2">{releaseCell(row, column.key)}</td>)}
+            </tr>
+          )) : (
+            <tr><td colSpan={Math.max(1, shownColumnDefs.length)} className="h-12 text-center text-[12px] text-gray-900 dark:text-gray-100">No data available</td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -1236,12 +2021,7 @@ function AssetFinancialsTab({
   const disposalCostTotal = sumCosts(disposalCostItems);
   const tcoTotal = purchaseCostTotal + operationalCostTotal + disposalCostTotal;
   const summary = data?.summary || { purchaseCost: purchaseCostTotal, operationalCost: operationalCostTotal, disposalCost: disposalCostTotal, currentBookValue: asset.purchaseCost || 0, tco: tcoTotal, total: operationalCostTotal + disposalCostTotal, totalCostOfOwnership: tcoTotal };
-  const configuredDepreciation = depreciationConfig || (data?.depreciation ? {
-    purchaseCost: data.depreciation.purchaseCost,
-    acquisitionDate: inputDateValue(data.depreciation.purchaseDate),
-    method: data.depreciation.depreciationMethod,
-    usefulLifeYears: data.depreciation.usefulLifeYears,
-  } : null);
+  const configuredDepreciation = depreciationConfig || depreciationConfigFromDetails(data?.depreciation);
 
   return (
     <div className="min-h-[520px] bg-white dark:bg-gray-900">
@@ -1521,6 +2301,10 @@ interface DepreciationConfig {
   acquisitionDate: string;
   method: string;
   usefulLifeYears: number;
+  usefulLifeMonths?: number;
+  calculationMode?: 'usefulLife' | 'percent';
+  depreciationPercent?: number;
+  salvageValue?: number;
 }
 
 interface DepreciationScheduleRow {
@@ -1531,18 +2315,36 @@ interface DepreciationScheduleRow {
   remainingLife: string;
 }
 
+function depreciationConfigFromDetails(details: AssetFinancialsResponse['depreciation'] | null | undefined): DepreciationConfig | null {
+  if (!details) return null;
+  return {
+    purchaseCost: details.purchaseCost,
+    acquisitionDate: inputDateValue(details.purchaseDate),
+    method: details.depreciationMethod,
+    usefulLifeYears: details.usefulLifeYears,
+    usefulLifeMonths: details.usefulLifeMonths ?? (details.usefulLifeYears ? Math.round(details.usefulLifeYears * 12) : undefined),
+    calculationMode: details.calculationMode === 'percent' ? 'percent' : 'usefulLife',
+    depreciationPercent: details.depreciationPercent ?? undefined,
+    salvageValue: details.salvageValue ?? undefined,
+  };
+}
+
 function DepreciationDetails({ config, loading, onConfigure }: { config: DepreciationConfig | null; loading: boolean; onConfigure: () => void }) {
   const [scheduleType, setScheduleType] = useState<'annually' | 'monthly'>('annually');
   const [pageSize, setPageSize] = useState(25);
+  const [pageSizeOpen, setPageSizeOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null);
   const rows = config ? buildDepreciationSchedule(config, scheduleType) : [];
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
   const start = rows.length ? (safePage - 1) * pageSize + 1 : 0;
   const end = Math.min(safePage * pageSize, rows.length);
+  const highlightedPeriod = visibleRows.some((row) => row.period === selectedPeriod) ? selectedPeriod : visibleRows[0]?.period;
 
   useEffect(() => { setPage(1); }, [scheduleType, pageSize, config?.purchaseCost, config?.acquisitionDate, config?.method]);
+  useEffect(() => { setSelectedPeriod(null); }, [scheduleType, config?.purchaseCost, config?.acquisitionDate, config?.method, config?.usefulLifeMonths, config?.depreciationPercent, config?.salvageValue]);
 
   if (loading) return <div className="flex h-40 items-center justify-center text-xs text-gray-500"><Loader2 size={16} className="mr-2 animate-spin" />Loading depreciation details...</div>;
 
@@ -1551,15 +2353,30 @@ function DepreciationDetails({ config, loading, onConfigure }: { config: Depreci
       <button type="button" onClick={onConfigure} className="inline-flex h-7 items-center gap-1 border border-gray-300 bg-white px-2 text-[11px] text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
         <Plus size={13} className="text-gray-600 dark:text-gray-300" /> Configure Depreciation
       </button>
-      <div className="mt-5 flex flex-wrap items-center gap-2 text-[12px]">
+      {config && (
+        <div className="mx-auto mt-6 grid max-w-[980px] grid-cols-1 gap-x-24 gap-y-4 text-[12px] sm:grid-cols-2">
+          <div className="space-y-4">
+            <DepreciationSummaryField label="Purchase Cost($)" value={currency(config.purchaseCost)} />
+            <DepreciationSummaryField label="Depreciation Method" value={config.method || '-'} />
+            <DepreciationSummaryField label="Salvage Value($)" value={config.salvageValue == null ? '-' : currency(config.salvageValue)} />
+          </div>
+          <div className="space-y-4">
+            <DepreciationSummaryField label="Acquisition Date" value={depreciationDateTime(config.acquisitionDate)} />
+            {config.method === 'Declining Balance' && config.calculationMode === 'percent' ? (
+              <DepreciationSummaryField label="Decline Percent/Year(%)" value={currency(config.depreciationPercent)} />
+            ) : (
+              <DepreciationSummaryField label="Useful Life" value={usefulLifeMonthsText(config)} />
+            )}
+          </div>
+        </div>
+      )}
+      <div className="mt-8 flex flex-wrap items-center gap-2 text-[12px]">
         <span className="text-gray-900 dark:text-gray-100">Depreciation Schedule :</span>
         <div className="inline-flex overflow-hidden rounded-full border border-gray-300 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
           <button type="button" onClick={() => setScheduleType('annually')} className={`h-6 px-3 text-[11px] font-medium ${scheduleType === 'annually' ? 'bg-sky-500 text-white' : 'text-gray-700 dark:text-gray-300'}`}>ANNUALLY</button>
           <button type="button" onClick={() => setScheduleType('monthly')} className={`h-6 px-3 text-[11px] font-medium ${scheduleType === 'monthly' ? 'bg-sky-500 text-white' : 'text-gray-700 dark:text-gray-300'}`}>MONTHLY</button>
         </div>
-        <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))} className="ml-1 h-7 border border-gray-300 bg-white px-2 text-[11px] dark:border-gray-700 dark:bg-gray-900">
-          {[10, 25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
-        </select>
+        <CompactPageSizeDropdown value={pageSize} open={pageSizeOpen} onOpenChange={setPageSizeOpen} onChange={setPageSize} />
         <span className="border-l border-gray-200 pl-2 text-[11px] text-gray-500 dark:border-gray-700">{start} - {end} of {rows.length}</span>
         <SmallButton onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronDown size={12} className="rotate-90" /></SmallButton>
         <SmallButton onClick={() => setPage((value) => Math.min(totalPages, value + 1))}><ChevronDown size={12} className="-rotate-90" /></SmallButton>
@@ -1567,7 +2384,7 @@ function DepreciationDetails({ config, loading, onConfigure }: { config: Depreci
       <table className="mt-3 w-full border-collapse text-[11px]">
         <thead className="bg-gray-50 uppercase dark:bg-gray-800">
           <tr className="border-y border-gray-200 dark:border-gray-700">
-            <th className="border-r border-gray-200 px-2 py-2 text-left font-normal dark:border-gray-700">Year(s)</th>
+            <th className="border-r border-gray-200 px-2 py-2 text-left font-normal dark:border-gray-700">{scheduleType === 'monthly' ? 'Year/Month' : 'Year(s)'}</th>
             <th className="border-r border-gray-200 px-2 py-2 text-left font-normal dark:border-gray-700">Depreciation ($)</th>
             <th className="border-r border-gray-200 px-2 py-2 text-left font-normal dark:border-gray-700">Accumulated Depreciation ($)</th>
             <th className="border-r border-gray-200 px-2 py-2 text-left font-normal dark:border-gray-700">Book Value ($)</th>
@@ -1576,7 +2393,11 @@ function DepreciationDetails({ config, loading, onConfigure }: { config: Depreci
         </thead>
         <tbody>
           {visibleRows.length ? visibleRows.map((row) => (
-            <tr key={row.period} className="border-b border-gray-100 dark:border-gray-800">
+            <tr
+              key={row.period}
+              onClick={() => setSelectedPeriod(row.period)}
+              className={`cursor-default border-b border-gray-100 dark:border-gray-800 ${row.period === highlightedPeriod ? 'bg-yellow-50 dark:bg-yellow-950/30' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+            >
               <td className="px-2 py-2">{row.period}</td>
               <td className="px-2 py-2">{currency(row.depreciation)}</td>
               <td className="px-2 py-2">{currency(row.accumulatedDepreciation)}</td>
@@ -1592,44 +2413,111 @@ function DepreciationDetails({ config, loading, onConfigure }: { config: Depreci
   );
 }
 
+function DepreciationSummaryField({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[minmax(140px,220px)_minmax(0,1fr)] items-baseline gap-6">
+      <span className="text-right text-gray-800 dark:text-gray-300">{label}</span>
+      <span className="font-semibold text-gray-950 dark:text-gray-100">{value}</span>
+    </div>
+  );
+}
+
 function buildDepreciationSchedule(config: DepreciationConfig, scheduleType: 'annually' | 'monthly'): DepreciationScheduleRow[] {
   if (!config.purchaseCost || !config.acquisitionDate || !config.method) return [];
-  const periods = scheduleType === 'monthly' ? config.usefulLifeYears * 12 : config.usefulLifeYears;
-  const rows: DepreciationScheduleRow[] = [];
+  const usefulLifeMonths = Math.max(1, Math.round(config.usefulLifeMonths || config.usefulLifeYears * 12 || 60));
   const startDate = new Date(`${config.acquisitionDate}T00:00:00`);
-  let bookValue = config.purchaseCost;
+  if (Number.isNaN(startDate.getTime())) return [];
+  const salvageValue = Math.min(Math.max(0, Number(config.salvageValue || 0)), config.purchaseCost);
+  if (config.method === 'Declining Balance' && config.calculationMode === 'percent' && Number(config.depreciationPercent) > 0) {
+    const monthlyRows = buildDecliningPercentMonthlySchedule(config, startDate, salvageValue, usefulLifeMonths);
+    return scheduleType === 'monthly' ? monthlyRows : groupMonthlyDepreciationByYear(monthlyRows);
+  }
+  const depreciableCost = Math.max(0, config.purchaseCost - salvageValue);
+  const monthlyBase = Math.floor((depreciableCost / usefulLifeMonths) * 100) / 100;
+  const monthlyRows: DepreciationScheduleRow[] = [];
   let accumulated = 0;
-  const sumOfYears = (config.usefulLifeYears * (config.usefulLifeYears + 1)) / 2;
 
-  for (let index = 1; index <= periods; index += 1) {
-    const yearIndex = scheduleType === 'monthly' ? Math.ceil(index / 12) : index;
-    let depreciation = config.purchaseCost / periods;
-    if (config.method === 'Declining Balance') depreciation = bookValue * (0.2 / (scheduleType === 'monthly' ? 12 : 1));
-    if (config.method === 'Double Declining Balance') depreciation = bookValue * ((2 / config.usefulLifeYears) / (scheduleType === 'monthly' ? 12 : 1));
-    if (config.method === 'Sum Of The Years Digit') {
-      const annual = config.purchaseCost * ((config.usefulLifeYears - yearIndex + 1) / sumOfYears);
-      depreciation = scheduleType === 'monthly' ? annual / 12 : annual;
-    }
-    depreciation = Math.min(depreciation, bookValue);
+  for (let index = 1; index <= usefulLifeMonths; index += 1) {
+    const isLastRow = index === usefulLifeMonths;
+    const remainingDepreciable = Math.max(0, depreciableCost - accumulated);
+    const depreciation = isLastRow ? remainingDepreciable : Math.min(monthlyBase, remainingDepreciable);
     accumulated += depreciation;
-    bookValue = Math.max(0, config.purchaseCost - accumulated);
+    const bookValue = Math.max(salvageValue, config.purchaseCost - accumulated);
     const periodDate = new Date(startDate);
-    if (scheduleType === 'monthly') periodDate.setMonth(startDate.getMonth() + index - 1);
-    else periodDate.setFullYear(startDate.getFullYear() + index - 1);
-    rows.push({
-      period: scheduleType === 'monthly' ? periodDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : String(periodDate.getFullYear()),
+    periodDate.setMonth(startDate.getMonth() + index - 1);
+    monthlyRows.push({
+      period: periodDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }).replace(' ', ', '),
       depreciation,
       accumulatedDepreciation: accumulated,
       bookValue,
-      remainingLife: scheduleType === 'monthly' ? `${Math.max(0, periods - index)} month(s)` : `${Math.max(0, config.usefulLifeYears - index)} year(s)`,
+      remainingLife: `${Math.max(0, usefulLifeMonths - index)} month(s)`,
     });
-    if (bookValue <= 0) break;
   }
+
+  if (scheduleType === 'monthly') return monthlyRows;
+
+  return groupMonthlyDepreciationByYear(monthlyRows);
+}
+
+function buildDecliningPercentMonthlySchedule(config: DepreciationConfig, startDate: Date, salvageValue: number, durationMonths: number): DepreciationScheduleRow[] {
+  const annualRate = Math.max(0, Number(config.depreciationPercent || 0)) / 100;
+  const rows: DepreciationScheduleRow[] = [];
+  let bookValue = config.purchaseCost;
+  let accumulated = 0;
+  let rateYear = -1;
+  let monthlyDepreciationForYear = 0;
+
+  for (let index = 1; index <= durationMonths; index += 1) {
+    const periodDate = new Date(startDate);
+    periodDate.setMonth(startDate.getMonth() + index - 1);
+    if (periodDate.getFullYear() !== rateYear) {
+      rateYear = periodDate.getFullYear();
+      monthlyDepreciationForYear = bookValue * (annualRate / 12);
+    }
+    const remainingDepreciable = Math.max(0, bookValue - salvageValue);
+    const depreciation = Math.min(remainingDepreciable, monthlyDepreciationForYear);
+    accumulated += depreciation;
+    bookValue = Math.max(salvageValue, bookValue - depreciation);
+    rows.push({
+      period: periodDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }).replace(' ', ', '),
+      depreciation,
+      accumulatedDepreciation: accumulated,
+      bookValue,
+      remainingLife: remainingLifeText(durationMonths - index),
+    });
+    if (bookValue <= salvageValue) break;
+  }
+
   return rows;
 }
 
+function groupMonthlyDepreciationByYear(monthlyRows: DepreciationScheduleRow[]) {
+  const yearlyRows = new Map<string, DepreciationScheduleRow>();
+  monthlyRows.forEach((row) => {
+    const year = row.period.split(', ')[1] || row.period;
+    const existing = yearlyRows.get(year);
+    if (existing) {
+      existing.depreciation += row.depreciation;
+      existing.accumulatedDepreciation = row.accumulatedDepreciation;
+      existing.bookValue = row.bookValue;
+      existing.remainingLife = row.remainingLife;
+    } else {
+      yearlyRows.set(year, { ...row, period: year });
+    }
+  });
+  return Array.from(yearlyRows.values());
+}
+
 function ConfigureDepreciationModal({ open, asset, initialConfig, onClose, onSave }: { open: boolean; asset: Asset; initialConfig: DepreciationConfig | null; onClose: () => void; onSave: (config: DepreciationConfig) => void }) {
-  const [form, setForm] = useState({ purchaseCost: '', acquisitionDate: '', method: '', usefulLifeYears: '5' });
+  const [form, setForm] = useState({
+    purchaseCost: '',
+    acquisitionDate: '',
+    method: '',
+    calculationMode: 'usefulLife' as 'usefulLife' | 'percent',
+    usefulLifeMonths: '60',
+    depreciationPercent: '',
+    salvageValue: '',
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -1639,25 +2527,59 @@ function ConfigureDepreciationModal({ open, asset, initialConfig, onClose, onSav
       purchaseCost: currency(initialConfig?.purchaseCost ?? asset.purchaseCost ?? 0),
       acquisitionDate: initialConfig?.acquisitionDate || (asset.acquisitionDate ? inputDateValue(asset.acquisitionDate) : ''),
       method: initialConfig?.method || '',
-      usefulLifeYears: String(initialConfig?.usefulLifeYears || 5),
+      calculationMode: initialConfig?.calculationMode || 'usefulLife',
+      usefulLifeMonths: String(initialConfig?.usefulLifeMonths || (initialConfig?.usefulLifeYears ? initialConfig.usefulLifeYears * 12 : 60)),
+      depreciationPercent: initialConfig?.depreciationPercent != null ? String(initialConfig.depreciationPercent) : '',
+      salvageValue: initialConfig?.salvageValue != null ? String(initialConfig.salvageValue) : '',
     });
   }, [open, asset.purchaseCost, asset.acquisitionDate, initialConfig]);
 
   if (!open) return null;
 
+  const hasSelectedMethod = Boolean(form.method);
+  const showsPercentToggle = form.method === 'Declining Balance' || form.method === 'Straight Line';
+  const showsUsefulLifeInput = hasSelectedMethod && (!showsPercentToggle || form.calculationMode === 'usefulLife');
+  const showsDepreciationPercentInput = showsPercentToggle && form.calculationMode === 'percent';
+
   function save() {
     const nextErrors: Record<string, string> = {};
     const purchaseCost = Number(form.purchaseCost);
+    const usefulLifeMonths = Number(form.usefulLifeMonths);
+    const depreciationPercent = Number(form.depreciationPercent);
+    const salvageValue = form.salvageValue.trim() === '' ? 0 : Number(form.salvageValue);
     if (form.purchaseCost.trim() === '' || Number.isNaN(purchaseCost) || purchaseCost < 0) nextErrors.purchaseCost = 'Purchase Cost is required.';
     if (!form.acquisitionDate) nextErrors.acquisitionDate = 'Acquisition Date is required.';
     if (!form.method) nextErrors.method = 'Depreciation Method is required.';
+    if (showsUsefulLifeInput && (form.usefulLifeMonths.trim() === '' || Number.isNaN(usefulLifeMonths) || usefulLifeMonths <= 0)) {
+      nextErrors.usefulLifeMonths = 'Useful Life is required.';
+    }
+    if (showsDepreciationPercentInput && (form.depreciationPercent.trim() === '' || Number.isNaN(depreciationPercent) || depreciationPercent <= 0 || depreciationPercent > 100)) {
+      nextErrors.depreciationPercent = 'Depreciation Percent is required.';
+    }
+    if (hasSelectedMethod && form.salvageValue.trim() !== '' && (Number.isNaN(salvageValue) || salvageValue < 0 || salvageValue > purchaseCost)) {
+      nextErrors.salvageValue = 'Enter a valid Salvage Value.';
+    }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
+    const savedSalvageValue = hasSelectedMethod && form.salvageValue.trim() !== '' ? salvageValue : undefined;
+    const percentModeDefaultMonths = initialConfig?.usefulLifeMonths || (initialConfig?.usefulLifeYears ? initialConfig.usefulLifeYears * 12 : 240);
+    const fallbackUsefulLifeMonths = Number(form.usefulLifeMonths)
+      || initialConfig?.usefulLifeMonths
+      || (initialConfig?.usefulLifeYears ? initialConfig.usefulLifeYears * 12 : 60);
+    const safeUsefulLifeMonths = showsUsefulLifeInput
+      ? Math.max(1, usefulLifeMonths)
+      : showsDepreciationPercentInput
+        ? Math.max(1, percentModeDefaultMonths)
+      : Math.max(1, fallbackUsefulLifeMonths);
     onSave({
       purchaseCost,
       acquisitionDate: form.acquisitionDate,
       method: form.method,
-      usefulLifeYears: Math.max(1, Number(form.usefulLifeYears) || 5),
+      usefulLifeYears: Math.max(1, safeUsefulLifeMonths / 12),
+      usefulLifeMonths: safeUsefulLifeMonths,
+      calculationMode: showsPercentToggle ? form.calculationMode : 'usefulLife',
+      depreciationPercent: showsDepreciationPercentInput ? depreciationPercent : undefined,
+      salvageValue: savedSalvageValue,
     });
   }
 
@@ -1702,7 +2624,7 @@ function ConfigureDepreciationModal({ open, asset, initialConfig, onClose, onSav
             <select
               value={form.method}
               onChange={(event) => {
-                setForm((prev) => ({ ...prev, method: event.target.value }));
+                setForm((prev) => ({ ...prev, method: event.target.value, calculationMode: 'usefulLife' }));
                 setErrors((prev) => ({ ...prev, method: '' }));
               }}
               className={`h-8 w-full border border-gray-300 bg-white px-2 text-xs outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 ${form.method ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400'}`}
@@ -1711,6 +2633,78 @@ function ConfigureDepreciationModal({ open, asset, initialConfig, onClose, onSav
               {DEPRECIATION_METHODS.map((method) => <option key={method} value={method}>{method}</option>)}
             </select>
           </DepreciationModalRow>
+          {hasSelectedMethod && (
+            <>
+              {showsPercentToggle && (
+                <DepreciationModalRow label="">
+                  <div className="flex h-8 flex-wrap items-center gap-4">
+                    <label className="inline-flex items-center gap-2 text-xs text-gray-900 dark:text-gray-100">
+                      <input
+                        type="radio"
+                        checked={form.calculationMode === 'usefulLife'}
+                        onChange={() => setForm((prev) => ({ ...prev, calculationMode: 'usefulLife' }))}
+                        className="border-gray-300 text-sky-600 focus:ring-sky-500"
+                      />
+                      Useful Life
+                    </label>
+                    <label className="inline-flex items-center gap-2 text-xs text-gray-900 dark:text-gray-100">
+                      <input
+                        type="radio"
+                        checked={form.calculationMode === 'percent'}
+                        onChange={() => setForm((prev) => ({ ...prev, calculationMode: 'percent' }))}
+                        className="border-gray-300 text-sky-600 focus:ring-sky-500"
+                    />
+                      {form.method === 'Declining Balance' ? 'Decline Percent' : 'Depreciation Percent'}
+                    </label>
+                  </div>
+                </DepreciationModalRow>
+              )}
+              {showsUsefulLifeInput && (
+                <DepreciationModalRow label="Useful Life (in months)" required error={errors.usefulLifeMonths}>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={form.usefulLifeMonths}
+                    onChange={(event) => {
+                      setForm((prev) => ({ ...prev, usefulLifeMonths: event.target.value }));
+                      setErrors((prev) => ({ ...prev, usefulLifeMonths: '' }));
+                    }}
+                    className="h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                  />
+                </DepreciationModalRow>
+              )}
+              {showsDepreciationPercentInput && (
+                <DepreciationModalRow label={form.method === 'Declining Balance' ? 'Decline Percent/Year(%)' : 'Depreciation Percent/Year(%)'} required error={errors.depreciationPercent}>
+                  <input
+                    type="number"
+                    min="0.01"
+                    max="100"
+                    step="0.01"
+                    value={form.depreciationPercent}
+                    onChange={(event) => {
+                      setForm((prev) => ({ ...prev, depreciationPercent: event.target.value }));
+                      setErrors((prev) => ({ ...prev, depreciationPercent: '' }));
+                    }}
+                    className="h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                  />
+                </DepreciationModalRow>
+              )}
+              <DepreciationModalRow label="Salvage Value ($)" error={errors.salvageValue}>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.salvageValue}
+                  onChange={(event) => {
+                    setForm((prev) => ({ ...prev, salvageValue: event.target.value }));
+                    setErrors((prev) => ({ ...prev, salvageValue: '' }));
+                  }}
+                  className="h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                />
+              </DepreciationModalRow>
+            </>
+          )}
         </div>
         <div className="sticky bottom-0 flex shrink-0 justify-center gap-3 border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
           <button type="button" onClick={save} className="h-8 rounded-full bg-sky-600 px-5 text-xs font-semibold text-white hover:bg-sky-700">Save</button>
@@ -1764,7 +2758,7 @@ function SearchableOptionSelect({ options, value, placeholder, onChange }: { opt
   );
 }
 
-function HistoryContent({ asset, refreshKey }: { asset: Asset; refreshKey: string }) {
+function HistoryContent({ asset, refreshKey, localItems = [] }: { asset: Asset; refreshKey: string; localItems?: AssetHistoryItem[] }) {
   const [subTab, setSubTab] = useState<'ownership' | 'asset'>('asset');
   const [collapsedDates, setCollapsedDates] = useState<Record<string, boolean>>({});
   const [items, setItems] = useState<AssetHistoryItem[]>([]);
@@ -1780,7 +2774,13 @@ function HistoryContent({ asset, refreshKey }: { asset: Asset; refreshKey: strin
     return () => { active = false; };
   }, [asset.id, asset.updatedAt, refreshKey, subTab]);
 
-  const grouped = items.reduce<Record<string, TimelineEvent[]>>((acc, item) => {
+  const visibleItems = useMemo(() => (
+    subTab === 'asset'
+      ? [...localItems, ...items].sort((a, b) => new Date(b.changedOn).getTime() - new Date(a.changedOn).getTime() || a.id - b.id)
+      : items
+  ), [items, localItems, subTab]);
+
+  const grouped = visibleItems.reduce<Record<string, TimelineEvent[]>>((acc, item) => {
     const key = inputDateValue(item.changedOn);
     acc[key] = acc[key] || [];
     const last = acc[key][acc[key].length - 1];
@@ -1897,11 +2897,11 @@ function historyDetails(item: AssetHistoryItem) {
 }
 
 export default function AssetDetailPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const assetId   = searchParams.get('asset-id');
   const ptId      = searchParams.get('asset-product-type-id');
-  const activeTab = searchParams.get('tab') || 'asset-detail';
+  const [activeTab, setActiveTab] = useState(() => normalizeAssetDetailTab(searchParams.get('detail-tab') || searchParams.get('tab')));
   const refreshKey = searchParams.get('refresh') || '';
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -2122,14 +3122,33 @@ export default function AssetDetailPage() {
     setDepreciationModalOpen(true);
   }
 
-  function handleDepreciationSave(config: DepreciationConfig) {
-    setDepreciationConfig(config);
-    setDepreciationInitialConfig(config);
-    setDepreciationModalOpen(false);
-    showToast('Depreciation configured successfully.');
+  async function handleDepreciationSave(config: DepreciationConfig) {
+    if (!asset) return;
+    try {
+      const saved = await saveAssetDepreciation(asset.id, config);
+      const persistedConfig = depreciationConfigFromDetails(saved) || config;
+      setDepreciationConfig(persistedConfig);
+      setDepreciationInitialConfig(persistedConfig);
+      setDepreciationModalOpen(false);
+      setHistoryRefreshKey(String(Date.now()));
+      showToast('Depreciation configured successfully.');
+    } catch (error) {
+      console.error(error);
+      showToast(apiErrorMessage(error, 'Failed to configure depreciation.'), 'error');
+    }
   }
 
-  function goToTab(key: string) { navigate(`/assets/detail?asset-product-type-id=${ptId}&asset-id=${assetId}&tab=${key}`); }
+  function goToTab(key: string) {
+    const nextTab = normalizeAssetDetailTab(key);
+    setActiveTab(nextTab);
+    const nextParams = new URLSearchParams(searchParams);
+    if (assetId) nextParams.set('asset-id', assetId);
+    if (ptId) nextParams.set('asset-product-type-id', ptId);
+    else nextParams.delete('asset-product-type-id');
+    nextParams.set('tab', nextTab);
+    nextParams.set('detail-tab', nextTab);
+    setSearchParams(nextParams);
+  }
   const userDetailsId = asset?.assignedUserId || asset?.user || null;
   function openUserDrawer() {
     if (userDetailsId) setUserDrawerOpen(true);
@@ -2158,8 +3177,11 @@ export default function AssetDetailPage() {
             <nav className="flex gap-6 overflow-x-auto scrollbar-thin">
               {MAIN_TABS.map(({ key, label }) => (
                 <button
+                  type="button"
                   key={key}
+                  onMouseDown={() => setActiveTab(key)}
                   onClick={() => goToTab(key)}
+                  data-asset-detail-tab={key}
                   className={`h-9 shrink-0 border-b-2 text-[11px] font-medium transition-colors ${activeTab === key ? 'border-sky-500 text-sky-600 dark:text-sky-300' : 'border-transparent text-gray-700 hover:text-sky-600 dark:text-gray-300 dark:hover:text-sky-300'}`}
                 >
                   {label}
@@ -2186,7 +3208,7 @@ export default function AssetDetailPage() {
             {activeTab === 'relationships' && <RelationshipsTab asset={asset} refreshKey={relationshipsRefreshKey} onAssign={() => { setAssignMode('assign'); setAssignOpen(true); }} />}
             {activeTab === 'contracts'     && <AssetContractsTab assetId={asset.id} />}
             {activeTab === 'financials'    && <AssetFinancialsTab asset={asset} depreciationConfig={depreciationConfig} onConfigureDepreciation={openDepreciationModal} />}
-            {activeTab === 'associations'  && <EmptyCard title="Associations" />}
+            {(activeTab === 'associations' || activeTab === 'association') && <AssociationsContent />}
             {activeTab === 'history'       && <HistoryContent asset={asset} refreshKey={`${refreshKey}:${historyRefreshKey}`} />}
           </div>
         </main>

@@ -284,8 +284,28 @@ model Asset {
   contracts AssetContract[]
   costs AssetCost[]
   attachments AssetAttachment[]
+  depreciationConfig AssetDepreciationConfig?
 
   @@map("assets")
+}
+
+model AssetDepreciationConfig {
+  id                  Int      @id @default(autoincrement())
+  assetId             Int      @unique @map("asset_id")
+  purchaseCost        Float    @map("purchase_cost")
+  acquisitionDate     DateTime @map("acquisition_date")
+  method              String
+  calculationMode     String?  @map("calculation_mode")
+  usefulLifeMonths    Int?     @map("useful_life_months")
+  depreciationPercent Float?   @map("depreciation_percent")
+  salvageValue        Float?   @map("salvage_value")
+  configuredBy        String?  @map("configured_by")
+  configuredOn        DateTime @default(now()) @map("configured_on")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("asset_depreciation_configs")
 }
 
 model AssetAttachment {

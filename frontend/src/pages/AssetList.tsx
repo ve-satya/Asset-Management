@@ -652,6 +652,7 @@ export default function AssetList() {
   const [stateFilter, setStateFilter] = useState('');
   const [assetViewFilter, setAssetViewFilter] = useState(() => localStorage.getItem(ASSET_VIEW_LS_KEY) || '');
   const [productFilter, setProductFilter] = useState(() => localStorage.getItem(PRODUCT_FILTER_LS_KEY) || '');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchFiltersOpen, setSearchFiltersOpen] = useState(false);
   const [sortKey, setSortKey] = useState<string | null>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection | null>('asc');
@@ -764,7 +765,6 @@ export default function AssetList() {
 
   const filteredAssets = assets;
   const visibleDefs = ALL_COLUMNS.filter((column) => visibleCols.includes(column.key));
-  const hasActiveFilters = Boolean(rawSearch || stateFilter || assetViewFilter || productFilter);
   const rangeStart = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1;
   const rangeEnd = Math.min(pagination.page * pagination.pageSize, pagination.total);
 
@@ -811,14 +811,6 @@ export default function AssetList() {
     } finally {
       setDeleting(false);
     }
-  }
-
-  function clearFilters() {
-    setRawSearch('');
-    setStateFilter('');
-    setAssetViewFilter('');
-    setProductFilter('');
-    setPagination((prev) => ({ ...prev, page: 1 }));
   }
 
   function handleSort(column: ColumnDef) {
@@ -971,7 +963,7 @@ export default function AssetList() {
           <ActionsDropdown disabled={selected.length === 0} />
           <ListViewDropdown onExportAssets={() => setExportOpen(true)} />
           <ToolbarButton>New Scan</ToolbarButton>
-          <ToolbarButton active={searchFiltersOpen || hasActiveFilters} onClick={() => setSearchFiltersOpen((value) => !value)}>Filters</ToolbarButton>
+          <ToolbarButton active={filtersOpen} onClick={() => setFiltersOpen((value) => !value)}>Filters</ToolbarButton>
           <ToolbarButton title="Delete selected" disabled={selected.length === 0} onClick={() => setDeleteTarget(selected)}><Trash2 size={16} /></ToolbarButton>
           <div className="flex items-center">
             <ToolbarButton active={searchFiltersOpen || Boolean(rawSearch)} onClick={() => setSearchFiltersOpen((value) => !value)} title="Search"><Search size={17} /></ToolbarButton>
@@ -992,33 +984,33 @@ export default function AssetList() {
           </div>
         </div>
 
-        <div className="flex min-h-12 flex-wrap items-center gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700 sm:gap-4">
-          <select
-            value={stateFilter}
-            onChange={(event) => { setStateFilter(event.target.value); setPagination((prev) => ({ ...prev, page: 1 })); }}
-            className="h-8 w-full rounded border border-gray-300 bg-white px-2 text-xs text-gray-700 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 sm:w-56"
-          >
-            <option value="">Select States</option>
-            {stateList.map((state) => <option key={state.id} value={state.name}>{state.name}</option>)}
-          </select>
-          <SearchableFilterDropdown
-            value={assetViewFilter}
-            options={ASSET_VIEW_OPTIONS}
-            placeholder="All Assets"
-            onChange={(value) => { setAssetViewFilter(value); setPagination((prev) => ({ ...prev, page: 1 })); }}
-          />
-          <SearchableFilterDropdown
-            value={productFilter}
-            options={productFilterOptions}
-            placeholder={productFilterLabel}
-            onChange={(value) => { setProductFilter(value); setPagination((prev) => ({ ...prev, page: 1 })); }}
-          />
-          {hasActiveFilters && (
-            <button type="button" onClick={clearFilters} className="flex h-8 w-8 items-center justify-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100" aria-label="Clear filters">
+        {filtersOpen && (
+          <div className="flex min-h-12 flex-wrap items-center gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700 sm:gap-4">
+            <select
+              value={stateFilter}
+              onChange={(event) => { setStateFilter(event.target.value); setPagination((prev) => ({ ...prev, page: 1 })); }}
+              className="h-8 w-full rounded border border-gray-300 bg-white px-2 text-xs text-gray-700 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 sm:w-56"
+            >
+              <option value="">Select States</option>
+              {stateList.map((state) => <option key={state.id} value={state.name}>{state.name}</option>)}
+            </select>
+            <SearchableFilterDropdown
+              value={assetViewFilter}
+              options={ASSET_VIEW_OPTIONS}
+              placeholder="All Assets"
+              onChange={(value) => { setAssetViewFilter(value); setPagination((prev) => ({ ...prev, page: 1 })); }}
+            />
+            <SearchableFilterDropdown
+              value={productFilter}
+              options={productFilterOptions}
+              placeholder={productFilterLabel}
+              onChange={(value) => { setProductFilter(value); setPagination((prev) => ({ ...prev, page: 1 })); }}
+            />
+            <button type="button" onClick={() => setFiltersOpen(false)} className="flex h-8 w-8 items-center justify-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100" aria-label="Hide filters">
               <X size={17} />
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {searchFiltersOpen && (
           <div className="flex h-11 items-center border-b border-gray-200 px-3 dark:border-gray-700">
