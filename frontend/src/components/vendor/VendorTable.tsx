@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import {
   createProductVendorAssociation,
+  deleteProductVendorAssociation,
   getAllProducts,
   updateProductVendorAssociation,
 } from '../../services/productService';
@@ -490,14 +491,52 @@ function VendorProductPanel({
   loading,
   onAssociate,
   onEdit,
+  onProductSearch,
+  onDeleteSelected,
 }: {
   vendor: Vendor;
   rows: ProductVendorAssociation[];
   loading: boolean;
   onAssociate: () => void;
   onEdit: (row: ProductVendorAssociation) => void;
+  onProductSearch: (query: string) => void;
+  onDeleteSelected: (rows: ProductVendorAssociation[]) => Promise<void>;
 }) {
+  const [showProductSearch, setShowProductSearch] = useState(false);
+  const [productQuery, setProductQuery] = useState('');
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deletingSelected, setDeletingSelected] = useState(false);
+  const allSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.id));
+  const selectedRows = rows.filter((row) => selectedIds.includes(row.id));
+  const selectedCount = selectedRows.length;
+
+  useEffect(() => {
+    setSelectedIds((current) => current.filter((id) => rows.some((row) => row.id === id)));
+  }, [rows]);
+
+  function toggleRow(id: number) {
+    setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  }
+
+  function toggleAll() {
+    setSelectedIds(allSelected ? [] : rows.map((row) => row.id));
+  }
+
+  async function confirmDeleteSelected() {
+    if (selectedRows.length === 0) return;
+    setDeletingSelected(true);
+    try {
+      await onDeleteSelected(selectedRows);
+      setSelectedIds([]);
+      setConfirmDeleteOpen(false);
+    } finally {
+      setDeletingSelected(false);
+    }
+  }
+
   return (
+    <>
     <div className="border-x border-b border-yellow-100 bg-yellow-50 px-4 pb-5 pt-0 dark:border-yellow-900/50 dark:bg-yellow-950/20">
       <div className="bg-white dark:bg-gray-900">
         <div className="flex border-b border-gray-200 dark:border-gray-700">
@@ -513,11 +552,26 @@ function VendorProductPanel({
           <button type="button" onClick={onAssociate} className="h-7 border border-gray-300 bg-white px-3 text-sm text-gray-800 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
             Associate Product
           </button>
-          <button type="button" className="inline-flex h-7 w-9 items-center justify-center border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+          <button
+            type="button"
+            onClick={() => setShowProductSearch((value) => !value)}
+            className={`inline-flex h-7 w-9 items-center justify-center border border-gray-300 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700 ${showProductSearch ? 'text-blue-600' : 'text-gray-700 dark:text-gray-100'}`}
+            title="Search product"
+          >
             <Search size={15} />
           </button>
-          <button type="button" disabled className="inline-flex h-7 w-14 cursor-not-allowed items-center justify-center border border-gray-300 bg-white text-gray-300 dark:border-gray-600 dark:bg-gray-800">
-            Delete
+          <button
+            type="button"
+            disabled={selectedCount === 0 || deletingSelected}
+            onClick={() => setConfirmDeleteOpen(true)}
+            className={`inline-flex h-7 w-14 items-center justify-center border border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800 ${
+              selectedCount > 0 && !deletingSelected
+                ? 'text-yellow-600 hover:bg-yellow-50 dark:text-yellow-400 dark:hover:bg-gray-700'
+                : 'cursor-not-allowed text-gray-300'
+            }`}
+            title={selectedCount > 0 ? 'Delete selected products' : 'Select products to delete'}
+          >
+            {deletingSelected ? <Loader2 size={14} className="animate-spin" /> : 'Delete'}
           </button>
           <div className="flex h-7 items-center gap-0 text-sm text-gray-700 dark:text-gray-300">
             <button type="button" className="inline-flex h-7 w-[60px] items-center justify-between border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
@@ -533,13 +587,36 @@ function VendorProductPanel({
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-              <th className="w-10 px-3 py-2 text-left"><input type="checkbox" className="rounded border-gray-300 text-blue-600" /></th>
+              <th className="w-10 px-3 py-2 text-left">
+                <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-gray-300 text-blue-600" />
+              </th>
               <th className="w-14 px-3 py-2 text-left" />
               <th className="px-3 py-2 text-left">Product</th>
               <th className="px-3 py-2 text-left">Price</th>
               <th className="px-3 py-2 text-left">Warranty Period</th>
               <th className="px-3 py-2 text-left">Comments</th>
             </tr>
+            {showProductSearch && (
+              <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                <th className="px-3 py-1" />
+                <th className="px-3 py-1" />
+                <th className="px-3 py-1 text-left">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={productQuery}
+                    onChange={(event) => setProductQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') onProductSearch(productQuery);
+                    }}
+                    className="h-8 w-full max-w-sm border border-blue-400 bg-white px-2 text-sm font-normal text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-blue-500 dark:bg-gray-900 dark:text-gray-100"
+                  />
+                </th>
+                <th className="px-3 py-1" />
+                <th className="px-3 py-1" />
+                <th className="px-3 py-1" />
+              </tr>
+            )}
           </thead>
           <tbody>
             {loading ? (
@@ -548,7 +625,9 @@ function VendorProductPanel({
               <tr><td colSpan={6} className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">No data available</td></tr>
             ) : rows.map((row) => (
               <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/60">
-                <td className="px-3 py-2"><input type="checkbox" className="rounded border-gray-300 text-blue-600" /></td>
+                <td className="px-3 py-2">
+                  <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleRow(row.id)} className="rounded border-gray-300 text-blue-600" />
+                </td>
                 <td className="px-3 py-2 text-gray-400"><AlignJustify size={14} /></td>
                 <td className="px-3 py-2">
                   <button type="button" onClick={() => onEdit(row)} className="text-blue-600 hover:underline dark:text-blue-400">{row.product?.name ?? '-'}</button>
@@ -562,6 +641,15 @@ function VendorProductPanel({
         </table>
       </div>
     </div>
+    <ConfirmDialog
+      open={confirmDeleteOpen}
+      onClose={() => setConfirmDeleteOpen(false)}
+      onConfirm={confirmDeleteSelected}
+      loading={deletingSelected}
+      title="Delete Product Association"
+      message={`Are you sure you want to delete ${selectedCount} selected product association${selectedCount === 1 ? '' : 's'}?`}
+    />
+    </>
   );
 }
 
@@ -587,6 +675,7 @@ export default function VendorTable() {
   const [expandedVendorId, setExpandedVendorId] = useState<number | null>(null);
   const [productAssociationLoading, setProductAssociationLoading] = useState<Record<number, boolean>>({});
   const [productAssociations, setProductAssociations] = useState<Record<number, ProductVendorAssociation[]>>({});
+  const [productAssociationSearches, setProductAssociationSearches] = useState<Record<number, string>>({});
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [vendors, setVendors] = useState<NamedOption[]>([]);
   const [associationVendor, setAssociationVendor] = useState<Vendor | null>(null);
@@ -678,10 +767,10 @@ export default function VendorTable() {
     return <span>{String(value ?? '-')}</span>;
   }
 
-  async function loadProductAssociations(vendorId: number) {
+  async function loadProductAssociations(vendorId: number, productSearch = productAssociationSearches[vendorId] || '') {
     setProductAssociationLoading((prev) => ({ ...prev, [vendorId]: true }));
     try {
-      const rows = await getVendorProductAssociations(vendorId);
+      const rows = await getVendorProductAssociations(vendorId, productSearch.trim() ? { productSearch: productSearch.trim() } : undefined);
       setProductAssociations((prev) => ({ ...prev, [vendorId]: rows }));
     } catch (error) {
       console.error(error);
@@ -696,6 +785,11 @@ export default function VendorTable() {
     if (nextId) loadProductAssociations(nextId);
   }
 
+  function searchVendorProducts(vendorId: number, productSearch: string) {
+    setProductAssociationSearches((prev) => ({ ...prev, [vendorId]: productSearch }));
+    loadProductAssociations(vendorId, productSearch);
+  }
+
   function openProductAssociationModal(vendor: Vendor, record: ProductVendorAssociation | null = null) {
     setAssociationVendor(vendor);
     setEditingProductAssociation(record);
@@ -708,6 +802,11 @@ export default function VendorTable() {
 
   function handleProductAssociationSaved() {
     if (associationVendor) loadProductAssociations(associationVendor.id);
+  }
+
+  async function deleteSelectedProductAssociations(vendorId: number, rows: ProductVendorAssociation[]) {
+    await Promise.all(rows.map((row) => deleteProductVendorAssociation(row.productId, row.id)));
+    await loadProductAssociations(vendorId);
   }
 
   async function handleConfirmDelete() {
@@ -843,6 +942,8 @@ export default function VendorTable() {
                         loading={Boolean(productAssociationLoading[row.id])}
                         onAssociate={() => openProductAssociationModal(row)}
                         onEdit={(record) => openProductAssociationModal(row, record)}
+                        onProductSearch={(query) => searchVendorProducts(row.id, query)}
+                        onDeleteSelected={(items) => deleteSelectedProductAssociations(row.id, items)}
                       />
                     </td>
                   </tr>

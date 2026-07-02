@@ -7,6 +7,7 @@ import {
 import {
   createProductVendorAssociation,
   deleteProduct,
+  deleteProductVendorAssociation,
   getProduct,
   getProducts,
   getProductVendorAssociations,
@@ -355,25 +356,77 @@ function ProductVendorPanel({
   loading,
   onAssociate,
   onEdit,
+  onVendorSearch,
+  onDeleteSelected,
 }: {
   product: Product;
   rows: ProductVendorAssociation[];
   loading: boolean;
   onAssociate: () => void;
   onEdit: (row: ProductVendorAssociation) => void;
+  onVendorSearch: (query: string) => void;
+  onDeleteSelected: (ids: number[]) => Promise<void>;
 }) {
+  const [showVendorSearch, setShowVendorSearch] = useState(false);
+  const [vendorQuery, setVendorQuery] = useState('');
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deletingSelected, setDeletingSelected] = useState(false);
+  const allSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.id));
+  const selectedCount = selectedIds.length;
+
+  useEffect(() => {
+    setSelectedIds((current) => current.filter((id) => rows.some((row) => row.id === id)));
+  }, [rows]);
+
+  function toggleRow(id: number) {
+    setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  }
+
+  function toggleAll() {
+    setSelectedIds(allSelected ? [] : rows.map((row) => row.id));
+  }
+
+  async function confirmDeleteSelected() {
+    if (selectedIds.length === 0) return;
+    setDeletingSelected(true);
+    try {
+      await onDeleteSelected(selectedIds);
+      setSelectedIds([]);
+      setConfirmDeleteOpen(false);
+    } finally {
+      setDeletingSelected(false);
+    }
+  }
+
   return (
+    <>
     <div className="border-x border-b border-yellow-100 bg-yellow-50 px-8 pb-5 pt-3 dark:border-yellow-900/50 dark:bg-yellow-950/20">
       <div className="flex items-center gap-3 bg-white px-2 py-2 dark:bg-gray-900">
         <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Vendors associated with {product.name}</h3>
         <button type="button" onClick={onAssociate} className="h-7 border border-gray-300 bg-white px-3 text-sm text-gray-800 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
           Associate Vendor
         </button>
-        <button type="button" className="inline-flex h-7 w-9 items-center justify-center border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+        <button
+          type="button"
+          onClick={() => setShowVendorSearch((value) => !value)}
+          className={`inline-flex h-7 w-9 items-center justify-center border border-gray-300 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700 ${showVendorSearch ? 'text-blue-600' : 'text-gray-700 dark:text-gray-100'}`}
+          title="Search vendor"
+        >
           <Search size={15} />
         </button>
-        <button type="button" disabled className="inline-flex h-7 w-9 cursor-not-allowed items-center justify-center border border-gray-300 bg-white text-gray-300 dark:border-gray-600 dark:bg-gray-800">
-          <Trash2 size={14} />
+        <button
+          type="button"
+          disabled={selectedCount === 0 || deletingSelected}
+          onClick={() => setConfirmDeleteOpen(true)}
+          className={`inline-flex h-7 w-9 items-center justify-center border border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800 ${
+            selectedCount > 0 && !deletingSelected
+              ? 'text-yellow-600 hover:bg-yellow-50 dark:text-yellow-400 dark:hover:bg-gray-700'
+              : 'cursor-not-allowed text-gray-300'
+          }`}
+          title={selectedCount > 0 ? 'Delete selected vendors' : 'Select vendors to delete'}
+        >
+          {deletingSelected ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
         </button>
         <div className="flex h-7 items-center gap-0 text-sm text-gray-700 dark:text-gray-300">
           <button type="button" className="inline-flex h-7 w-[72px] items-center justify-between border border-gray-300 bg-white px-3 text-sm text-gray-800 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
@@ -390,12 +443,34 @@ function ProductVendorPanel({
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
-              <th className="w-10 px-3 py-2 text-left"><input type="checkbox" className="rounded border-gray-300 text-blue-600" /></th>
+              <th className="w-10 px-3 py-2 text-left">
+                <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-gray-300 text-blue-600" />
+              </th>
               <th className="px-3 py-2 text-left">Vendor</th>
               <th className="px-3 py-2 text-left">Price</th>
               <th className="px-3 py-2 text-left">Warranty Period</th>
               <th className="px-3 py-2 text-left">Comments</th>
             </tr>
+            {showVendorSearch && (
+              <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                <th className="px-3 py-1" />
+                <th className="px-3 py-1 text-left">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={vendorQuery}
+                    onChange={(event) => setVendorQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') onVendorSearch(vendorQuery);
+                    }}
+                    className="h-8 w-full max-w-sm border border-blue-400 bg-white px-2 text-sm font-normal text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-blue-500 dark:bg-gray-900 dark:text-gray-100"
+                  />
+                </th>
+                <th className="px-3 py-1" />
+                <th className="px-3 py-1" />
+                <th className="px-3 py-1" />
+              </tr>
+            )}
           </thead>
           <tbody>
             {loading ? (
@@ -404,7 +479,9 @@ function ProductVendorPanel({
               <tr><td colSpan={5} className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">No data available</td></tr>
             ) : rows.map((row) => (
               <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/60">
-                <td className="px-3 py-2"><input type="checkbox" className="rounded border-gray-300 text-blue-600" /></td>
+                <td className="px-3 py-2">
+                  <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleRow(row.id)} className="rounded border-gray-300 text-blue-600" />
+                </td>
                 <td className="px-3 py-2">
                   <button type="button" onClick={() => onEdit(row)} className="text-blue-600 hover:underline dark:text-blue-400">{row.vendor?.name ?? '-'}</button>
                 </td>
@@ -417,6 +494,15 @@ function ProductVendorPanel({
         </table>
       </div>
     </div>
+    <ConfirmDialog
+      open={confirmDeleteOpen}
+      onClose={() => setConfirmDeleteOpen(false)}
+      onConfirm={confirmDeleteSelected}
+      loading={deletingSelected}
+      title="Delete Vendor Association"
+      message={`Are you sure you want to delete ${selectedCount} selected vendor association${selectedCount === 1 ? '' : 's'}?`}
+    />
+    </>
   );
 }
 
@@ -438,6 +524,7 @@ export default function ProductTable() {
   const [expandedProductId, setExpandedProductId] = useState<number | null>(null);
   const [associationLoading, setAssociationLoading] = useState<Record<number, boolean>>({});
   const [associations, setAssociations] = useState<Record<number, ProductVendorAssociation[]>>({});
+  const [associationVendorSearches, setAssociationVendorSearches] = useState<Record<number, string>>({});
   const [vendors, setVendors] = useState<NamedOption[]>([]);
   const [associationProduct, setAssociationProduct] = useState<Product | null>(null);
   const [editingAssociation, setEditingAssociation] = useState<ProductVendorAssociation | null>(null);
@@ -486,10 +573,10 @@ export default function ProductTable() {
     setFormOpen(true);
   }
 
-  async function loadAssociations(productId: number) {
+  async function loadAssociations(productId: number, vendorSearch = associationVendorSearches[productId] || '') {
     setAssociationLoading((prev) => ({ ...prev, [productId]: true }));
     try {
-      const rows = await getProductVendorAssociations(productId);
+      const rows = await getProductVendorAssociations(productId, vendorSearch.trim() ? { vendorSearch: vendorSearch.trim() } : undefined);
       setAssociations((prev) => ({ ...prev, [productId]: rows }));
     } catch (error) {
       console.error(error);
@@ -504,6 +591,11 @@ export default function ProductTable() {
     if (nextId) loadAssociations(nextId);
   }
 
+  function searchProductVendors(productId: number, vendorSearch: string) {
+    setAssociationVendorSearches((prev) => ({ ...prev, [productId]: vendorSearch }));
+    loadAssociations(productId, vendorSearch);
+  }
+
   function openAssociationModal(product: Product, record: ProductVendorAssociation | null = null) {
     setAssociationProduct(product);
     setEditingAssociation(record);
@@ -516,6 +608,11 @@ export default function ProductTable() {
 
   async function handleAssociationSaved() {
     if (associationProduct) await loadAssociations(associationProduct.id);
+  }
+
+  async function deleteSelectedAssociations(productId: number, ids: number[]) {
+    await Promise.all(ids.map((id) => deleteProductVendorAssociation(productId, id)));
+    await loadAssociations(productId);
   }
 
   const visibleDefs = ALL_COLUMNS.filter((col) => visibleCols.includes(col.key));
@@ -626,6 +723,8 @@ export default function ProductTable() {
                       loading={Boolean(associationLoading[row.id])}
                       onAssociate={() => openAssociationModal(row)}
                       onEdit={(association) => openAssociationModal(row, association)}
+                      onVendorSearch={(query) => searchProductVendors(row.id, query)}
+                      onDeleteSelected={(ids) => deleteSelectedAssociations(row.id, ids)}
                     />
                   </td>
                 </tr>
