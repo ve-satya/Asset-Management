@@ -12,8 +12,15 @@ const INCLUDE = {
 export async function getProductVendorAssociations(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const productId = parseInt(String(req.params.productId), 10);
+    const vendorSearch = String(req.query.vendorSearch || req.query.search || '').trim();
     const items = await (prisma as any).productVendorAssociation.findMany({
-      where: { productId, isActive: true },
+      where: {
+        productId,
+        isActive: true,
+        ...(vendorSearch
+          ? { vendor: { is: { name: { contains: vendorSearch, mode: 'insensitive' } } } }
+          : {}),
+      },
       include: INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
@@ -24,8 +31,15 @@ export async function getProductVendorAssociations(req: Request, res: Response, 
 export async function getVendorProductAssociations(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const vendorId = parseInt(String(req.params.vendorId), 10);
+    const productSearch = String(req.query.productSearch || req.query.search || '').trim();
     const items = await (prisma as any).productVendorAssociation.findMany({
-      where: { vendorId, isActive: true },
+      where: {
+        vendorId,
+        isActive: true,
+        ...(productSearch
+          ? { product: { name: { contains: productSearch, mode: 'insensitive' } } }
+          : {}),
+      },
       include: {
         product: { select: { id: true, name: true } },
         maintenanceVendor: { select: { id: true, name: true } },

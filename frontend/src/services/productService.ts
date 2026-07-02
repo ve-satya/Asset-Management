@@ -21,14 +21,17 @@ export const updateProduct = (id: number | string, data: unknown): Promise<Produ
 export const deleteProduct = (id: number | string): Promise<{ message: string }> =>
   axios.delete(`${BASE}/${id}`).then((r) => r.data);
 
-export const getProductVendorAssociations = (productId: number | string): Promise<ProductVendorAssociation[]> =>
-  axios.get(`${BASE}/${productId}/vendor-associations`).then((r) => r.data.data);
+export const getProductVendorAssociations = (productId: number | string, params?: Record<string, unknown>): Promise<ProductVendorAssociation[]> =>
+  axios.get(`${BASE}/${productId}/vendor-associations`, { params }).then((r) => r.data.data);
 
 export const createProductVendorAssociation = (productId: number | string, data: unknown): Promise<ProductVendorAssociation> =>
   axios.post(`${BASE}/${productId}/vendor-associations`, data).then((r) => r.data);
 
 export const updateProductVendorAssociation = (productId: number | string, associationId: number | string, data: unknown): Promise<ProductVendorAssociation> =>
   axios.put(`${BASE}/${productId}/vendor-associations/${associationId}`, data).then((r) => r.data);
+
+export const deleteProductVendorAssociation = (productId: number | string, associationId: number | string): Promise<{ message: string }> =>
+  axios.delete(`${BASE}/${productId}/vendor-associations/${associationId}`).then((r) => r.data);
 
 export const uploadProductImage = (id: number | string, file: File): Promise<Product> => {
   const fd = new FormData();
