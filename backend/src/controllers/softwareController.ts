@@ -176,7 +176,12 @@ export async function getAllSoftwares(_req: Request, res: Response, next: NextFu
   try {
     const items = await prisma.software.findMany({
       where: { isActive: true },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        manufacturerId: true,
+        manufacturer: { select: { id: true, name: true } },
+      },
       orderBy: { name: 'asc' },
     });
     res.json(items);
@@ -263,14 +268,16 @@ export async function deleteSoftware(req: Request, res: Response, next: NextFunc
 }
 
 function buildPayload(body: Record<string, unknown>) {
+  const softwareTypeId = parseInt(String(body.softwareTypeId), 10);
   return {
     name:               String(body.name || '').trim(),
     version:            String(body.version || '').trim()      || null,
-    softwareTypeId:     parseInt(String(body.softwareTypeId), 10),
+    softwareTypeId,
     softwareCategoryId: parseInt(String(body.softwareCategoryId), 10),
     manufacturerId:     parseInt(String(body.manufacturerId), 10),
     licenseTypeId:      body.licenseTypeId ? parseInt(String(body.licenseTypeId), 10) : null,
     description:        String(body.description || '').trim()  || null,
+    isSoftwareSuite:    body.isSoftwareSuite !== undefined ? Boolean(body.isSoftwareSuite) : false,
     isActive:           body.isActive !== undefined ? Boolean(body.isActive) : true,
   };
 }
