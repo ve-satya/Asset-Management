@@ -2,18 +2,17 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ChevronDown, ImageIcon, X, Loader2, Plus } from 'lucide-react';
 import {
-  getSoftware, createSoftware, updateSoftware,
+  getSoftware, getAllSoftwares, createSoftware, updateSoftware,
   uploadSoftwareImage, deleteSoftwareImage,
 } from '../services/softwareService';
 import { getAllSoftwareTypes }        from '../services/softwareTypeService';
 import { getAllSoftwareCategories }   from '../services/softwareCategoryService';
 import { getAllManufacturers }        from '../services/manufacturerService';
-import { getAllSoftwareLicenseTypes } from '../services/softwareLicenseTypeService';
 import type { NamedOption } from '../types';
 
 const EMPTY = {
   name: '', version: '', softwareTypeId: '', softwareCategoryId: '',
-  manufacturerId: '', licenseTypeId: '', description: '',
+  manufacturerId: '', licenseTypeId: '', description: '', isSoftwareSuite: false,
 };
 
 const MAX_SLOTS = 5;
@@ -51,6 +50,21 @@ const fieldCls = (hasErr?: boolean) =>
       ? 'border-red-400 focus:ring-red-400'
       : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
   } bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 transition`;
+
+function manufacturerAlias(name?: string | null) {
+  const normalized = (name || '').trim().toLowerCase();
+  return normalized === 'microsoft corporation' ? 'microsoft' : normalized;
+}
+
+function SuiteValidationBubble({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative inline-flex items-center gap-2 rounded bg-red-500 px-3 py-1.5 text-sm font-semibold text-white shadow">
+      <span className="absolute -top-2 left-8 h-0 w-0 border-x-8 border-b-8 border-x-transparent border-b-red-500" />
+      {children}
+      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-700 text-xs leading-none">x</span>
+    </div>
+  );
+}
 
 /* ── ImageSlot ────────────────────────────────────────────────────────── */
 function ImageSlot({
@@ -113,7 +127,12 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
   const [softwareTypes,      setSoftwareTypes]      = useState<NamedOption[]>([]);
   const [softwareCategories, setSoftwareCategories] = useState<NamedOption[]>([]);
   const [manufacturers,      setManufacturers]      = useState<NamedOption[]>([]);
-  const [licenseTypes,       setLicenseTypes]       = useState<NamedOption[]>([]);
+  const [suiteOptions,       setSuiteOptions]       = useState<NamedOption[]>([]);
+  const [suiteComponents,    setSuiteComponents]    = useState<NamedOption[]>([]);
+  const [availableSelected,  setAvailableSelected]  = useState<string[]>([]);
+  const [componentSelected,  setComponentSelected]  = useState<string[]>([]);
+  const [suiteInstallRule,   setSuiteInstallRule]   = useState<'auto' | 'manual' | ''>('');
+  const [suiteMessage,       setSuiteMessage]       = useState('');
 
   /* load dropdown options */
   useEffect(() => {
@@ -121,14 +140,20 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
       getAllSoftwareTypes(),
       getAllSoftwareCategories(),
       getAllManufacturers(),
-      getAllSoftwareLicenseTypes(),
-    ]).then(([st, sc, mfr, lt]) => {
+      getAllSoftwares(),
+    ]).then(([st, sc, mfr, sw]) => {
       setSoftwareTypes(st);
       setSoftwareCategories(sc);
       setManufacturers(mfr);
-      setLicenseTypes(lt);
+      setSuiteOptions(sw);
+      if (!isEdit) {
+        const managed = st.find((type) => type.name === 'Managed');
+        if (managed) {
+          setForm((prev) => ({ ...prev, softwareTypeId: String(managed.id), isSoftwareSuite: false }));
+        }
+      }
     });
-  }, []);
+  }, [isEdit]);
 
   /* load existing record in edit mode */
   useEffect(() => {
@@ -144,6 +169,7 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
           manufacturerId:     String(sw.manufacturerId),
           licenseTypeId:      sw.licenseTypeId ? String(sw.licenseTypeId) : '',
           description:        sw.description ?? '',
+          isSoftwareSuite:    Boolean(sw.isSoftwareSuite),
         });
         setImages(sw.images ?? []);
         setSoftwareId(sw.id);
@@ -157,9 +183,34 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
     return () => { pending.forEach((p) => URL.revokeObjectURL(p.preview)); };
   }, [pending]);
 
+  useEffect(() => {
+    const selectedType = softwareTypes.find((type) => String(type.id) === form.softwareTypeId);
+    if (selectedType && selectedType.name !== 'Managed' && form.isSoftwareSuite) {
+      setForm((prev) => ({ ...prev, isSoftwareSuite: false }));
+    }
+  }, [softwareTypes, form.softwareTypeId, form.isSoftwareSuite]);
+
+  useEffect(() => {
+    const selectedManufacturer = manufacturers.find((manufacturer) => String(manufacturer.id) === form.manufacturerId);
+    const selectedAlias = manufacturerAlias(selectedManufacturer?.name);
+    setSuiteComponents((current) => current.filter((option) => (
+      String(option.manufacturerId ?? '') === form.manufacturerId
+      || (Boolean(selectedAlias) && manufacturerAlias(option.manufacturer?.name) === selectedAlias)
+    )));
+    setAvailableSelected([]);
+    setComponentSelected([]);
+  }, [form.manufacturerId, manufacturers]);
+
   function ch(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
+    setForm((p) => {
+      const next = { ...p, [name]: value };
+      if (name === 'softwareTypeId') {
+        const selectedType = softwareTypes.find((type) => String(type.id) === value);
+        if (selectedType?.name !== 'Managed') next.isSoftwareSuite = false;
+      }
+      return next;
+    });
     setErrors((p) => ({ ...p, [name]: '' }));
   }
 
@@ -200,6 +251,33 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
     });
   }
 
+  function selectedValues(event: React.ChangeEvent<HTMLSelectElement>) {
+    return Array.from(event.target.selectedOptions).map((option) => option.value);
+  }
+
+  function addSuiteComponents() {
+    if (!availableSelected.length) return;
+    const toAdd = suiteOptions.filter((option) => availableSelected.includes(String(option.id)));
+    setSuiteComponents((current) => [...current, ...toAdd.filter((option) => !current.some((item) => item.id === option.id))]);
+    if (toAdd.length > 0 && suiteMessage === 'Choose suite component software.') setSuiteMessage('');
+    setAvailableSelected([]);
+  }
+
+  function removeSuiteComponents() {
+    if (!componentSelected.length) return;
+    setSuiteComponents((current) => {
+      const next = current.filter((option) => !componentSelected.includes(String(option.id)));
+      if (suiteInstallRule === 'manual' && next.length === 0) setSuiteMessage('Choose suite component software.');
+      return next;
+    });
+    setComponentSelected([]);
+  }
+
+  function changeSuiteInstallRule(rule: 'auto' | 'manual') {
+    setSuiteInstallRule(rule);
+    setSuiteMessage(rule === 'auto' ? 'Value cannot be empty.' : (suiteComponents.length === 0 ? 'Choose suite component software.' : ''));
+  }
+
   /* drag-and-drop handlers */
   function onDragOver(e: React.DragEvent) { e.preventDefault(); setDragOver(true); }
   function onDragLeave() { setDragOver(false); }
@@ -227,6 +305,7 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
         softwareCategoryId: parseInt(form.softwareCategoryId, 10),
         manufacturerId:     parseInt(form.manufacturerId, 10),
         licenseTypeId:      form.licenseTypeId ? parseInt(form.licenseTypeId, 10) : null,
+        isSoftwareSuite:    form.isSoftwareSuite,
         description:        form.description.trim()  || null,
       };
 
@@ -273,6 +352,18 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
   ];
   const emptySlots = Math.max(0, MAX_SLOTS - allPreviews.length);
   const canAddMore = allPreviews.length < MAX_SLOTS;
+  const selectedSoftwareType = softwareTypes.find((type) => String(type.id) === form.softwareTypeId);
+  const isManagedSoftware = selectedSoftwareType?.name === 'Managed';
+  const selectedManufacturer = manufacturers.find((manufacturer) => String(manufacturer.id) === form.manufacturerId);
+  const selectedManufacturerAlias = manufacturerAlias(selectedManufacturer?.name);
+  const availableSuiteOptions = suiteOptions.filter((option) => (
+    String(option.id) !== String(id || '')
+    && (
+      String(option.manufacturerId ?? '') === form.manufacturerId
+      || (Boolean(selectedManufacturerAlias) && manufacturerAlias(option.manufacturer?.name) === selectedManufacturerAlias)
+    )
+    && !suiteComponents.some((item) => item.id === option.id)
+  ));
 
   /* ─────────────────────────────────────────────────────────────────────── */
   return (
@@ -332,7 +423,6 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
                       onChange={ch}
                       className={fieldCls(!!errors.softwareTypeId)}
                     >
-                      <option value="">Select type</option>
                       {softwareTypes.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
                     </select>
                   </FieldRow>
@@ -357,6 +447,18 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
                         <Plus size={14} />
                       </button>
                     </div>
+                  </FieldRow>
+
+                  <FieldRow label="Software Suite">
+                    <label className={`inline-flex items-center gap-2 text-sm ${isManagedSoftware ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
+                      <input
+                        type="checkbox"
+                        checked={form.isSoftwareSuite}
+                        disabled={!isManagedSoftware}
+                        onChange={(event) => setForm((prev) => ({ ...prev, isSoftwareSuite: event.target.checked }))}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    </label>
                   </FieldRow>
                 </div>
 
@@ -384,19 +486,6 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
                     >
                       <option value="">Select category</option>
                       {softwareCategories.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                    </select>
-                  </FieldRow>
-
-                  {/* License Type (optional) */}
-                  <FieldRow label="License Type">
-                    <select
-                      name="licenseTypeId"
-                      value={form.licenseTypeId}
-                      onChange={ch}
-                      className={fieldCls()}
-                    >
-                      <option value="">Select license type</option>
-                      {licenseTypes.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
                     </select>
                   </FieldRow>
                 </div>
@@ -498,6 +587,74 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
                   </div>
                 )}
               </div>
+
+              {form.isSoftwareSuite && (
+                <div className="space-y-5 border-t border-gray-200 pt-5 dark:border-gray-700">
+                  <FieldRow label="Suite Component Software" required>
+                    <div className="grid grid-cols-[1fr_auto_1fr] gap-4">
+                      <select multiple value={availableSelected} onChange={(event) => setAvailableSelected(selectedValues(event))} className="h-40 w-full rounded border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+                        {availableSuiteOptions.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
+                      </select>
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <button type="button" onClick={addSuiteComponents} disabled={availableSelected.length === 0} className="h-8 w-10 border border-gray-400 bg-gray-100 text-sm font-semibold text-gray-800 hover:bg-gray-200 disabled:opacity-40">&gt;&gt;</button>
+                        <button type="button" onClick={removeSuiteComponents} disabled={componentSelected.length === 0} className="h-8 w-10 border border-gray-400 bg-gray-100 text-sm font-semibold text-gray-800 hover:bg-gray-200 disabled:opacity-40">&lt;&lt;</button>
+                      </div>
+                      <div>
+                        <select multiple value={componentSelected} onChange={(event) => setComponentSelected(selectedValues(event))} className="h-40 w-full rounded border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+                          {suiteComponents.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
+                        </select>
+                        {suiteMessage === 'Choose suite component software.' && (
+                          <div className="mt-2">
+                            <SuiteValidationBubble>Choose suite component software.</SuiteValidationBubble>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </FieldRow>
+
+                  <div className="border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                    <div className="border-b border-gray-200 px-3 py-2 text-sm font-semibold text-gray-800 dark:border-gray-700 dark:text-gray-100">
+                      Identify Suite Installations <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-xs text-gray-500">?</span>
+                    </div>
+                    <div className="space-y-3 px-3 py-4 text-sm text-gray-700 dark:text-gray-300">
+                      <p>Identify the suite installation based on the following rule</p>
+                      <label className="flex flex-wrap items-center gap-2">
+                        <input type="radio" name="suiteInstallRule" checked={suiteInstallRule === 'auto'} onChange={() => changeSuiteInstallRule('auto')} className="text-blue-600 focus:ring-blue-500" />
+                        <span>Automatically discover as suite installation if the suite component software installation(s) is greater than or equal to</span>
+                        <input type="text" className="h-7 w-14 border border-gray-300 bg-white px-2 text-sm dark:border-gray-600 dark:bg-gray-800" />
+                        <span>in a computer.</span>
+                      </label>
+                      {suiteMessage === 'Value cannot be empty.' && (
+                        <div className="ml-10">
+                          <SuiteValidationBubble>Value cannot be empty.</SuiteValidationBubble>
+                        </div>
+                      )}
+                      <label className="flex items-center gap-2">
+                        <input type="radio" name="suiteInstallRule" checked={suiteInstallRule === 'manual'} onChange={() => changeSuiteInstallRule('manual')} className="text-blue-600 focus:ring-blue-500" />
+                        <span>Manually choose suite installations</span>
+                      </label>
+                      <div>
+                        <p className="mb-2 font-semibold">Matched suite installation(s)</p>
+                        <table className="w-full border-collapse text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-200 bg-gray-50 text-left uppercase dark:border-gray-700 dark:bg-gray-800">
+                              <th className="w-10 px-2 py-2"><input type="checkbox" className="rounded border-gray-300 text-blue-600" /></th>
+                              <th className="px-2 py-2">Workstation</th>
+                              <th className="px-2 py-2">User</th>
+                              <th className="px-2 py-2">Department</th>
+                              <th className="px-2 py-2">Site</th>
+                              <th className="px-2 py-2">Installed Component(s)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr><td colSpan={6} className="py-4 text-center text-gray-500 dark:text-gray-400">No installation(s) found.</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ── Action buttons — centered ──────────────────────── */}

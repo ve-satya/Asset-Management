@@ -128,6 +128,8 @@ export interface AssetFinancialsResponse {
 export interface NamedOption {
   id: number;
   name: string;
+  manufacturerId?: number | null;
+  manufacturer?: { id: number; name: string } | null;
 }
 
 export interface ProductType {
