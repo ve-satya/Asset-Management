@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChevronDown, ImageIcon, X, Loader2, Plus } from 'lucide-react';
 import {
   getSoftware, getAllSoftwares, createSoftware, updateSoftware,
@@ -104,8 +104,10 @@ interface SoftwareFormPageProps {
 export default function SoftwareFormPage({ recordId, embedded = false, onSuccess, onCancel }: SoftwareFormPageProps = {}) {
   const navigate     = useNavigate();
   const params       = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const id           = recordId ?? params.id;
   const isEdit       = Boolean(id);
+  const createAsSuite = !isEdit && searchParams.get('suite') === 'true';
   const hideEditOnlyFields = embedded && isEdit;
   const dropRef      = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -149,11 +151,11 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
       if (!isEdit) {
         const managed = st.find((type) => type.name === 'Managed');
         if (managed) {
-          setForm((prev) => ({ ...prev, softwareTypeId: String(managed.id), isSoftwareSuite: false }));
+          setForm((prev) => ({ ...prev, softwareTypeId: String(managed.id), isSoftwareSuite: createAsSuite }));
         }
       }
     });
-  }, [isEdit]);
+  }, [createAsSuite, isEdit]);
 
   /* load existing record in edit mode */
   useEffect(() => {
@@ -449,17 +451,19 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
                     </div>
                   </FieldRow>
 
-                  <FieldRow label="Software Suite">
-                    <label className={`inline-flex items-center gap-2 text-sm ${isManagedSoftware ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
-                      <input
-                        type="checkbox"
-                        checked={form.isSoftwareSuite}
-                        disabled={!isManagedSoftware}
-                        onChange={(event) => setForm((prev) => ({ ...prev, isSoftwareSuite: event.target.checked }))}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-                      />
-                    </label>
-                  </FieldRow>
+                  {!isEdit && (
+                    <FieldRow label="Software Suite">
+                      <label className={`inline-flex items-center gap-2 text-sm ${isManagedSoftware ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
+                        <input
+                          type="checkbox"
+                          checked={form.isSoftwareSuite}
+                          disabled={!isManagedSoftware}
+                          onChange={(event) => setForm((prev) => ({ ...prev, isSoftwareSuite: event.target.checked }))}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                      </label>
+                    </FieldRow>
+                  )}
                 </div>
 
                 {/* ── Right column ────────────────────────────────── */}
@@ -588,7 +592,7 @@ export default function SoftwareFormPage({ recordId, embedded = false, onSuccess
                 )}
               </div>
 
-              {form.isSoftwareSuite && (
+              {!isEdit && form.isSoftwareSuite && (
                 <div className="space-y-5 border-t border-gray-200 pt-5 dark:border-gray-700">
                   <FieldRow label="Suite Component Software" required>
                     <div className="grid grid-cols-[1fr_auto_1fr] gap-4">
