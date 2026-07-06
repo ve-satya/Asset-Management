@@ -511,6 +511,12 @@ export default function ScannedSoftwarePage() {
                   >
                     <Plus size={13} /> New Software
                   </button>
+                  <button
+                    onClick={() => { navigate('/software/create?suite=true'); setShowNewMenu(false); }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <Plus size={13} /> Software Suite
+                  </button>
                 </div>
               )}
             </div>
