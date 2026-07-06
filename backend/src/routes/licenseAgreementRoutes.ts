@@ -1,7 +1,7 @@
 import express from 'express';
 import { body } from 'express-validator';
 import {
-  getAgreements, getAgreement, createAgreement, updateAgreement, deleteAgreement,
+  getAgreements, getAgreement, createAgreement, updateAgreement, deleteAgreement, removeAgreementLicense,
 } from '../controllers/licenseAgreementController';
 
 const router = express.Router();
@@ -14,6 +14,7 @@ router.get('/',       getAgreements);
 router.get('/:id',    getAgreement);
 router.post('/',      validators, createAgreement);
 router.put('/:id',    validators, updateAgreement);
+router.delete('/:id/licenses/:licenseId', removeAgreementLicense);
 router.delete('/:id', deleteAgreement);
 
 export default router;

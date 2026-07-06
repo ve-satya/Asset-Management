@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Loader2, ArrowLeft, Plus, Info, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Info, ChevronRight, ChevronLeft, Trash2 } from 'lucide-react';
 import axios from 'axios';
-import { createLicenseAgreement, updateLicenseAgreement, getLicenseAgreement } from '../services/licenseAgreementService';
+import { createLicenseAgreement, updateLicenseAgreement, getLicenseAgreement, removeLicenseFromAgreement } from '../services/licenseAgreementService';
 import { getGlobalLicenses } from '../services/globalSoftwareLicenseService';
 import { ToastContainer, useToast } from '../components/common/Toast';
 import type { NamedOption, SoftwareLicenseAgreement } from '../types';
@@ -78,6 +78,7 @@ export default function LicenseAgreementFormPage() {
   const [saving,    setSaving]    = useState(false);
   const [loading,   setLoading]   = useState(false);
   const [agreement, setAgreement] = useState<SoftwareLicenseAgreement | null>(null);
+  const [removingLicenseId, setRemovingLicenseId] = useState<number | null>(null);
 
   // Unassociated licenses count for selected manufacturer
   const [unassocCount, setUnassocCount] = useState(0);
@@ -154,6 +155,21 @@ export default function LicenseAgreementFormPage() {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [refreshAgreement]);
+
+  async function removeLicenseRow(licenseId: number) {
+    if (!id) return;
+    setRemovingLicenseId(licenseId);
+    try {
+      await removeLicenseFromAgreement(id, licenseId);
+      showToast('License removed from agreement.');
+      refreshAgreement();
+    } catch (error) {
+      console.error(error);
+      showToast('Failed to remove license.', 'error');
+    } finally {
+      setRemovingLicenseId(null);
+    }
+  }
 
   // ── Form helpers ────────────────────────────────────────────────────────────
   function set(key: string, value: string) {
@@ -434,7 +450,7 @@ export default function LicenseAgreementFormPage() {
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
-                    {['License Name', 'Software', 'License Type', 'License Option', 'Installation(s) Allowed', 'License Key', 'Cost ($)'].map((h) => (
+                    {['', 'License Name', 'Software', 'License Type', 'License Option', 'Installation(s) Allowed', 'License Key', 'Cost ($)'].map((h) => (
                       <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -442,12 +458,23 @@ export default function LicenseAgreementFormPage() {
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {(agreement?.licenses ?? []).length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+                      <td colSpan={8} className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">
                         No software licenses available in this view.
                       </td>
                     </tr>
                   ) : (agreement?.licenses ?? []).map((l) => (
                     <tr key={l.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="w-10 px-3 py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => removeLicenseRow(l.id)}
+                          disabled={removingLicenseId === l.id}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded text-yellow-600 hover:bg-yellow-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-yellow-400 dark:hover:bg-gray-800"
+                          title="Remove license from agreement"
+                        >
+                          {removingLicenseId === l.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={15} />}
+                        </button>
+                      </td>
                       <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">{l.licenseKey ?? `License #${l.id}`}</td>
                       <td className="px-3 py-2.5 text-gray-700 dark:text-gray-300">{l.software?.name ?? '—'}</td>
                       <td className="px-3 py-2.5 text-gray-600 dark:text-gray-400">{l.licenseType ?? '—'}</td>
