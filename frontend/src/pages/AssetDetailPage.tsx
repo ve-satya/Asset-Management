@@ -15,6 +15,7 @@ import type { Asset, AssetAttachment, AssetContract, AssetCost, AssetFinancialsR
 const MAIN_TABS      = [{ key: 'asset-detail', label: 'Asset Details' }, { key: 'relationships', label: 'Relationships' }, { key: 'contracts', label: 'Contracts' }, { key: 'financials', label: 'Financials' }, { key: 'associations', label: 'Associations' }, { key: 'history', label: 'History' }];
 const HISTORY_SUBTABS = [{ key: 'ownership', label: 'Asset Ownership History' }, { key: 'asset', label: 'Asset History' }];
 const FINANCIAL_SUBTABS = [{ key: 'cost', label: 'Cost' }, { key: 'depreciation', label: 'Depreciation Details' }];
+const PURCHASE_COST_FACTOR = 'Purchase Cost';
 const COST_FACTORS = ['Disposal Cost', 'Move/Change Cost', 'Others', 'Service Cost'];
 const DEPRECIATION_METHODS = ['Declining Balance', 'Double Declining Balance', 'Straight Line', 'Sum Of The Years Digit'];
 const ATTACHMENT_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.html,.png,.jpg,.jpeg,.zip';
@@ -1056,6 +1057,7 @@ function AssociationsContent() {
 
 type AssociatedRequestStatusFilter = 'all' | 'pending' | 'completed';
 interface AssociatedRequestRow {
+  [key: string]: string | undefined;
   id: string;
   subject?: string;
   requester: string;
@@ -1066,10 +1068,19 @@ interface AssociatedRequestRow {
 }
 const ASSOCIATED_REQUEST_COLUMNS = [
   { key: 'id', label: 'Request ID' },
-  { key: 'subject', label: 'Subject' },
   { key: 'requester', label: 'Requester' },
   { key: 'status', label: 'Status' },
   { key: 'createdDate', label: 'Created Date' },
+  { key: 'area', label: 'Area' },
+  { key: 'branchMaster', label: 'Branch Master' },
+  { key: 'city', label: 'City' },
+  { key: 'country', label: 'Country' },
+  { key: 'departmentSelection', label: 'Department Selection' },
+  { key: 'testRequesterEmail', label: 'Test Requester Email' },
+  { key: 'testRequesterName', label: 'Test Requester Name' },
+  { key: 'typeOfProblem', label: 'Type of Problem' },
+  { key: 'userContract', label: 'User Contract' },
+  { key: 'subject', label: 'Subject' },
   { key: 'createdBy', label: 'Created By' },
   { key: 'contactNumber', label: 'Additional Contact Number' },
 ] as const;
@@ -1174,7 +1185,7 @@ function AssociatedRequestsPanel() {
                   />
                 </div>
               </div>
-              <div className="max-h-64 overflow-y-auto scrollbar-thin">
+              <div className="overflow-y-scroll" style={{ maxHeight: 360, overflowY: 'scroll' }}>
                 {filteredColumnDefs.map((column) => (
                   <label key={column.key} className="flex h-9 items-center gap-2 border-t border-gray-100 px-4 text-[12px] text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
                     <input
@@ -1242,6 +1253,7 @@ function AssociatedRequestsPanel() {
 
 type AssociatedProblemFilter = 'open' | 'closed' | 'all';
 interface AssociatedProblemRow {
+  [key: string]: string | undefined;
   id: string;
   title: string;
   reportedBy: string;
@@ -1257,6 +1269,14 @@ const ASSOCIATED_PROBLEM_COLUMNS = [
   { key: 'title', label: 'Title' },
   { key: 'reportedBy', label: 'Reported By' },
   { key: 'technician', label: 'Technician' },
+  { key: 'item', label: 'Item' },
+  { key: 'impactClosedDate', label: 'Impact Closed Date' },
+  { key: 'siteReportedDate', label: 'Site Reported Date' },
+  { key: 'subCategory', label: 'SubCategory' },
+  { key: 'group', label: 'Group' },
+  { key: 'documentLink', label: 'Document Link' },
+  { key: 'isWorkAroundAvailable', label: 'Is WorkAround Available?' },
+  { key: 'wasReportedIncidentResolved', label: 'Was Reported Incident Resolved?' },
   { key: 'category', label: 'Category' },
   { key: 'priority', label: 'Priority' },
   { key: 'status', label: 'Status' },
@@ -1355,7 +1375,7 @@ function AssociatedProblemsPanel() {
                   <input value={columnQuery} onChange={(event) => setColumnQuery(event.target.value)} className="h-8 w-full border border-sky-400 bg-white pl-7 pr-2 text-[12px] text-gray-900 outline-none dark:bg-gray-900 dark:text-gray-100" aria-label="Search columns" />
                 </div>
               </div>
-              <div className="max-h-64 overflow-y-auto scrollbar-thin">
+              <div className="overflow-y-scroll" style={{ maxHeight: 360, overflowY: 'scroll' }}>
                 {filteredColumnDefs.map((column) => (
                   <label key={column.key} className="flex h-9 items-center gap-2 border-t border-gray-100 px-4 text-[12px] text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
                     <input type="checkbox" checked={draftColumns.includes(column.key)} onChange={() => setDraftColumns((prev) => prev.includes(column.key) ? prev.filter((item) => item !== column.key) : [...prev, column.key])} className="rounded border-gray-300 text-sky-600 focus:ring-sky-500" />
@@ -1398,6 +1418,7 @@ function AssociatedProblemsPanel() {
 
 type AssociatedChangeFilter = 'all' | 'open' | 'completed';
 interface AssociatedChangeRow {
+  [key: string]: string | undefined;
   id: string;
   title: string;
   changeType: string;
@@ -1413,6 +1434,41 @@ const ASSOCIATED_CHANGE_COLUMNS = [
   { key: 'title', label: 'Title' },
   { key: 'changeType', label: 'Change Type' },
   { key: 'changeOwner', label: 'Change Owner' },
+  { key: 'closureCode', label: 'Closure Code' },
+  { key: 'emergency', label: 'Emergency' },
+  { key: 'group', label: 'Group' },
+  { key: 'createdTime', label: 'Created Time' },
+  { key: 'item', label: 'Item' },
+  { key: 'workflow', label: 'Workflow' },
+  { key: 'cabApprovalStatus', label: 'CAB Approval Status' },
+  { key: 'impact', label: 'Impact' },
+  { key: 'subCategory', label: 'SubCategory' },
+  { key: 'problems', label: 'Problems' },
+  { key: 'urgency', label: 'Urgency' },
+  { key: 'site', label: 'Site' },
+  { key: 'completedTime', label: 'Completed Time' },
+  { key: 'risk', label: 'Risk' },
+  { key: 'anamoly', label: 'Anamoly' },
+  { key: 'approvalConcerns', label: 'Approval Concerns' },
+  { key: 'challangesCommunicationPlan', label: 'Challanges Communication Plan' },
+  { key: 'criticality', label: 'Criticality' },
+  { key: 'designDetails', label: 'Design Details' },
+  { key: 'designEstimateEnd', label: 'Design Estimate End' },
+  { key: 'errorIn', label: 'Error In' },
+  { key: 'estimateCost', label: 'Estimate Cost $' },
+  { key: 'implemenationDescription', label: 'Implemenation Description' },
+  { key: 'mom', label: 'MOM' },
+  { key: 'nextCabReviewDate', label: 'Next CAB Review Date' },
+  { key: 'planningScheduleEnd', label: 'Planning Schedule End' },
+  { key: 'planningScheduleStart', label: 'Planning Schedule Start' },
+  { key: 'postDeploymentVerificationPlan', label: 'Post Deployment Verification Plan' },
+  { key: 'preImplementationWorkPlan', label: 'Pre-Implementation Work Plan' },
+  { key: 'reviewMeetingMom', label: 'Review Meeting MOM' },
+  { key: 'reviewSchedule', label: 'Review Schedule' },
+  { key: 'reviewUserFeedbacks', label: 'Review User Feedbacks' },
+  { key: 'scheduleDeviationComments', label: 'Schedule Deviation Comments' },
+  { key: 'summary', label: 'Summary' },
+  { key: 'uatStatus', label: 'UAT Status' },
   { key: 'category', label: 'Category' },
   { key: 'priority', label: 'Priority' },
   { key: 'status', label: 'Status' },
@@ -1511,7 +1567,7 @@ function AssociatedChangesPanel() {
                   <input value={columnQuery} onChange={(event) => setColumnQuery(event.target.value)} className="h-8 w-full border border-sky-400 bg-white pl-7 pr-2 text-[12px] text-gray-900 outline-none dark:bg-gray-900 dark:text-gray-100" aria-label="Search columns" />
                 </div>
               </div>
-              <div className="max-h-64 overflow-y-auto scrollbar-thin">
+              <div className="overflow-y-scroll" style={{ maxHeight: 360, overflowY: 'scroll' }}>
                 {filteredColumnDefs.map((column) => (
                   <label key={column.key} className="flex h-9 items-center gap-2 border-t border-gray-100 px-4 text-[12px] text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
                     <input type="checkbox" checked={draftColumns.includes(column.key)} onChange={() => setDraftColumns((prev) => prev.includes(column.key) ? prev.filter((item) => item !== column.key) : [...prev, column.key])} className="rounded border-gray-300 text-sky-600 focus:ring-sky-500" />
@@ -1554,6 +1610,7 @@ function AssociatedChangesPanel() {
 
 type AssociatedReleaseFilter = 'all' | 'open' | 'closed';
 interface AssociatedReleaseRow {
+  [key: string]: string | undefined;
   id: string;
   title: string;
   type: string;
@@ -1570,6 +1627,22 @@ const ASSOCIATED_RELEASE_COLUMNS = [
   { key: 'title', label: 'Title' },
   { key: 'type', label: 'Type' },
   { key: 'stage', label: 'Stage' },
+  { key: 'closureCode', label: 'Closure Code' },
+  { key: 'emergencyRelease', label: 'Emergency Release' },
+  { key: 'group', label: 'Group' },
+  { key: 'createdTime', label: 'Created Time' },
+  { key: 'item', label: 'Item' },
+  { key: 'impact', label: 'Impact' },
+  { key: 'subCategory', label: 'SubCategory' },
+  { key: 'template', label: 'Template' },
+  { key: 'urgency', label: 'Urgency' },
+  { key: 'releaseManager', label: 'Release Manager' },
+  { key: 'site', label: 'Site' },
+  { key: 'risk', label: 'Risk' },
+  { key: 'category', label: 'Category' },
+  { key: 'lastWorkingVersion', label: 'Last Working Version' },
+  { key: 'newVersion', label: 'New Version' },
+  { key: 'snapshotRequired', label: 'Snapshot Required?' },
   { key: 'status', label: 'Status' },
   { key: 'priority', label: 'Priority' },
   { key: 'releaseEngineer', label: 'Release Engineer' },
@@ -1669,7 +1742,7 @@ function AssociatedReleasesPanel() {
                   <input value={columnQuery} onChange={(event) => setColumnQuery(event.target.value)} className="h-8 w-full border border-sky-400 bg-white pl-7 pr-2 text-[12px] text-gray-900 outline-none dark:bg-gray-900 dark:text-gray-100" aria-label="Search columns" />
                 </div>
               </div>
-              <div className="max-h-64 overflow-y-auto scrollbar-thin">
+              <div className="overflow-y-scroll" style={{ maxHeight: 360, overflowY: 'scroll' }}>
                 {filteredColumnDefs.map((column) => (
                   <label key={column.key} className="flex h-9 items-center gap-2 border-t border-gray-100 px-4 text-[12px] text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
                     <input type="checkbox" checked={draftColumns.includes(column.key)} onChange={() => setDraftColumns((prev) => prev.includes(column.key) ? prev.filter((item) => item !== column.key) : [...prev, column.key])} className="rounded border-gray-300 text-sky-600 focus:ring-sky-500" />
@@ -1965,10 +2038,12 @@ function AssetFinancialsTab({
   asset,
   depreciationConfig,
   onConfigureDepreciation,
+  onAssetRefresh,
 }: {
   asset: Asset;
   depreciationConfig: DepreciationConfig | null;
   onConfigureDepreciation: (initialConfig: DepreciationConfig | null) => void;
+  onAssetRefresh: () => void;
 }) {
   const [subTab, setSubTab] = useState<'cost' | 'depreciation'>('cost');
   const [data, setData] = useState<AssetFinancialsResponse | null>(null);
@@ -1987,11 +2062,12 @@ function AssetFinancialsTab({
   async function saveCost(values: CostFormValues) {
     setSaving(true);
     try {
-      if (editCost) await updateAssetCost(editCost.id, values);
+      if (editCost?.id) await updateAssetCost(editCost.id, values);
       else await createAssetCost(asset.id, values);
       setModalOpen(false);
       setEditCost(null);
       load();
+      if (values.costFactor === PURCHASE_COST_FACTOR) onAssetRefresh();
     } catch (error) {
       console.error(error);
       throw error;
@@ -2022,6 +2098,19 @@ function AssetFinancialsTab({
   const tcoTotal = purchaseCostTotal + operationalCostTotal + disposalCostTotal;
   const summary = data?.summary || { purchaseCost: purchaseCostTotal, operationalCost: operationalCostTotal, disposalCost: disposalCostTotal, currentBookValue: asset.purchaseCost || 0, tco: tcoTotal, total: operationalCostTotal + disposalCostTotal, totalCostOfOwnership: tcoTotal };
   const configuredDepreciation = depreciationConfig || depreciationConfigFromDetails(data?.depreciation);
+  const openPurchaseCostEditor = (item?: AssetCost) => {
+    setEditCost(item || {
+      id: 0,
+      assetId: asset.id,
+      costFactor: PURCHASE_COST_FACTOR,
+      costAmount: purchaseCostTotal,
+      description: null,
+      costDate: null,
+      createdOn: new Date().toISOString(),
+      createdBy: null,
+    });
+    setModalOpen(true);
+  };
 
   return (
     <div className="min-h-[520px] bg-white dark:bg-gray-900">
@@ -2051,7 +2140,7 @@ function AssetFinancialsTab({
             <div className="flex h-24 items-center justify-center text-xs text-gray-500"><Loader2 size={16} className="mr-2 animate-spin" />Loading costs...</div>
           ) : (
             <>
-              <CostSection title="Purchase Cost" items={purchaseCostItems} total={purchaseCostTotal} onEdit={(item) => { setEditCost(item); setModalOpen(true); }} onDelete={removeCost} saving={saving} fallbackPurchaseCost={purchaseCostItems.length ? undefined : purchaseCostTotal} />
+              <PurchaseCostSection items={purchaseCostItems} total={purchaseCostTotal} onEdit={openPurchaseCostEditor} />
               <CostSection title="Operational Cost(s)" items={operationalCostItems} total={operationalCostTotal} onEdit={(item) => { setEditCost(item); setModalOpen(true); }} onDelete={removeCost} saving={saving} />
               <CostSection title="Disposal Cost" items={disposalCostItems} total={disposalCostTotal} onEdit={(item) => { setEditCost(item); setModalOpen(true); }} onDelete={removeCost} saving={saving} />
             </>
@@ -2081,8 +2170,49 @@ function CostSummary({ label, value }: { label: string; value: number }) {
   );
 }
 
-function CostSection({ title, items, total, onEdit, onDelete, saving, fallbackPurchaseCost }: { title: string; items: AssetCost[]; total: number; onEdit: (item: AssetCost) => void; onDelete: (id: number) => void; saving: boolean; fallbackPurchaseCost?: number }) {
-  if (!items.length && fallbackPurchaseCost == null) return null;
+function PurchaseCostSection({ items, total, onEdit }: { items: AssetCost[]; total: number; onEdit: (item?: AssetCost) => void }) {
+  const rows = items.length ? items : [];
+
+  return (
+    <section className="mt-4">
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Purchase Cost</h3>
+      <table className="mt-2 w-full border-collapse text-[11px]">
+        <thead className="bg-gray-50 uppercase dark:bg-gray-800">
+          <tr className="border-y border-gray-200 dark:border-gray-700">
+            <th className="w-14 px-2 py-2 text-left font-normal" />
+            <th className="px-2 py-2 text-left font-normal">Cost Factor</th>
+            <th className="px-2 py-2 text-left font-normal">Cost ($)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length ? rows.map((item) => (
+            <tr key={item.id} className="border-b border-gray-100 dark:border-gray-800">
+              <td className="px-2 py-2 text-gray-500">
+                <button type="button" onClick={() => onEdit(item)} title="Edit"><Pencil size={13} /></button>
+              </td>
+              <td className="px-2 py-2">{PURCHASE_COST_FACTOR}</td>
+              <td className="px-2 py-2">{currency(item.costAmount)}</td>
+            </tr>
+          )) : (
+            <tr className="border-b border-gray-100 dark:border-gray-800">
+              <td className="px-2 py-2 text-gray-500">
+                <button type="button" onClick={() => onEdit()} title="Edit"><Pencil size={13} /></button>
+              </td>
+              <td className="px-2 py-2">{PURCHASE_COST_FACTOR}</td>
+              <td className="px-2 py-2">{currency(total)}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+      <div className="mt-4 text-right text-[12px] text-gray-900 dark:text-gray-100">
+        Total($) : {currency(total)}
+      </div>
+    </section>
+  );
+}
+
+function CostSection({ title, items, total, onEdit, onDelete, saving }: { title: string; items: AssetCost[]; total: number; onEdit: (item: AssetCost) => void; onDelete: (id: number) => void; saving: boolean }) {
+  if (!items.length) return null;
 
   return (
     <section className="mt-4">
@@ -2099,7 +2229,7 @@ function CostSection({ title, items, total, onEdit, onDelete, saving, fallbackPu
           </tr>
         </thead>
         <tbody>
-          {items.length ? items.map((item) => (
+          {items.map((item) => (
             <tr key={item.id} className="border-b border-gray-100 dark:border-gray-800">
               <td className="px-2 py-2 text-gray-500">
                 <button type="button" onClick={() => onEdit(item)} title="Edit"><Pencil size={13} /></button>
@@ -2112,16 +2242,7 @@ function CostSection({ title, items, total, onEdit, onDelete, saving, fallbackPu
               <td className="px-2 py-2">{item.description || '-'}</td>
               <td className="px-2 py-2">{currency(item.costAmount)}</td>
             </tr>
-          )) : (
-            <tr className="border-b border-gray-100 dark:border-gray-800">
-              <td className="px-2 py-2" />
-              <td className="px-2 py-2" />
-              <td className="px-2 py-2">-</td>
-              <td className="px-2 py-2">Purchase Cost</td>
-              <td className="px-2 py-2">-</td>
-              <td className="px-2 py-2">{currency(fallbackPurchaseCost)}</td>
-            </tr>
-          )}
+          ))}
         </tbody>
       </table>
       <div className="mt-4 text-right text-[12px] text-gray-900 dark:text-gray-100">
@@ -2142,6 +2263,7 @@ function CostModal({ open, cost, saving, onClose, onSave }: { open: boolean; cos
   const [form, setForm] = useState({ costFactor: '', costAmount: '', description: '', costDate: new Date().toISOString().slice(0, 10) });
   const [error, setError] = useState('');
   const isEdit = Boolean(cost);
+  const isPurchaseCostEdit = isEdit && cost?.costFactor === PURCHASE_COST_FACTOR;
 
   useEffect(() => {
     if (!open) return;
@@ -2157,11 +2279,16 @@ function CostModal({ open, cost, saving, onClose, onSave }: { open: boolean; cos
   if (!open) return null;
 
   async function save() {
-    if (!form.costDate) { setError('Date is required.'); return; }
+    if (!isPurchaseCostEdit && !form.costDate) { setError('Date is required.'); return; }
     if (!form.costFactor) { setError('Cost Factor is required.'); return; }
     if (form.costAmount === '' || Number.isNaN(Number(form.costAmount)) || Number(form.costAmount) < 0) { setError('Amount must be zero or greater.'); return; }
     try {
-      await onSave({ ...form, costAmount: Number(form.costAmount) });
+      await onSave({
+        ...form,
+        costAmount: Number(form.costAmount),
+        costDate: isPurchaseCostEdit ? '' : form.costDate,
+        description: isPurchaseCostEdit ? '' : form.description,
+      });
     } catch (err) {
       const message = err && typeof err === 'object' && 'response' in err
         ? String((err as { response?: { data?: { error?: string } } }).response?.data?.error || 'Unable to save cost.')
@@ -2180,18 +2307,23 @@ function CostModal({ open, cost, saving, onClose, onSave }: { open: boolean; cos
         </div>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-5 text-xs scrollbar-thin sm:px-6">
           {error && <p className="ml-[108px] text-red-600">{error}</p>}
-          <CostModalRow label="Date" required>
-            <DateInputWithIcon value={form.costDate} onChange={(value) => setForm((prev) => ({ ...prev, costDate: value }))} />
-          </CostModalRow>
+          {!isPurchaseCostEdit && (
+            <CostModalRow label="Date" required>
+              <DateInputWithIcon value={form.costDate} onChange={(value) => setForm((prev) => ({ ...prev, costDate: value }))} />
+            </CostModalRow>
+          )}
           <CostModalRow label="Cost Factor" required>
             <SearchableCostFactorSelect
               value={form.costFactor}
               onChange={(value) => setForm((prev) => ({ ...prev, costFactor: value }))}
+              disabled={isPurchaseCostEdit}
             />
           </CostModalRow>
-          <CostModalRow label="Description">
-            <textarea value={form.description} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} className="min-h-16 w-full resize-none border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
-          </CostModalRow>
+          {!isPurchaseCostEdit && (
+            <CostModalRow label="Description">
+              <textarea value={form.description} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} className="min-h-16 w-full resize-none border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+            </CostModalRow>
+          )}
           <CostModalRow label="Amount ($)" required>
             <input type="number" min="0" step="0.01" value={form.costAmount} onChange={(event) => setForm((prev) => ({ ...prev, costAmount: event.target.value }))} className="h-8 w-full border border-gray-300 bg-white px-2 text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
           </CostModalRow>
@@ -2247,7 +2379,7 @@ function DateInputWithIcon({ value, onChange }: { value: string; onChange: (valu
   );
 }
 
-function SearchableCostFactorSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+function SearchableCostFactorSelect({ value, onChange, disabled = false }: { value: string; onChange: (value: string) => void; disabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const options = value && !COST_FACTORS.includes(value) ? [value, ...COST_FACTORS] : COST_FACTORS;
@@ -2257,13 +2389,16 @@ function SearchableCostFactorSelect({ value, onChange }: { value: string; onChan
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen((current) => !current)}
-        className="flex h-8 w-full items-center justify-between border border-gray-300 bg-white px-2 text-left text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+        onClick={() => {
+          if (!disabled) setOpen((current) => !current);
+        }}
+        disabled={disabled}
+        className={`flex h-8 w-full items-center justify-between border border-gray-300 px-2 text-left text-xs text-gray-900 outline-none focus:border-sky-400 dark:border-gray-700 dark:text-gray-100 ${disabled ? 'cursor-not-allowed bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-300' : 'bg-white dark:bg-gray-900'}`}
       >
         <span className={value ? '' : 'text-gray-400'}>{value || '--Select Cost Factor--'}</span>
         <ChevronDown size={14} className={`text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && (
+      {open && !disabled && (
         <div className="absolute left-0 right-0 top-full z-40 border border-gray-300 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
           <div className="relative m-1">
             <input
@@ -3207,7 +3342,7 @@ export default function AssetDetailPage() {
             )}
             {activeTab === 'relationships' && <RelationshipsTab asset={asset} refreshKey={relationshipsRefreshKey} onAssign={() => { setAssignMode('assign'); setAssignOpen(true); }} />}
             {activeTab === 'contracts'     && <AssetContractsTab assetId={asset.id} />}
-            {activeTab === 'financials'    && <AssetFinancialsTab asset={asset} depreciationConfig={depreciationConfig} onConfigureDepreciation={openDepreciationModal} />}
+            {activeTab === 'financials'    && <AssetFinancialsTab asset={asset} depreciationConfig={depreciationConfig} onConfigureDepreciation={openDepreciationModal} onAssetRefresh={load} />}
             {(activeTab === 'associations' || activeTab === 'association') && <AssociationsContent />}
             {activeTab === 'history'       && <HistoryContent asset={asset} refreshKey={`${refreshKey}:${historyRefreshKey}`} />}
           </div>

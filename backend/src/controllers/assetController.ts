@@ -10,6 +10,7 @@ const UPLOAD_ROOT = process.env.UPLOAD_ROOT || path.join(__dirname, '..', '..', 
 const ASSET_ATTACHMENT_DIR = path.join(UPLOAD_ROOT, 'asset-attachments');
 const ASSET_ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024;
 const ASSET_ATTACHMENT_EXTENSIONS = new Set(['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt', '.html', '.png', '.jpg', '.jpeg', '.zip']);
+const ASSET_TRANSACTION_OPTIONS = { maxWait: 10000, timeout: 30000 };
 fs.mkdirSync(ASSET_ATTACHMENT_DIR, { recursive: true });
 
 const assetAttachmentStorage = multer.diskStorage({
@@ -782,14 +783,16 @@ async function createAsset(req: Request, res: Response, next: NextFunction): Pro
     const actor = changedBy(req, req.body);
     const item = await prisma.$transaction(async (tx) => {
       const changedOn = new Date();
-      const created = await tx.asset.create({ data: buildPayload(req.body) });
+      const payload = buildPayload(req.body);
+      const created = await tx.asset.create({ data: payload });
+      await syncPurchaseCostRow(tx, created.id, payload.purchaseCost, actor);
       await saveDynamicFieldValues(tx, created.id, req.body);
       const createdWithFields = await tx.asset.findUnique({ where: { id: created.id }, include: historyInclude });
       if (createdWithFields) {
         await tx.assetHistory.createMany({ data: buildHistoryChanges(null, createdWithFields as HistoryAsset, actor, changedOn) });
       }
       return tx.asset.findUnique({ where: { id: created.id } });
-    });
+    }, ASSET_TRANSACTION_OPTIONS);
     res.status(201).json(item);
   } catch (err) { next(err); }
 }
@@ -917,10 +920,12 @@ async function updateAsset(req: Request, res: Response, next: NextFunction): Pro
     const item = await prisma.$transaction(async (tx) => {
       const changedOn = new Date();
       const before = await tx.asset.findUnique({ where: { id }, include: historyInclude });
+      const payload = buildPayload(req.body);
       await tx.asset.update({
         where: { id },
-        data: buildPayload(req.body),
+        data: payload,
       });
+      await syncPurchaseCostRow(tx, id, payload.purchaseCost, actor);
       await saveDynamicFieldValues(tx, id, req.body);
       const after = await tx.asset.findUnique({ where: { id }, include: historyInclude });
       if (after) {
@@ -931,7 +936,7 @@ async function updateAsset(req: Request, res: Response, next: NextFunction): Pro
         where: { id },
         include: { productType: { select: { displayName: true, id: true } } },
       });
-    });
+    }, ASSET_TRANSACTION_OPTIONS);
     res.json(item);
   } catch (err) { next(err); }
 }
@@ -1560,15 +1565,24 @@ async function createAssetCost(req: Request, res: Response, next: NextFunction):
     if (!COST_FACTORS.has(costFactor)) { res.status(400).json({ error: 'Valid Cost Factor is required.' }); return; }
     const amount = money(req.body.costAmount);
     if (amount < 0) { res.status(400).json({ error: 'Cost Amount must be zero or greater.' }); return; }
-    const item = await prisma.assetCost.create({
-      data: {
-        assetId,
-        costFactor,
-        costAmount: amount,
-        description: String(req.body.description || '').trim() || null,
-        costDate: optionalDate(req.body.costDate),
-        createdBy: changedBy(req, req.body),
-      },
+    const item = await prisma.$transaction(async (tx) => {
+      const actor = changedBy(req, req.body);
+      if (costFactor === 'Purchase Cost') {
+        await tx.asset.update({ where: { id: assetId }, data: { purchaseCost: amount } });
+        await syncPurchaseCostRow(tx, assetId, amount, actor);
+        return tx.assetCost.findFirstOrThrow({ where: { assetId, costFactor: 'Purchase Cost' }, orderBy: { id: 'asc' } });
+      }
+
+      return tx.assetCost.create({
+        data: {
+          assetId,
+          costFactor,
+          costAmount: amount,
+          description: String(req.body.description || '').trim() || null,
+          costDate: optionalDate(req.body.costDate),
+          createdBy: actor,
+        },
+      });
     });
     res.status(201).json(item);
   } catch (err) { next(err); }
@@ -1579,14 +1593,30 @@ async function updateAssetCost(req: Request, res: Response, next: NextFunction):
     const id = parseInt(String(req.params.costId), 10);
     const costFactor = String(req.body.costFactor || '').trim();
     if (!COST_FACTORS.has(costFactor)) { res.status(400).json({ error: 'Valid Cost Factor is required.' }); return; }
-    const item = await prisma.assetCost.update({
-      where: { id },
-      data: {
-        costFactor,
-        costAmount: money(req.body.costAmount),
-        description: String(req.body.description || '').trim() || null,
-        costDate: optionalDate(req.body.costDate),
-      },
+    const amount = money(req.body.costAmount);
+    const item = await prisma.$transaction(async (tx) => {
+      const updated = await tx.assetCost.update({
+        where: { id },
+        data: {
+          costFactor,
+          costAmount: amount,
+          description: String(req.body.description || '').trim() || null,
+          costDate: optionalDate(req.body.costDate),
+        },
+      });
+
+      if (costFactor === 'Purchase Cost') {
+        await tx.asset.update({ where: { id: updated.assetId }, data: { purchaseCost: amount } });
+        await tx.assetCost.deleteMany({
+          where: {
+            assetId: updated.assetId,
+            costFactor: 'Purchase Cost',
+            id: { not: updated.id },
+          },
+        });
+      }
+
+      return updated;
     });
     res.json(item);
   } catch (err) { next(err); }
@@ -1650,7 +1680,7 @@ function buildPayload(body: Record<string, unknown>) {
     comments:           String(body.comments || '').trim()           || null,
     acquisitionDate:    toDate(body.acquisitionDate),
     expiryDate:         toDate(body.expiryDate),
-    purchaseCost:       body.purchaseCost ? parseFloat(String(body.purchaseCost)) : null,
+    purchaseCost:       optionalNonNegativeNumber(body.purchaseCost),
     warrantyExpiryDate: toDate(body.warrantyExpiryDate),
     impactDetails:      String(body.impactDetails || '').trim()      || null,
     impact:             String(body.impact || '').trim()             || null,
@@ -1681,6 +1711,40 @@ function buildPayload(body: Record<string, unknown>) {
 }
 
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+async function syncPurchaseCostRow(tx: TransactionClient, assetId: number, purchaseCost: number | null | undefined, actor: string) {
+  const rows = await tx.assetCost.findMany({
+    where: { assetId, costFactor: 'Purchase Cost' },
+    orderBy: { id: 'asc' },
+    select: { id: true },
+  });
+
+  if (purchaseCost == null) {
+    if (rows.length) await tx.assetCost.deleteMany({ where: { id: { in: rows.map((row) => row.id) } } });
+    return;
+  }
+
+  if (rows[0]) {
+    await tx.assetCost.update({
+      where: { id: rows[0].id },
+      data: { costAmount: purchaseCost, description: null, costDate: null },
+    });
+  } else {
+    await tx.assetCost.create({
+      data: {
+        assetId,
+        costFactor: 'Purchase Cost',
+        costAmount: purchaseCost,
+        description: null,
+        costDate: null,
+        createdBy: actor,
+      },
+    });
+  }
+
+  const duplicateIds = rows.slice(1).map((row) => row.id);
+  if (duplicateIds.length) await tx.assetCost.deleteMany({ where: { id: { in: duplicateIds } } });
+}
 
 async function saveDynamicFieldValues(tx: TransactionClient, assetId: number, body: Record<string, unknown>) {
   const values = Array.isArray(body.dynamicFieldValues) ? body.dynamicFieldValues : [];
