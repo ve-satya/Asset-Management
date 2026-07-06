@@ -17,3 +17,6 @@ export const updateLicenseAgreement = (id: number | string, data: unknown): Prom
 
 export const deleteLicenseAgreement = (id: number | string): Promise<{ message: string }> =>
   axios.delete(`${BASE}/${id}`).then((r) => r.data);
+
+export const removeLicenseFromAgreement = (id: number | string, licenseId: number | string): Promise<{ message: string }> =>
+  axios.delete(`${BASE}/${id}/licenses/${licenseId}`).then((r) => r.data);

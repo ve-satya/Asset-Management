@@ -131,6 +131,22 @@ export async function deleteAgreement(req: Request, res: Response, next: NextFun
   } catch (err) { next(err); }
 }
 
+export async function removeAgreementLicense(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const agreementId = parseInt(String(req.params.id), 10);
+    const licenseId = parseInt(String(req.params.licenseId), 10);
+    const item = await prisma.softwareLicense.findFirst({
+      where: { id: licenseId, agreementId, isActive: true },
+    });
+    if (!item) { res.status(404).json({ error: 'Associated license not found.' }); return; }
+    await prisma.softwareLicense.update({
+      where: { id: licenseId },
+      data: { agreementId: null },
+    });
+    res.json({ message: 'License removed from agreement successfully.' });
+  } catch (err) { next(err); }
+}
+
 function buildPayload(body: Record<string, unknown>) {
   return {
     agreementName:       String(body.agreementName       || '').trim(),
