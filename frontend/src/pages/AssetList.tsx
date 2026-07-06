@@ -648,12 +648,12 @@ export default function AssetList() {
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
   const [treeSearch, setTreeSearch] = useState('');
   const [treeExpandAll, setTreeExpandAll] = useState<boolean | null>(null);
-  const [rawSearch, setRawSearch] = useState('');
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [stateFilter, setStateFilter] = useState('');
   const [assetViewFilter, setAssetViewFilter] = useState(() => localStorage.getItem(ASSET_VIEW_LS_KEY) || '');
   const [productFilter, setProductFilter] = useState(() => localStorage.getItem(PRODUCT_FILTER_LS_KEY) || '');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [searchFiltersOpen, setSearchFiltersOpen] = useState(false);
+  const [columnSearchOpen, setColumnSearchOpen] = useState(false);
   const [sortKey, setSortKey] = useState<string | null>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection | null>('asc');
   const [selected, setSelected] = useState<number[]>([]);
@@ -672,7 +672,7 @@ export default function AssetList() {
   const [deleting, setDeleting] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const search = useDebounce(rawSearch, 300);
+  const debouncedColumnFilters = useDebounce(columnFilters, 300);
   const { toasts, showToast, removeToast } = useToast();
 
   useEffect(() => {
@@ -738,7 +738,6 @@ export default function AssetList() {
       const params: Record<string, unknown> = {
         page: pagination.page,
         pageSize: pagination.pageSize,
-        search,
         isActive: 'true',
       };
       if (selectedPtId) params.productTypeId = selectedPtId;
@@ -759,12 +758,24 @@ export default function AssetList() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize, search, selectedPtId, selectedCategory, stateFilter, assetViewFilter, productFilter, sortKey, sortDirection]);
+  }, [pagination.page, pagination.pageSize, selectedPtId, selectedCategory, stateFilter, assetViewFilter, productFilter, sortKey, sortDirection]);
 
   useEffect(() => { fetchAssets(); }, [fetchAssets]);
 
-  const filteredAssets = assets;
-  const visibleDefs = ALL_COLUMNS.filter((column) => visibleCols.includes(column.key));
+  const visibleDefs = useMemo(() => ALL_COLUMNS.filter((column) => visibleCols.includes(column.key)), [visibleCols]);
+  const visibleKeys = useMemo(() => new Set(visibleDefs.map((column) => column.key)), [visibleDefs]);
+  const activeColumnFilters = useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(debouncedColumnFilters)
+        .filter(([key, value]) => visibleKeys.has(key) && value.trim()),
+    );
+  }, [debouncedColumnFilters, visibleKeys]);
+  const hasColumnFilters = Object.values(columnFilters).some((value) => value.trim());
+  const filteredAssets = useMemo(() => {
+    const filters = Object.entries(activeColumnFilters).map(([key, value]) => [key, value.trim().toLowerCase()] as const);
+    if (!filters.length) return assets;
+    return assets.filter((asset) => filters.every(([key, value]) => getCellValue(asset, key).toLowerCase().includes(value)));
+  }, [assets, activeColumnFilters]);
   const rangeStart = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1;
   const rangeEnd = Math.min(pagination.page * pagination.pageSize, pagination.total);
 
@@ -873,7 +884,7 @@ export default function AssetList() {
       const exportColumns = ['name', ...visibleCols.filter((column) => column !== 'name')];
       const params: Record<string, unknown> = {
         format,
-        search,
+        search: '',
         isActive: 'true',
         title: exportTitle,
         fileScope: scopeLabel,
@@ -966,7 +977,7 @@ export default function AssetList() {
           <ToolbarButton active={filtersOpen} onClick={() => setFiltersOpen((value) => !value)}>Filters</ToolbarButton>
           <ToolbarButton title="Delete selected" disabled={selected.length === 0} onClick={() => setDeleteTarget(selected)}><Trash2 size={16} /></ToolbarButton>
           <div className="flex items-center">
-            <ToolbarButton active={searchFiltersOpen || Boolean(rawSearch)} onClick={() => setSearchFiltersOpen((value) => !value)} title="Search"><Search size={17} /></ToolbarButton>
+            <ToolbarButton active={columnSearchOpen || hasColumnFilters} onClick={() => setColumnSearchOpen((value) => !value)} title="Search"><Search size={17} /></ToolbarButton>
             <SelectColumnsDropdown visible={visibleCols} onApply={setVisibleCols} />
           </div>
           <ToolbarButton onClick={fetchAssets} title="Refresh"><RefreshCw size={15} /></ToolbarButton>
@@ -1012,20 +1023,6 @@ export default function AssetList() {
           </div>
         )}
 
-        {searchFiltersOpen && (
-          <div className="flex h-11 items-center border-b border-gray-200 px-3 dark:border-gray-700">
-            <div className="relative w-80">
-              <Search size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                value={rawSearch}
-                onChange={(event) => { setRawSearch(event.target.value); setPagination((prev) => ({ ...prev, page: 1 })); }}
-                placeholder="Search assets..."
-                className="h-8 w-full rounded border border-sky-300 bg-white pl-8 pr-2 text-xs text-gray-900 outline-none focus:border-sky-500 dark:bg-gray-900 dark:text-gray-100"
-              />
-            </div>
-          </div>
-        )}
-
         <div className="min-h-0 flex-1 overflow-auto scrollbar-thin">
           <table className="min-w-[980px] w-full border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
             <colgroup>
@@ -1055,6 +1052,33 @@ export default function AssetList() {
                   </th>
                 ))}
               </tr>
+              {columnSearchOpen && (
+                <tr className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+                  <th className="border-r border-gray-200 px-1 py-1 dark:border-gray-700" />
+                  <th className="border-r border-gray-200 px-1 py-1 dark:border-gray-700" />
+                  {visibleDefs.map((column) => (
+                    <th key={`search-${column.key}`} className="border-r border-gray-200 px-1 py-1 dark:border-gray-700">
+                      <input
+                        value={columnFilters[column.key] || ''}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setColumnFilters((prev) => {
+                            if (!value) {
+                              const next = { ...prev };
+                              delete next[column.key];
+                              return next;
+                            }
+                            return { ...prev, [column.key]: value };
+                          });
+                          setSelected([]);
+                        }}
+                        aria-label={`Search ${column.label}`}
+                        className="h-7 w-full rounded-sm border border-gray-300 bg-white px-1.5 text-xs font-normal text-gray-900 outline-none focus:border-sky-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                      />
+                    </th>
+                  ))}
+                </tr>
+              )}
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {loading ? (
