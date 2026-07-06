@@ -7,7 +7,7 @@ import AssetCommonForm from '../components/asset/AssetCommonForm';
 import AssetDynamicFormRenderer from '../components/asset/AssetDynamicFormRenderer';
 import ProductForm from '../components/product/ProductForm';
 import VendorForm from '../components/vendor/VendorForm';
-import { createAsset, getAsset, getAssets, updateAsset } from '../services/assetService';
+import { createAsset, getAsset, getAssetCosts, getAssets, updateAsset } from '../services/assetService';
 import { getAllProducts } from '../services/productService';
 import { getAllProductTypes } from '../services/productTypeService';
 import { getAllVendors } from '../services/vendorService';
@@ -130,9 +130,13 @@ export default function AssetFormPage() {
   useEffect(() => {
     if (!isEdit) return;
     setLoading(true);
-    getAsset(id!)
-      .then((rec) => {
+    Promise.all([
+      getAsset(id!),
+      getAssetCosts(id!).catch(() => null),
+    ])
+      .then(([rec, financials]) => {
         const dynamicFieldValues = Object.fromEntries((rec.dynamicFieldValues || []).map((item) => [String(item.productTypeFieldId), item.value || '']));
+        const purchaseCost = financials?.summary.purchaseCost ?? rec.purchaseCost;
         setForm({
           productTypeId: String(rec.productTypeId ?? ''),
           name: String(rec.name ?? ''),
@@ -162,7 +166,7 @@ export default function AssetFormPage() {
           comments: String(rec.comments ?? rec.stateComments ?? ''),
           acquisitionDate: fmt(rec.acquisitionDate),
           expiryDate: fmt(rec.expiryDate),
-          purchaseCost: String(rec.purchaseCost ?? ''),
+          purchaseCost: String(purchaseCost ?? ''),
           warrantyExpiryDate: fmt(rec.warrantyExpiryDate),
           impactDetails: String(rec.impactDetails ?? ''),
           impact: String(rec.impact ?? ''),
@@ -328,6 +332,10 @@ export default function AssetFormPage() {
     if (stateRules.requiresAssociatedAsset && !form.associatedAssetId) e.associatedAssetId = 'Associated asset is required.';
     if (form.isLoanable && !form.loanStart) e.loanStart = 'Loan Start is required.';
     if (form.isLoanable && !form.loanEnd) e.loanEnd = 'Loan End is required.';
+    if (form.purchaseCost !== '') {
+      const purchaseCost = Number(form.purchaseCost);
+      if (Number.isNaN(purchaseCost) || purchaseCost < 0) e.purchaseCost = 'Purchase Cost must be zero or greater.';
+    }
     return e;
   }
 
@@ -345,7 +353,7 @@ export default function AssetFormPage() {
       associatedAssetId: stateRules.associatedAssetsDisabled || !form.associatedAssetId ? null : parseInt(form.associatedAssetId, 10),
       associatedToAssets: stateRules.associatedAssetsDisabled ? null : form.associatedToAssets,
       siteId: form.siteId ? parseInt(form.siteId, 10) : null,
-      purchaseCost: form.purchaseCost !== '' ? parseFloat(form.purchaseCost) : null,
+      purchaseCost: form.purchaseCost !== '' ? Number(form.purchaseCost) : null,
       loanStart: form.loanStart || null,
       loanEnd: form.loanEnd || null,
       acquisitionDate: form.acquisitionDate || null,
@@ -373,7 +381,7 @@ export default function AssetFormPage() {
         if (!continueEdit) {
           const detailProductTypeId = updated.productTypeId || form.productTypeId;
           const refreshKey = Date.now();
-          setTimeout(() => navigate(`/assets/detail?asset-product-type-id=${detailProductTypeId}&asset-id=${updated.id}&tab=history&refresh=${refreshKey}`, { replace: true }), 800);
+          setTimeout(() => navigate(`/assets/detail?asset-product-type-id=${detailProductTypeId}&asset-id=${updated.id}&tab=asset-detail&refresh=${refreshKey}`, { replace: true }), 800);
         }
       } else {
         const created = await createAsset(payload);

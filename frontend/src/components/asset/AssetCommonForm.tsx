@@ -123,7 +123,7 @@ export default function AssetCommonForm({
             <Field label="Expiry Date"><input type="date" name="expiryDate" value={form.expiryDate} onChange={onChange} className={inputClass()} /></Field>
           </div>
           <div className="space-y-3">
-            <Field label="Purchase Cost"><input type="number" name="purchaseCost" value={form.purchaseCost} onChange={onChange} min="0" step="0.01" className={inputClass()} /></Field>
+            <Field label="Purchase Cost" error={errors.purchaseCost}><input type="number" name="purchaseCost" value={form.purchaseCost} onChange={onChange} min="0" step="0.01" className={inputClass(!!errors.purchaseCost)} /></Field>
             <Field label="Warranty Expiry Date"><input type="date" name="warrantyExpiryDate" value={form.warrantyExpiryDate} onChange={onChange} className={inputClass()} /></Field>
           </div>
         </div>
