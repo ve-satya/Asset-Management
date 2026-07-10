@@ -74,9 +74,14 @@ const ALL_COLUMNS: ColumnDef[] = [
   { key: 'location', label: 'Location', width: 150, sortable: true, sortKey: 'location' },
 ];
 const DEFAULT_VISIBLE = ALL_COLUMNS.map((column) => column.key);
+const REQUIRED_VISIBLE_COLUMNS = ['name'];
 const LS_KEY = 'asset_list_columns';
 const ASSET_VIEW_LS_KEY = 'asset_list_view_filter';
 const PRODUCT_FILTER_LS_KEY = 'asset_list_product_filter';
+
+function withRequiredColumns(keys: string[]) {
+  return Array.from(new Set([...REQUIRED_VISIBLE_COLUMNS, ...keys]));
+}
 
 const ASSET_VIEW_OPTIONS: DropdownOption[] = [
   { value: '', label: 'All Assets' },
@@ -197,6 +202,7 @@ function TreeNodeComp({ node, depth, selectedNodeId, onSelect, openNodeIds, quer
     <div>
       <div
         onClick={handleSelect}
+        title={node.displayName}
         className={`flex h-9 cursor-pointer items-center gap-2 text-xs transition-colors ${isSelected ? 'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300' : 'text-gray-900 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800'}`}
         style={{ paddingLeft: depth * 18 + 10, paddingRight: 10 }}
       >
@@ -453,8 +459,11 @@ function SelectColumnsDropdown({ visible, onApply }: { visible: string[]; onAppl
     return () => document.removeEventListener('mousedown', close);
   }, []);
 
-  useEffect(() => { if (open) setDraft(visible); }, [open, visible]);
-  const filteredColumns = ALL_COLUMNS.filter((column) => column.label.toLowerCase().includes(query.toLowerCase()));
+  useEffect(() => {
+    if (open) setDraft(withRequiredColumns(visible));
+  }, [open, visible]);
+  const selectableColumns = ALL_COLUMNS.filter((column) => !REQUIRED_VISIBLE_COLUMNS.includes(column.key));
+  const filteredColumns = selectableColumns.filter((column) => column.label.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <div className="relative" ref={ref}>
@@ -493,13 +502,13 @@ function SelectColumnsDropdown({ visible, onApply }: { visible: string[]; onAppl
           </div>
           <div className="flex items-center justify-center gap-3 border-t border-gray-100 p-3 dark:border-gray-700">
             <button
-              onClick={() => { onApply(draft.length ? draft : DEFAULT_VISIBLE); setOpen(false); }}
+              onClick={() => { onApply(withRequiredColumns(draft.length ? draft : DEFAULT_VISIBLE)); setOpen(false); }}
               className="h-9 rounded-full bg-sky-600 px-6 text-sm font-medium text-white hover:bg-sky-700"
             >
               Save
             </button>
             <button
-              onClick={() => { setDraft(visible); setOpen(false); }}
+              onClick={() => { setDraft(withRequiredColumns(visible)); setOpen(false); }}
               className="h-9 rounded-full border border-gray-300 bg-gray-50 px-5 text-sm text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
             >
               Cancel
@@ -663,7 +672,7 @@ export default function AssetList() {
       if (saved) {
         const parsed: string[] = JSON.parse(saved);
         const valid = parsed.filter((key) => ALL_COLUMNS.some((column) => column.key === key));
-        if (valid.length) return valid;
+        if (valid.length) return withRequiredColumns(valid);
       }
     } catch {}
     return DEFAULT_VISIBLE;
@@ -978,7 +987,7 @@ export default function AssetList() {
           <ToolbarButton title="Delete selected" disabled={selected.length === 0} onClick={() => setDeleteTarget(selected)}><Trash2 size={16} /></ToolbarButton>
           <div className="flex items-center">
             <ToolbarButton active={columnSearchOpen || hasColumnFilters} onClick={() => setColumnSearchOpen((value) => !value)} title="Search"><Search size={17} /></ToolbarButton>
-            <SelectColumnsDropdown visible={visibleCols} onApply={setVisibleCols} />
+            <SelectColumnsDropdown visible={visibleCols} onApply={(keys) => setVisibleCols(withRequiredColumns(keys))} />
           </div>
           <ToolbarButton onClick={fetchAssets} title="Refresh"><RefreshCw size={15} /></ToolbarButton>
           <div className="flex flex-wrap items-center gap-1">
