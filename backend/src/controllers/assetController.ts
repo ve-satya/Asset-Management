@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
+import * as XLSX from 'xlsx';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
@@ -10,6 +11,8 @@ const UPLOAD_ROOT = process.env.UPLOAD_ROOT || path.join(__dirname, '..', '..', 
 const ASSET_ATTACHMENT_DIR = path.join(UPLOAD_ROOT, 'asset-attachments');
 const ASSET_ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024;
 const ASSET_ATTACHMENT_EXTENSIONS = new Set(['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt', '.html', '.png', '.jpg', '.jpeg', '.zip']);
+const ASSET_IMPORT_EXTENSIONS = new Set(['.xls', '.xlsx', '.csv']);
+const ASSET_IMPORT_MAX_SIZE = 20 * 1024 * 1024;
 const ASSET_TRANSACTION_OPTIONS = { maxWait: 10000, timeout: 30000 };
 fs.mkdirSync(ASSET_ATTACHMENT_DIR, { recursive: true });
 
@@ -35,6 +38,63 @@ const assetAttachmentUpload = multer({
 });
 
 export const uploadAssetAttachmentsMiddleware = assetAttachmentUpload.array('documents', 20);
+
+const assetImportUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: ASSET_IMPORT_MAX_SIZE },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ASSET_IMPORT_EXTENSIONS.has(ext)) cb(null, true);
+    else cb(new Error('Unsupported file type. Use XLS, XLSX, or CSV.'));
+  },
+});
+
+export const uploadAssetImportMiddleware = assetImportUpload.single('file');
+
+const IMPORT_FIELD_DEFS = [
+  { key: 'id', label: 'ID' },
+  { key: 'name', label: 'Asset Name', required: true },
+  { key: 'productType', label: 'Product Type', required: true },
+  { key: 'product', label: 'Product', required: true },
+  { key: 'assetTag', label: 'Asset Tag' },
+  { key: 'barcode', label: 'Barcode' },
+  { key: 'orgSerialNumber', label: 'Org Serial Number' },
+  { key: 'description', label: 'Description' },
+  { key: 'vendor', label: 'Vendor' },
+  { key: 'manufacturer', label: 'Manufacturer' },
+  { key: 'assetState', label: 'Asset State' },
+  { key: 'user', label: 'User' },
+  { key: 'department', label: 'Department' },
+  { key: 'associatedToAssets', label: 'Associated To Assets' },
+  { key: 'site', label: 'Site' },
+  { key: 'region', label: 'Region' },
+  { key: 'location', label: 'Location' },
+  { key: 'purchaseCost', label: 'Purchase Cost' },
+  { key: 'acquisitionDate', label: 'Acquisition Date' },
+  { key: 'expiryDate', label: 'Expiry Date' },
+  { key: 'warrantyExpiryDate', label: 'Warranty Expiry Date' },
+  { key: 'comments', label: 'Comments' },
+  { key: 'serviceTag', label: 'Service Tag' },
+  { key: 'biosDate', label: 'BIOS Date' },
+  { key: 'smbiosVersion', label: 'SMBIOS Version' },
+  { key: 'virtualMemory', label: 'Virtual Memory' },
+  { key: 'biosVersion', label: 'BIOS Version' },
+  { key: 'biosManufacturer', label: 'BIOS Manufacturer' },
+  { key: 'physicalMemory', label: 'Total Memory' },
+  { key: 'domain', label: 'Domain' },
+  { key: 'osName', label: 'Operating System' },
+  { key: 'osVersion', label: 'OS Version' },
+  { key: 'osServicePack', label: 'Service Pack' },
+  { key: 'osProductId', label: 'Product ID' },
+  { key: 'osBuildNumber', label: 'Build Number' },
+  { key: 'impactDetails', label: 'Impact Details' },
+  { key: 'impact', label: 'Impact' },
+  { key: 'assetAudited', label: 'Asset Audited' },
+] as const;
+
+type ImportFieldKey = typeof IMPORT_FIELD_DEFS[number]['key'];
+type ImportMode = 'addUpdate' | 'replaceAll' | 'ignoreDuplicates';
+type ImportRow = Record<string, unknown>;
 
 type AssetListQuery = {
   where: Prisma.AssetWhereInput;
@@ -262,6 +322,125 @@ const historyInclude = {
     include: { field: { select: { fieldName: true } } },
   },
 } satisfies Prisma.AssetInclude;
+
+const workstationInclude = {
+  computerDetails: true,
+  networkAdapters: { orderBy: { id: 'asc' as const } },
+  assetProcessors: { orderBy: { id: 'asc' as const } },
+  hardDisks: { orderBy: { id: 'asc' as const } },
+  keyboards: { orderBy: { id: 'asc' as const } },
+  monitors: { orderBy: { id: 'asc' as const } },
+  motherboards: { orderBy: { id: 'asc' as const } },
+  mice: { orderBy: { id: 'asc' as const } },
+  memoryModules: { orderBy: { id: 'asc' as const } },
+  userAccounts: { orderBy: { id: 'asc' as const } },
+  logicalDrives: { orderBy: { id: 'asc' as const } },
+  physicalDrives: { orderBy: { id: 'asc' as const } },
+  printers: { orderBy: { id: 'asc' as const } },
+  videoCards: { orderBy: { id: 'asc' as const } },
+  usbControllers: { orderBy: { id: 'asc' as const } },
+  ports: { orderBy: { id: 'asc' as const } },
+  soundCards: { orderBy: { id: 'asc' as const } },
+};
+
+const COMPUTER_DETAIL_FIELDS = [
+  'serviceTag', 'lastLoggedInUser', 'biosDate', 'smbiosVersion', 'virtualMemory', 'virtualMemoryUnit',
+  'logicalProcessors', 'biosName', 'biosVersion', 'biosManufacturer', 'totalMemory', 'totalMemoryUnit',
+  'domain', 'totalSlots', 'operatingSystem', 'osVersion', 'servicePack', 'productId', 'buildNumber',
+  'systemType', 'licenseType', 'licenseStatus', 'systemDrive', 'vmPlatform', 'installedVms', 'allowedVms',
+] as const;
+
+const WORKSTATION_CHILD_CONFIGS = [
+  { key: 'networkAdapters', relation: 'networkAdapters', label: 'Network Adapters', delegate: 'assetNetworkAdapter', fields: ['ipAddress', 'macAddress', 'nicName', 'nicLease', 'gateway', 'network', 'nicDescription', 'netmask', 'isDhcp', 'dhcpServer'] },
+  { key: 'processors', relation: 'assetProcessors', label: 'Processors', delegate: 'assetProcessor', fields: ['processor', 'serialNumber', 'cpuModel', 'manufacturer', 'processorCount', 'processorSpeedGhz', 'cpuStatus', 'cpuStepping', 'cpuFamily', 'vendorInfo', 'numberOfCores'] },
+  { key: 'hardDisks', relation: 'hardDisks', label: 'Hard Disks', delegate: 'assetHardDisk', fields: ['model', 'serialNumber', 'freeSpace', 'manufacturer', 'capacity', 'driveType'] },
+  { key: 'keyboards', relation: 'keyboards', label: 'Keyboards', delegate: 'assetKeyboard', fields: ['keyboardType', 'keyboardSerialNumber', 'keyboardManufacturer'] },
+  { key: 'monitors', relation: 'monitors', label: 'Monitors', delegate: 'assetMonitor', fields: ['monitorType', 'resolution', 'serialNumber', 'manufacturer'] },
+  { key: 'motherboards', relation: 'motherboards', label: 'Motherboards', delegate: 'assetMotherboard', fields: ['product', 'serialNumber', 'installedDate', 'manufacturer', 'model', 'version', 'partNumber', 'primaryBusType', 'secondaryBusType', 'deviceStatus', 'description'] },
+  { key: 'mice', relation: 'mice', label: 'Mouse', delegate: 'assetMouse', fields: ['mouseType', 'mouseButtons', 'serialNumber', 'manufacturer'] },
+  { key: 'memoryModules', relation: 'memoryModules', label: 'Memory Modules', delegate: 'assetMemoryModule', fields: ['moduleTag', 'memoryType', 'capacity', 'socket', 'bankLabel', 'frequencyMhz'] },
+  { key: 'userAccounts', relation: 'userAccounts', label: 'User Accounts', delegate: 'assetUserAccount', fields: ['accountName', 'domainName', 'fullName', 'description', 'status', 'sid'] },
+  { key: 'logicalDrives', relation: 'logicalDrives', label: 'Logical Drives', delegate: 'assetLogicalDrive', fields: ['drive', 'driveType', 'capacity', 'capacityUnit', 'freeSpace', 'freeSpaceUnit', 'fileType', 'serialNumber', 'remoteHost', 'remotePath'] },
+  { key: 'physicalDrives', relation: 'physicalDrives', label: 'Physical Drives', delegate: 'assetPhysicalDrive', fields: ['driveName', 'driveType', 'manufacturer', 'driverVersion', 'driverProvider', 'description'] },
+  { key: 'printers', relation: 'printers', label: 'Printers', delegate: 'assetPrinter', fields: ['name', 'type', 'model', 'server', 'default', 'location'] },
+  { key: 'videoCards', relation: 'videoCards', label: 'Video Cards', delegate: 'assetVideoCard', fields: ['videoCardName', 'videoCardMemory', 'videoCardChipset', 'videoCardBiosVersion'] },
+  { key: 'usbControllers', relation: 'usbControllers', label: 'USB Controllers', delegate: 'assetUsbController', fields: ['usb'] },
+  { key: 'ports', relation: 'ports', label: 'Ports', delegate: 'assetPort', fields: ['portName', 'status'] },
+  { key: 'soundCards', relation: 'soundCards', label: 'Sound Cards', delegate: 'assetSoundCard', fields: ['soundCardName', 'manufacturer'] },
+] as const;
+
+const historyComparisonInclude = {
+  ...historyInclude,
+  ...workstationInclude,
+};
+
+function compactWorkstationRecord(row: unknown, fields: readonly string[]) {
+  if (!row || typeof row !== 'object') return null;
+  const source = row as Record<string, unknown>;
+  const data: Record<string, string> = {};
+  for (const field of fields) {
+    const value = source[field];
+    if (value === undefined || value === null) continue;
+    const text = String(value).trim();
+    if (text !== '') data[field] = text;
+  }
+  return Object.keys(data).length ? data : null;
+}
+
+function compactWorkstationRows(rows: unknown, fields: readonly string[]) {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .map((row) => compactWorkstationRecord(row, fields))
+    .filter((row): row is Record<string, string> => Boolean(row));
+}
+
+function workstationHistoryValue(value: Record<string, string> | Record<string, string>[]) {
+  if (Array.isArray(value) && value.length === 0) return null;
+  if (!Array.isArray(value) && Object.keys(value).length === 0) return null;
+  return JSON.stringify(value);
+}
+
+function buildWorkstationHistoryChanges(before: unknown, after: unknown, actor: string, changedOn = new Date()) {
+  const rows: Prisma.AssetHistoryCreateManyInput[] = [];
+  const beforeAsset = (before || {}) as Record<string, unknown>;
+  const afterAsset = (after || {}) as Record<string, unknown>;
+  const assetId = Number(afterAsset.id);
+  if (!assetId) return rows;
+
+  const beforeComputer = compactWorkstationRecord(beforeAsset.computerDetails, COMPUTER_DETAIL_FIELDS) || {};
+  const afterComputer = compactWorkstationRecord(afterAsset.computerDetails, COMPUTER_DETAIL_FIELDS) || {};
+  if (!valuesEqual(beforeComputer, afterComputer)) {
+    rows.push({
+      assetId,
+      actionType: before ? 'Updated' : 'Created',
+      changedBy: actor,
+      changedOn,
+      fieldName: 'Computer Details',
+      oldValue: workstationHistoryValue(beforeComputer),
+      newValue: workstationHistoryValue(afterComputer),
+      comments: 'Computer Details updated',
+    });
+  }
+
+  for (const config of WORKSTATION_CHILD_CONFIGS) {
+    const beforeRows = compactWorkstationRows(beforeAsset[config.relation], config.fields);
+    const afterRows = compactWorkstationRows(afterAsset[config.relation], config.fields);
+    if (!valuesEqual(beforeRows, afterRows)) {
+      rows.push({
+        assetId,
+        actionType: before ? 'Updated' : 'Created',
+        changedBy: actor,
+        changedOn,
+        fieldName: config.label,
+        oldValue: workstationHistoryValue(beforeRows),
+        newValue: workstationHistoryValue(afterRows),
+        comments: `${config.label} updated`,
+      });
+    }
+  }
+
+  return rows;
+}
 
 function buildAssetListQuery(query: Record<string, string>): AssetListQuery {
   const {
@@ -745,6 +924,354 @@ async function exportAssets(req: Request, res: Response, next: NextFunction): Pr
   } catch (err) { next(err); }
 }
 
+function normalizeHeader(value: unknown) {
+  return String(value || '').trim();
+}
+
+function normalizeLookup(value: unknown) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function parseImportWorkbook(file: Express.Multer.File, requestedSheetName?: string) {
+  const workbook = XLSX.read(file.buffer, { type: 'buffer', cellDates: false });
+  const sheetName = requestedSheetName || workbook.SheetNames[0];
+  if (!sheetName) return { headers: [] as string[], rows: [] as ImportRow[] };
+  if (!workbook.Sheets[sheetName]) throw new Error('Selected worksheet was not found.');
+  const worksheet = workbook.Sheets[sheetName];
+  const matrix = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1, defval: '', raw: false });
+  const headers = (matrix[0] || []).map(normalizeHeader).filter(Boolean);
+  const rows = matrix.slice(1).map((line) => {
+    const row: ImportRow = {};
+    headers.forEach((header, index) => {
+      row[header] = normalizeHeader(line[index]);
+    });
+    return row;
+  }).filter((row) => headers.some((header) => normalizeHeader(row[header]) !== ''));
+  return { headers, rows };
+}
+
+function readImportSheetNames(file: Express.Multer.File) {
+  const workbook = XLSX.read(file.buffer, { type: 'buffer', bookSheets: true });
+  return workbook.SheetNames || [];
+}
+
+function rowMappedValue(row: ImportRow, mapping: Record<string, string>, key: ImportFieldKey) {
+  const header = mapping[key];
+  if (!header) return '';
+  return normalizeHeader(row[header]);
+}
+
+function parseImportDate(value: unknown) {
+  if (value === undefined || value === null || String(value).trim() === '') return null;
+  const raw = String(value).trim();
+  const date = new Date(raw);
+  if (!Number.isNaN(date.getTime())) return date;
+  const slash = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+  if (slash) {
+    const [, dd, mm, yyyy] = slash;
+    const year = yyyy.length === 2 ? `20${yyyy}` : yyyy;
+    const parsed = new Date(`${year}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}T00:00:00`);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return undefined;
+}
+
+function csvEscape(value: unknown) {
+  const text = String(value ?? '');
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function buildImportTemplate() {
+  const headers = IMPORT_FIELD_DEFS.filter((field) => field.key !== 'id').map((field) => field.label);
+  const sample = [
+    'Access Point - Sample',
+    'Access Point',
+    'PoE',
+    'TAG-0001',
+    'BC-0001',
+    'SER-0001',
+    'Sample asset imported from template',
+    'AV Vendor',
+    'TENDAA',
+    'In Store',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '230.00',
+    '2026-07-01',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+  ];
+  return `${headers.map(csvEscape).join(',')}\r\n${sample.map(csvEscape).join(',')}\r\n`;
+}
+
+async function importAssetsTemplate(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="asset_import_template.csv"');
+    res.send(buildImportTemplate());
+  } catch (err) { next(err); }
+}
+
+async function previewAssetImport(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const file = req.file as Express.Multer.File | undefined;
+    if (!file) { res.status(400).json({ error: 'Choose a file to import.' }); return; }
+    const ext = path.extname(file.originalname).toLowerCase();
+    const sheetName = String(req.body.sheetName || '').trim();
+    if (['.xls', '.xlsx'].includes(ext) && !sheetName) {
+      res.status(400).json({ error: 'Please select a sheet name.' });
+      return;
+    }
+    const parsed = parseImportWorkbook(file, sheetName || undefined);
+    if (!parsed.headers.length) { res.status(400).json({ error: 'The selected file does not contain a header row.' }); return; }
+    res.json({
+      fileName: file.originalname,
+      sheetName: sheetName || null,
+      headers: parsed.headers,
+      rows: parsed.rows,
+      previewRows: parsed.rows.slice(0, 10),
+      totalRecords: parsed.rows.length,
+      fields: IMPORT_FIELD_DEFS,
+    });
+  } catch (err) { next(err); }
+}
+
+async function getAssetImportSheets(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const file = req.file as Express.Multer.File | undefined;
+    if (!file) { res.status(400).json({ error: 'Choose a file to import.' }); return; }
+    const sheets = readImportSheetNames(file);
+    if (!sheets.length) { res.status(400).json({ error: 'Unable to read worksheet names from the selected file.' }); return; }
+    res.json({ sheets });
+  } catch {
+    res.status(400).json({ error: 'Unable to read worksheet names from the selected file.' });
+  }
+}
+
+function buildMappingError(mapping: Record<string, string>) {
+  const missing = IMPORT_FIELD_DEFS
+    .filter((field) => 'required' in field && field.required)
+    .filter((field) => !mapping[field.key])
+    .map((field) => field.label);
+  return missing.length ? `${missing.join(', ')} must be mapped.` : null;
+}
+
+async function findImportMatch(tx: TransactionClient, row: ImportRow, mapping: Record<string, string>) {
+  const id = parseInt(rowMappedValue(row, mapping, 'id'), 10);
+  if (id && Number.isFinite(id)) {
+    const byId = await tx.asset.findUnique({ where: { id }, include: historyInclude });
+    if (byId) return byId;
+  }
+  const candidates: Prisma.AssetWhereInput[] = [];
+  const assetTag = rowMappedValue(row, mapping, 'assetTag');
+  const barcode = rowMappedValue(row, mapping, 'barcode');
+  const serial = rowMappedValue(row, mapping, 'orgSerialNumber');
+  const name = rowMappedValue(row, mapping, 'name');
+  if (assetTag) candidates.push({ assetTag });
+  if (barcode) candidates.push({ barcode });
+  if (serial) candidates.push({ orgSerialNumber: serial });
+  if (name) candidates.push({ name });
+  if (!candidates.length) return null;
+  return tx.asset.findFirst({ where: { OR: candidates }, include: historyInclude });
+}
+
+async function executeAssetImport(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const body = req.body as {
+      rows?: ImportRow[];
+      mapping?: Record<string, string>;
+      importMode?: ImportMode;
+      confirmReplace?: boolean;
+    };
+    const rows = Array.isArray(body.rows) ? body.rows : [];
+    const mapping = body.mapping || {};
+    const importMode: ImportMode = body.importMode === 'replaceAll' || body.importMode === 'ignoreDuplicates' ? body.importMode : 'addUpdate';
+    const mappingError = buildMappingError(mapping);
+    if (mappingError) { res.status(400).json({ error: mappingError }); return; }
+    if (!rows.length) { res.status(400).json({ error: 'The import file does not contain any records.' }); return; }
+    if (importMode === 'replaceAll' && body.confirmReplace !== true) {
+      res.status(400).json({ error: 'Confirm replace-all import before deleting existing asset records.' });
+      return;
+    }
+
+    const actor = changedBy(req, body as Record<string, unknown>);
+    const [productTypes, products, assetStates, vendors] = await Promise.all([
+      prisma.productType.findMany({ where: { isActive: true }, select: { id: true, displayName: true } }),
+      prisma.product.findMany({ where: { isActive: true }, select: { id: true, name: true, productTypeId: true, manufacturer: { select: { name: true } } } }),
+      prisma.assetState.findMany({ where: { isActive: true }, select: { id: true, name: true } }),
+      prisma.vendor.findMany({ where: { isActive: true }, select: { id: true, name: true } }),
+    ]);
+
+    const productTypeMap = new Map(productTypes.map((item) => [normalizeLookup(item.displayName), item]));
+    const assetStateMap = new Map(assetStates.map((item) => [normalizeLookup(item.name), item]));
+    const vendorMap = new Map(vendors.map((item) => [normalizeLookup(item.name), item]));
+    const productsByTypeAndName = new Map(products.map((item) => [`${item.productTypeId}:${normalizeLookup(item.name)}`, item]));
+
+    const results: Array<{ rowNumber: number; assetName: string; status: 'Imported' | 'Updated' | 'Skipped' | 'Failed'; message: string; assetId?: number }> = [];
+    let imported = 0;
+    let updated = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    await prisma.$transaction(async (tx) => {
+      if (importMode === 'replaceAll') {
+        await tx.assetDynamicFieldValue.deleteMany({});
+        await tx.assetHistory.deleteMany({});
+        await tx.assetRelationship.deleteMany({});
+        await tx.assetServiceRelationship.deleteMany({});
+        await tx.assetAttachment.deleteMany({});
+        await tx.assetContract.deleteMany({});
+        await tx.assetCost.deleteMany({});
+        await tx.assetDepreciationConfig.deleteMany({});
+        await tx.asset.deleteMany({});
+      }
+
+      for (let index = 0; index < rows.length; index += 1) {
+        const row = rows[index];
+        const rowNumber = index + 2;
+        const assetName = rowMappedValue(row, mapping, 'name');
+        try {
+          const productTypeName = rowMappedValue(row, mapping, 'productType');
+          const productName = rowMappedValue(row, mapping, 'product');
+          const productType = productTypeMap.get(normalizeLookup(productTypeName));
+          if (!assetName) throw new Error('Asset Name is required.');
+          if (!productType) throw new Error(`Product Type "${productTypeName}" was not found.`);
+          const product = productsByTypeAndName.get(`${productType.id}:${normalizeLookup(productName)}`);
+          if (!product) throw new Error(`Product "${productName}" was not found for Product Type "${productType.displayName}".`);
+
+          const purchaseCostValue = rowMappedValue(row, mapping, 'purchaseCost');
+          const parsedPurchaseCost = purchaseCostValue ? parseFloat(purchaseCostValue) : null;
+          if (purchaseCostValue && (parsedPurchaseCost === null || !Number.isFinite(parsedPurchaseCost) || parsedPurchaseCost < 0)) throw new Error('Purchase Cost must be a non-negative number.');
+
+          const dates: Record<string, Date | null> = {};
+          for (const dateKey of ['acquisitionDate', 'expiryDate', 'warrantyExpiryDate'] as ImportFieldKey[]) {
+            const rawDate = rowMappedValue(row, mapping, dateKey);
+            const parsedDate = parseImportDate(rawDate);
+            if (parsedDate === undefined) throw new Error(`${IMPORT_FIELD_DEFS.find((field) => field.key === dateKey)?.label} is invalid.`);
+            dates[dateKey] = parsedDate;
+          }
+
+          const stateName = rowMappedValue(row, mapping, 'assetState');
+          const state = stateName ? assetStateMap.get(normalizeLookup(stateName)) : null;
+          if (stateName && !state) throw new Error(`Asset State "${stateName}" was not found.`);
+          const vendorName = rowMappedValue(row, mapping, 'vendor');
+          const vendor = vendorName ? vendorMap.get(normalizeLookup(vendorName)) : null;
+
+          const payloadBody = {
+            productTypeId: productType.id,
+            name: assetName,
+            assetTag: rowMappedValue(row, mapping, 'assetTag'),
+            orgSerialNumber: rowMappedValue(row, mapping, 'orgSerialNumber'),
+            description: rowMappedValue(row, mapping, 'description'),
+            productId: product.id,
+            product: product.name,
+            vendorId: vendor?.id || null,
+            vendor: vendorName,
+            barcode: rowMappedValue(row, mapping, 'barcode'),
+            manufacturer: rowMappedValue(row, mapping, 'manufacturer') || product.manufacturer?.name || '',
+            assetStateId: state?.id || null,
+            assetState: stateName,
+            user: rowMappedValue(row, mapping, 'user'),
+            department: rowMappedValue(row, mapping, 'department'),
+            associatedToAssets: rowMappedValue(row, mapping, 'associatedToAssets'),
+            site: rowMappedValue(row, mapping, 'site'),
+            region: rowMappedValue(row, mapping, 'region'),
+            location: rowMappedValue(row, mapping, 'location'),
+            purchaseCost: parsedPurchaseCost,
+            acquisitionDate: dates.acquisitionDate,
+            expiryDate: dates.expiryDate,
+            warrantyExpiryDate: dates.warrantyExpiryDate,
+            comments: rowMappedValue(row, mapping, 'comments'),
+            serviceTag: rowMappedValue(row, mapping, 'serviceTag'),
+            biosDate: rowMappedValue(row, mapping, 'biosDate'),
+            smbiosVersion: rowMappedValue(row, mapping, 'smbiosVersion'),
+            virtualMemory: rowMappedValue(row, mapping, 'virtualMemory'),
+            biosVersion: rowMappedValue(row, mapping, 'biosVersion'),
+            biosManufacturer: rowMappedValue(row, mapping, 'biosManufacturer'),
+            physicalMemory: rowMappedValue(row, mapping, 'physicalMemory'),
+            domain: rowMappedValue(row, mapping, 'domain'),
+            osName: rowMappedValue(row, mapping, 'osName'),
+            osVersion: rowMappedValue(row, mapping, 'osVersion'),
+            osServicePack: rowMappedValue(row, mapping, 'osServicePack'),
+            osProductId: rowMappedValue(row, mapping, 'osProductId'),
+            osBuildNumber: rowMappedValue(row, mapping, 'osBuildNumber'),
+            impactDetails: rowMappedValue(row, mapping, 'impactDetails'),
+            impact: rowMappedValue(row, mapping, 'impact'),
+            assetAudited: rowMappedValue(row, mapping, 'assetAudited'),
+          };
+
+          const payload = buildPayload(payloadBody);
+          const existing = importMode === 'replaceAll' ? null : await findImportMatch(tx, row, mapping);
+          if (existing && importMode === 'ignoreDuplicates') {
+            skipped += 1;
+            results.push({ rowNumber, assetName, status: 'Skipped', message: 'Duplicate asset ignored.', assetId: existing.id });
+            continue;
+          }
+
+          if (existing) {
+            await tx.asset.update({ where: { id: existing.id }, data: payload });
+            await syncPurchaseCostRow(tx, existing.id, payload.purchaseCost, actor);
+            const after = await tx.asset.findUnique({ where: { id: existing.id }, include: historyInclude });
+            if (after) {
+              const changes = buildHistoryChanges(existing as HistoryAsset, after as HistoryAsset, actor, new Date());
+              changes.push({
+                assetId: existing.id,
+                actionType: 'Imported',
+                changedBy: actor,
+                changedOn: new Date(),
+                fieldName: 'Asset Import',
+                newValue: assetName,
+                comments: 'Asset updated from import.',
+              });
+              await tx.assetHistory.createMany({ data: changes });
+            }
+            updated += 1;
+            results.push({ rowNumber, assetName, status: 'Updated', message: 'Asset updated successfully.', assetId: existing.id });
+          } else {
+            const created = await tx.asset.create({ data: payload });
+            await syncPurchaseCostRow(tx, created.id, payload.purchaseCost, actor);
+            await tx.assetHistory.create({
+              data: {
+                assetId: created.id,
+                actionType: 'Imported',
+                changedBy: actor,
+                changedOn: new Date(),
+                fieldName: 'Asset Import',
+                newValue: assetName,
+                comments: 'Asset imported.',
+              },
+            });
+            imported += 1;
+            results.push({ rowNumber, assetName, status: 'Imported', message: 'Asset imported successfully.', assetId: created.id });
+          }
+        } catch (error) {
+          failed += 1;
+          results.push({ rowNumber, assetName: assetName || '-', status: 'Failed', message: error instanceof Error ? error.message : 'Import failed.' });
+        }
+      }
+    }, ASSET_TRANSACTION_OPTIONS);
+
+    res.json({
+      status: failed ? 'completed_with_errors' : 'completed',
+      totalRecords: rows.length,
+      successfulRecords: imported + updated,
+      importedRecords: imported,
+      updatedRecords: updated,
+      skippedRecords: skipped,
+      failedRecords: failed,
+      results,
+    });
+  } catch (err) { next(err); }
+}
+
 async function getAsset(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const item = await prisma.asset.findUnique({
@@ -755,6 +1282,7 @@ async function getAsset(req: Request, res: Response, next: NextFunction): Promis
         vendorRef: { select: { id: true, name: true } },
         stateRef: { select: { id: true, name: true } },
         associatedAsset: { select: { id: true, name: true, assetTag: true } },
+        ...workstationInclude,
         dynamicFieldValues: {
           include: {
             field: {
@@ -786,12 +1314,17 @@ async function createAsset(req: Request, res: Response, next: NextFunction): Pro
       const payload = buildPayload(req.body);
       const created = await tx.asset.create({ data: payload });
       await syncPurchaseCostRow(tx, created.id, payload.purchaseCost, actor);
+      await syncWorkstationDetails(tx, created.id, req.body.workstationDetails);
       await saveDynamicFieldValues(tx, created.id, req.body);
-      const createdWithFields = await tx.asset.findUnique({ where: { id: created.id }, include: historyInclude });
+      const createdWithFields = await tx.asset.findUnique({ where: { id: created.id }, include: historyComparisonInclude });
       if (createdWithFields) {
-        await tx.assetHistory.createMany({ data: buildHistoryChanges(null, createdWithFields as HistoryAsset, actor, changedOn) });
+        const changes = [
+          ...buildHistoryChanges(null, createdWithFields as HistoryAsset, actor, changedOn),
+          ...buildWorkstationHistoryChanges(null, createdWithFields, actor, changedOn),
+        ];
+        if (changes.length) await tx.assetHistory.createMany({ data: changes });
       }
-      return tx.asset.findUnique({ where: { id: created.id } });
+      return tx.asset.findUnique({ where: { id: created.id }, include: workstationInclude as any });
     }, ASSET_TRANSACTION_OPTIONS);
     res.status(201).json(item);
   } catch (err) { next(err); }
@@ -919,22 +1452,26 @@ async function updateAsset(req: Request, res: Response, next: NextFunction): Pro
     const actor = changedBy(req, req.body);
     const item = await prisma.$transaction(async (tx) => {
       const changedOn = new Date();
-      const before = await tx.asset.findUnique({ where: { id }, include: historyInclude });
+      const before = await tx.asset.findUnique({ where: { id }, include: historyComparisonInclude });
       const payload = buildPayload(req.body);
       await tx.asset.update({
         where: { id },
         data: payload,
       });
       await syncPurchaseCostRow(tx, id, payload.purchaseCost, actor);
+      await syncWorkstationDetails(tx, id, req.body.workstationDetails);
       await saveDynamicFieldValues(tx, id, req.body);
-      const after = await tx.asset.findUnique({ where: { id }, include: historyInclude });
+      const after = await tx.asset.findUnique({ where: { id }, include: historyComparisonInclude });
       if (after) {
-        const changes = buildHistoryChanges(before as HistoryAsset | null, after as HistoryAsset, actor, changedOn);
+        const changes = [
+          ...buildHistoryChanges(before as HistoryAsset | null, after as HistoryAsset, actor, changedOn),
+          ...buildWorkstationHistoryChanges(before, after, actor, changedOn),
+        ];
         if (changes.length) await tx.assetHistory.createMany({ data: changes });
       }
       return tx.asset.findUnique({
         where: { id },
-        include: { productType: { select: { displayName: true, id: true } } },
+        include: { productType: { select: { displayName: true, id: true } }, ...workstationInclude },
       });
     }, ASSET_TRANSACTION_OPTIONS);
     res.json(item);
@@ -1648,7 +2185,7 @@ function buildPayload(body: Record<string, unknown>) {
   const toDate = (v: unknown) => (v ? new Date(String(v)) : null);
   const toInt = (v: unknown) => (v !== undefined && v !== null && String(v) !== '' ? parseInt(String(v), 10) : null);
   const isLoanable = toBoolean(readBodyValue(body, 'isLoanable', 'IsLoanable', 'is_loanable'));
-  return {
+  const payload: Prisma.AssetUncheckedCreateInput = {
     productTypeId:      parseInt(String(body.productTypeId), 10),
     name:               String(body.name || '').trim(),
     assetTag:           String(body.assetTag || '').trim()           || null,
@@ -1706,11 +2243,89 @@ function buildPayload(body: Record<string, unknown>) {
     ram:                String(body.ram || '').trim()                 || null,
     virtualMemory:      String(body.virtualMemory || '').trim()      || null,
     physicalMemory:     String(body.physicalMemory || '').trim()     || null,
-    processors:         Array.isArray(body.processors) ? body.processors : [],
   };
+
+  return payload;
 }
 
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+function pickStringFields(row: Record<string, unknown>, fields: readonly string[]) {
+  const data: Record<string, string | null> = {};
+  for (const field of fields) {
+    const value = row[field];
+    data[field] = value === undefined || value === null ? null : String(value).trim() || null;
+  }
+  return data;
+}
+
+function hasMeaningfulWorkstationValue(row: Record<string, unknown>, fields: readonly string[]) {
+  return fields.some((field) => !field.endsWith('Unit') && String(row[field] ?? '').trim() !== '');
+}
+
+async function clearWorkstationDetails(tx: TransactionClient, assetId: number) {
+  const client = tx as unknown as Record<string, any>;
+  await client.assetComputerDetails.deleteMany({ where: { assetId } });
+  for (const config of WORKSTATION_CHILD_CONFIGS) {
+    await client[config.delegate].deleteMany({ where: { assetId } });
+  }
+}
+
+async function syncWorkstationDetails(tx: TransactionClient, assetId: number, rawDetails: unknown) {
+  if (rawDetails === undefined) return;
+  if (rawDetails === null) {
+    await clearWorkstationDetails(tx, assetId);
+    return;
+  }
+  if (!rawDetails || typeof rawDetails !== 'object' || Array.isArray(rawDetails)) return;
+
+  const details = rawDetails as Record<string, unknown>;
+  const client = tx as unknown as Record<string, any>;
+  const computerData = pickStringFields(details, COMPUTER_DETAIL_FIELDS);
+  const hasComputerData = hasMeaningfulWorkstationValue(computerData, COMPUTER_DETAIL_FIELDS);
+
+  if (hasComputerData) {
+    await client.assetComputerDetails.upsert({
+      where: { assetId },
+      create: { assetId, ...computerData },
+      update: computerData,
+    });
+  } else {
+    await client.assetComputerDetails.deleteMany({ where: { assetId } });
+  }
+
+  for (const config of WORKSTATION_CHILD_CONFIGS) {
+    const rows = Array.isArray(details[config.key]) ? details[config.key] as Record<string, unknown>[] : [];
+    const cleanRows = rows
+      .filter((row) => row && typeof row === 'object' && hasMeaningfulWorkstationValue(row, config.fields))
+      .map((row) => ({
+        id: Number(row.id) || null,
+        data: pickStringFields(row, config.fields),
+      }));
+    const keepIds = cleanRows.map((row) => row.id).filter((id): id is number => Boolean(id));
+    const delegate = client[config.delegate];
+
+    await delegate.deleteMany({
+      where: {
+        assetId,
+        ...(keepIds.length ? { id: { notIn: keepIds } } : {}),
+      },
+    });
+
+    for (const row of cleanRows) {
+      if (row.id) {
+        await delegate.updateMany({
+          where: { id: row.id, assetId },
+          data: row.data,
+        });
+      } else {
+        await delegate.create({
+          data: { assetId, ...row.data },
+        });
+      }
+    }
+  }
+}
 
 async function syncPurchaseCostRow(tx: TransactionClient, assetId: number, purchaseCost: number | null | undefined, actor: string) {
   const rows = await tx.assetCost.findMany({
@@ -1763,4 +2378,4 @@ async function saveDynamicFieldValues(tx: TransactionClient, assetId: number, bo
   }
 }
 
-export { getAssets, getAsset, createAsset, copyAsset, updateAsset, modifyAssetType, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, attachAssetRelationships, deleteAssetRelationship, getAssetAttachments, uploadAssetAttachments, downloadAssetAttachment, previewAssetAttachment, deleteAssetAttachment, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, saveAssetDepreciation, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets };
+export { getAssets, getAsset, createAsset, copyAsset, updateAsset, modifyAssetType, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, attachAssetRelationships, deleteAssetRelationship, getAssetAttachments, uploadAssetAttachments, downloadAssetAttachment, previewAssetAttachment, deleteAssetAttachment, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, saveAssetDepreciation, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets, importAssetsTemplate, getAssetImportSheets, previewAssetImport, executeAssetImport };

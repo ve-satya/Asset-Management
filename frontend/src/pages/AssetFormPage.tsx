@@ -5,6 +5,8 @@ import Modal from '../components/common/Modal';
 import { useToast, ToastContainer } from '../components/common/Toast';
 import AssetCommonForm from '../components/asset/AssetCommonForm';
 import AssetDynamicFormRenderer from '../components/asset/AssetDynamicFormRenderer';
+import WorkstationDetailsForm from '../components/asset/workstation/WorkstationDetailsForm';
+import { EMPTY_WORKSTATION_DETAILS, type WorkstationDetailsFormData } from '../components/asset/workstation/workstationTypes';
 import ProductForm from '../components/product/ProductForm';
 import VendorForm from '../components/vendor/VendorForm';
 import { createAsset, getAsset, getAssetCosts, getAssets, updateAsset } from '../services/assetService';
@@ -61,6 +63,7 @@ const EMPTY: AssetFormState = {
   totalSlots: '',
   osName: '',
   osVersion: '',
+  workstationDetails: { ...EMPTY_WORKSTATION_DETAILS },
   dynamicFieldValues: {},
 };
 
@@ -82,6 +85,127 @@ function getStateRules(assetState: string) {
     return { userDepartmentDisabled: false, associatedAssetsDisabled: true, requiresUserDepartment: true, requiresAssociatedAsset: false };
   }
   return { userDepartmentDisabled: true, associatedAssetsDisabled: true, requiresUserDepartment: false, requiresAssociatedAsset: false };
+}
+
+function isComputerProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['computer', 'computers', 'workstation', 'desktop', 'laptop', 'server'].includes(part));
+}
+
+function workstationDetailsDirty(details: WorkstationDetailsFormData) {
+  const scalarDirty = Object.entries(details).some(([key, value]) => {
+    if (Array.isArray(value)) return value.length > 0;
+    const emptyDefault = EMPTY_WORKSTATION_DETAILS[key as keyof WorkstationDetailsFormData];
+    return String(value ?? '') !== String(emptyDefault ?? '');
+  });
+  return scalarDirty;
+}
+
+const WORKSTATION_COLLECTION_KEYS: Array<keyof WorkstationDetailsFormData> = [
+  'networkAdapters',
+  'processors',
+  'hardDisks',
+  'keyboards',
+  'monitors',
+  'motherboards',
+  'mice',
+  'memoryModules',
+  'userAccounts',
+  'logicalDrives',
+  'physicalDrives',
+  'printers',
+  'videoCards',
+  'usbControllers',
+  'ports',
+  'soundCards',
+];
+
+function sanitizeWorkstationDetails(details: WorkstationDetailsFormData): WorkstationDetailsFormData {
+  const sanitized = { ...details };
+  for (const key of WORKSTATION_COLLECTION_KEYS) {
+    const value = sanitized[key];
+    if (!Array.isArray(value)) continue;
+    (sanitized as Record<string, unknown>)[key] = value.filter((row) => {
+      if (!row || typeof row !== 'object') return false;
+      return Object.entries(row as unknown as Record<string, unknown>).some(([fieldKey, fieldValue]) => {
+        if (fieldKey.endsWith('Unit')) return false;
+        return String(fieldValue ?? '').trim() !== '';
+      });
+    });
+  }
+  return sanitized;
+}
+
+function validateWorkstationDetails(details: WorkstationDetailsFormData) {
+  const errors: Record<string, string> = {};
+  const numericFields: Array<[keyof WorkstationDetailsFormData, string]> = [
+    ['virtualMemory', 'Virtual Memory'],
+    ['logicalProcessors', 'Logical Processors'],
+    ['totalMemory', 'Total Memory'],
+    ['totalSlots', 'Total Slots'],
+    ['installedVms', 'Installed VMs'],
+    ['allowedVms', 'Allowed VMs'],
+  ];
+  numericFields.forEach(([key, label]) => {
+    const value = details[key];
+    if (typeof value === 'string' && value.trim() && Number(value) < 0) errors.workstationDetails = `${label} must not be negative.`;
+  });
+  const ipv4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+  const mac = /^([0-9a-f]{2}[:-]){5}[0-9a-f]{2}$/i;
+  for (const row of details.networkAdapters) {
+    if (row.ipAddress && !ipv4.test(row.ipAddress.trim())) errors.workstationDetails = 'Network Adapter IP Address is invalid.';
+    if (row.macAddress && !mac.test(row.macAddress.trim())) errors.workstationDetails = 'Network Adapter MAC Address is invalid.';
+  }
+  return errors;
+}
+
+function workstationFromAsset(rec: Asset): WorkstationDetailsFormData {
+  const normalizedAsset = rec as Asset & Record<string, unknown>;
+  const processors = rec.processors as unknown;
+  const stored = processors && typeof processors === 'object' && !Array.isArray(processors) && 'workstationDetails' in processors
+    ? (processors as { workstationDetails?: Partial<WorkstationDetailsFormData> }).workstationDetails
+    : undefined;
+  const computerDetails = normalizedAsset.computerDetails && typeof normalizedAsset.computerDetails === 'object'
+    ? normalizedAsset.computerDetails as Partial<WorkstationDetailsFormData>
+    : undefined;
+  const relationRows = (relationKey: string) => Array.isArray(normalizedAsset[relationKey]) ? normalizedAsset[relationKey] as unknown[] : undefined;
+  return {
+    ...EMPTY_WORKSTATION_DETAILS,
+    ...stored,
+    ...computerDetails,
+    serviceTag: computerDetails?.serviceTag ?? stored?.serviceTag ?? String(rec.serviceTag ?? ''),
+    biosDate: computerDetails?.biosDate ?? stored?.biosDate ?? String(rec.biosDate ?? ''),
+    smbiosVersion: computerDetails?.smbiosVersion ?? stored?.smbiosVersion ?? String(rec.smbiosVersion ?? ''),
+    virtualMemory: computerDetails?.virtualMemory ?? stored?.virtualMemory ?? String(rec.virtualMemory ?? ''),
+    biosVersion: computerDetails?.biosVersion ?? stored?.biosVersion ?? String(rec.biosVersion ?? ''),
+    biosManufacturer: computerDetails?.biosManufacturer ?? stored?.biosManufacturer ?? String(rec.biosManufacturer ?? ''),
+    totalMemory: computerDetails?.totalMemory ?? stored?.totalMemory ?? String(rec.physicalMemory ?? rec.ram ?? ''),
+    domain: computerDetails?.domain ?? stored?.domain ?? String(rec.domain ?? ''),
+    operatingSystem: computerDetails?.operatingSystem ?? stored?.operatingSystem ?? String(rec.osName ?? ''),
+    osVersion: computerDetails?.osVersion ?? stored?.osVersion ?? String(rec.osVersion ?? ''),
+    servicePack: computerDetails?.servicePack ?? stored?.servicePack ?? String(rec.osServicePack ?? ''),
+    productId: computerDetails?.productId ?? stored?.productId ?? String(rec.osProductId ?? ''),
+    buildNumber: computerDetails?.buildNumber ?? stored?.buildNumber ?? String(rec.osBuildNumber ?? ''),
+    networkAdapters: (relationRows('networkAdapters') as WorkstationDetailsFormData['networkAdapters']) ?? stored?.networkAdapters ?? [],
+    processors: (relationRows('assetProcessors') as WorkstationDetailsFormData['processors']) ?? stored?.processors ?? [],
+    hardDisks: (relationRows('hardDisks') as WorkstationDetailsFormData['hardDisks']) ?? stored?.hardDisks ?? [],
+    keyboards: (relationRows('keyboards') as WorkstationDetailsFormData['keyboards']) ?? stored?.keyboards ?? [],
+    monitors: (relationRows('monitors') as WorkstationDetailsFormData['monitors']) ?? stored?.monitors ?? [],
+    motherboards: (relationRows('motherboards') as WorkstationDetailsFormData['motherboards']) ?? stored?.motherboards ?? [],
+    mice: (relationRows('mice') as WorkstationDetailsFormData['mice']) ?? stored?.mice ?? [],
+    memoryModules: (relationRows('memoryModules') as WorkstationDetailsFormData['memoryModules']) ?? stored?.memoryModules ?? [],
+    userAccounts: (relationRows('userAccounts') as WorkstationDetailsFormData['userAccounts']) ?? stored?.userAccounts ?? [],
+    logicalDrives: (relationRows('logicalDrives') as WorkstationDetailsFormData['logicalDrives']) ?? stored?.logicalDrives ?? [],
+    physicalDrives: (relationRows('physicalDrives') as WorkstationDetailsFormData['physicalDrives']) ?? stored?.physicalDrives ?? [],
+    printers: (relationRows('printers') as WorkstationDetailsFormData['printers']) ?? stored?.printers ?? [],
+    videoCards: (relationRows('videoCards') as WorkstationDetailsFormData['videoCards']) ?? stored?.videoCards ?? [],
+    usbControllers: (relationRows('usbControllers') as WorkstationDetailsFormData['usbControllers']) ?? stored?.usbControllers ?? [],
+    ports: (relationRows('ports') as WorkstationDetailsFormData['ports']) ?? stored?.ports ?? [],
+    soundCards: (relationRows('soundCards') as WorkstationDetailsFormData['soundCards']) ?? stored?.soundCards ?? [],
+  };
 }
 
 export default function AssetFormPage() {
@@ -183,6 +307,7 @@ export default function AssetFormPage() {
           totalSlots: '',
           osName: String(rec.osName ?? ''),
           osVersion: String(rec.osVersion ?? ''),
+          workstationDetails: workstationFromAsset(rec),
           dynamicFieldValues,
         });
       })
@@ -255,11 +380,18 @@ export default function AssetFormPage() {
   }
 
   function selectProduct(productId: string, product?: ProductOption) {
+    const nextProductTypeId = product ? String(product.productTypeId) : form.productTypeId;
+    const changingAwayFromComputer = isComputerProductType(form.productTypeId, productTypeList) && !isComputerProductType(nextProductTypeId, productTypeList);
+    if (changingAwayFromComputer && workstationDetailsDirty(form.workstationDetails)) {
+      const ok = window.confirm('Changing the Product Type will remove the entered computer-specific information. Do you want to continue?');
+      if (!ok) return;
+    }
     setForm((prev) => ({
       ...prev,
       productId,
       product: product?.name || '',
-      productTypeId: product ? String(product.productTypeId) : prev.productTypeId,
+      productTypeId: nextProductTypeId,
+      workstationDetails: changingAwayFromComputer ? { ...EMPTY_WORKSTATION_DETAILS } : prev.workstationDetails,
     }));
     setErrors((prev) => ({ ...prev, productId: '', product: '', productTypeId: '' }));
   }
@@ -336,10 +468,29 @@ export default function AssetFormPage() {
       const purchaseCost = Number(form.purchaseCost);
       if (Number.isNaN(purchaseCost) || purchaseCost < 0) e.purchaseCost = 'Purchase Cost must be zero or greater.';
     }
+    if (isComputerProductType(form.productTypeId, productTypeList)) Object.assign(e, validateWorkstationDetails(form.workstationDetails));
     return e;
   }
 
+  function handleWorkstationDetailsChange(workstationDetails: WorkstationDetailsFormData) {
+    setForm((prev) => ({
+      ...prev,
+      workstationDetails,
+      serviceTag: workstationDetails.serviceTag,
+      biosVersion: workstationDetails.biosVersion,
+      biosManufacturer: workstationDetails.biosManufacturer,
+      smbiosVersion: workstationDetails.smbiosVersion,
+      physicalMemory: workstationDetails.totalMemory,
+      virtualMemory: workstationDetails.virtualMemory,
+      domain: workstationDetails.domain,
+      osName: workstationDetails.operatingSystem,
+      osVersion: workstationDetails.osVersion,
+    }));
+  }
+
   function buildPayload() {
+    const sanitizedWorkstationDetails = sanitizeWorkstationDetails(form.workstationDetails);
+    const shouldSaveWorkstationDetails = isComputerProductType(form.productTypeId, productTypeList) || workstationDetailsDirty(sanitizedWorkstationDetails);
     return {
       ...form,
       productTypeId: form.productTypeId ? parseInt(form.productTypeId, 10) : undefined,
@@ -360,6 +511,21 @@ export default function AssetFormPage() {
       expiryDate: form.expiryDate || null,
       warrantyExpiryDate: form.warrantyExpiryDate || null,
       stateComments: form.comments || null,
+      serviceTag: form.workstationDetails.serviceTag,
+      biosDate: form.workstationDetails.biosDate,
+      smbiosVersion: form.workstationDetails.smbiosVersion,
+      biosVersion: form.workstationDetails.biosVersion,
+      biosManufacturer: form.workstationDetails.biosManufacturer,
+      virtualMemory: form.workstationDetails.virtualMemory,
+      physicalMemory: form.workstationDetails.totalMemory,
+      ram: form.workstationDetails.totalMemory,
+      domain: form.workstationDetails.domain,
+      osName: form.workstationDetails.operatingSystem,
+      osVersion: form.workstationDetails.osVersion,
+      osServicePack: form.workstationDetails.servicePack,
+      osProductId: form.workstationDetails.productId,
+      osBuildNumber: form.workstationDetails.buildNumber,
+      workstationDetails: shouldSaveWorkstationDetails ? sanitizedWorkstationDetails : null,
       dynamicFieldValues: Object.entries(form.dynamicFieldValues).map(([productTypeFieldId, value]) => ({
         productTypeFieldId: parseInt(productTypeFieldId, 10),
         value,
@@ -409,6 +575,7 @@ export default function AssetFormPage() {
     ? productList.filter((product) => String(product.productTypeId) === form.productTypeId || String(product.id) === form.productId)
     : productList;
   const productTypeName = productTypeList.find((productType) => String(productType.id) === form.productTypeId)?.displayName;
+  const showWorkstationDetails = isComputerProductType(form.productTypeId, productTypeList);
   const pageTitle = isEdit ? `Edit ${form.name || productTypeName || 'Asset'}` : `Add New ${productTypeName || 'Asset'}`;
   const loanDateDisabled = !form.isLoanable;
 
@@ -426,6 +593,7 @@ export default function AssetFormPage() {
         <div className="w-full max-w-[min(100%,1440px)] border-r border-gray-200 dark:border-gray-800 pb-8">
           {errors.submit && <div className="m-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">{errors.submit}</div>}
           {errors.productTypeId && <div className="m-4 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">{errors.productTypeId}</div>}
+          {errors.workstationDetails && <div className="m-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">{errors.workstationDetails}</div>}
 
           <AssetCommonForm
             form={form}
@@ -447,6 +615,13 @@ export default function AssetFormPage() {
             onAddProduct={() => setProductModalOpen(true)}
             onAddVendor={() => setVendorModalOpen(true)}
           />
+
+        {showWorkstationDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+          />
+        )}
 
         <AssetDynamicFormRenderer
           productTypeId={form.productTypeId}

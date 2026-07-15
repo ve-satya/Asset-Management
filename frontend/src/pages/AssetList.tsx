@@ -91,6 +91,22 @@ function clampAssetTreeWidth(value: number) {
   return Math.min(ASSET_TREE_MAX_WIDTH, Math.max(ASSET_TREE_MIN_WIDTH, Math.round(value)));
 }
 
+function compareTreeNodesByName(left: TreeNode, right: TreeNode) {
+  return left.displayName.trim().localeCompare(right.displayName.trim(), undefined, {
+    sensitivity: 'base',
+    numeric: true,
+  });
+}
+
+function sortTreeAlphabetically(nodes: TreeNode[]): TreeNode[] {
+  return [...nodes]
+    .sort(compareTreeNodesByName)
+    .map((node) => ({
+      ...node,
+      children: sortTreeAlphabetically(node.children || []),
+    }));
+}
+
 const ASSET_VIEW_OPTIONS: DropdownOption[] = [
   { value: '', label: 'All Assets' },
   { value: 'not-in-contract', label: 'Not in contract' },
@@ -136,6 +152,8 @@ function buildTree(items: ProductTypeOption[]): TreeNode[] {
     else nonItRoot.children.push(node);
   });
 
+  itRoot.children = sortTreeAlphabetically(itRoot.children);
+  nonItRoot.children = sortTreeAlphabetically(nonItRoot.children);
   assetsGroup.children = [itRoot, nonItRoot];
   assetsRoot.children = [assetsGroup];
   return [assetsRoot];
@@ -327,7 +345,7 @@ function ActionsDropdown({ disabled }: { disabled: boolean }) {
   );
 }
 
-function ListViewDropdown({ onExportAssets }: { onExportAssets: () => void }) {
+function ListViewDropdown({ onImportAssets, onExportAssets }: { onImportAssets: () => void; onExportAssets: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -339,11 +357,6 @@ function ListViewDropdown({ onExportAssets }: { onExportAssets: () => void }) {
     return () => document.removeEventListener('mousedown', close);
   }, []);
 
-  function handlePlaceholder(action: 'Import Assets' | 'Export Assets') {
-    console.log(`${action} placeholder`);
-    setOpen(false);
-  }
-
   return (
     <div className="relative" ref={ref}>
       <ToolbarButton active={open} onClick={() => setOpen((value) => !value)}>
@@ -353,7 +366,7 @@ function ListViewDropdown({ onExportAssets }: { onExportAssets: () => void }) {
         <div className="absolute left-0 top-full z-30 mt-1 min-w-44 overflow-hidden rounded border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
           <button
             type="button"
-            onClick={() => handlePlaceholder('Import Assets')}
+            onClick={() => { setOpen(false); onImportAssets(); }}
             className="flex h-9 w-full items-center gap-2 px-3 text-left text-xs text-gray-700 hover:bg-sky-50 hover:text-sky-700 dark:text-gray-200 dark:hover:bg-sky-900/30 dark:hover:text-sky-200"
           >
             <Import size={15} className="shrink-0 text-gray-500 dark:text-gray-400" /> Import Assets
@@ -1067,7 +1080,10 @@ export default function AssetList() {
             </ToolbarButton>
           )}
           <ActionsDropdown disabled={selected.length === 0} />
-          <ListViewDropdown onExportAssets={() => setExportOpen(true)} />
+          <ListViewDropdown
+            onImportAssets={() => navigate(selectedTreeNode?.productTypeId ? `/assets/import?asset-product-type-id=${selectedTreeNode.productTypeId}` : '/assets/import')}
+            onExportAssets={() => setExportOpen(true)}
+          />
           <ToolbarButton>New Scan</ToolbarButton>
           <ToolbarButton active={filtersOpen} onClick={() => setFiltersOpen((value) => !value)}>Filters</ToolbarButton>
           <ToolbarButton title="Delete selected" disabled={selected.length === 0} onClick={() => setDeleteTarget(selected)}><Trash2 size={16} /></ToolbarButton>

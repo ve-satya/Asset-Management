@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, ReactNode, useMemo, ChangeEvent, DragEvent
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Box, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Cpu, Download, FileText, Info, Link, Loader2, Monitor, Paperclip, Pencil, Play, Plus, Printer, RefreshCw, Router, Search, TableProperties, Trash2, UserCircle, UserPlus, X } from 'lucide-react';
 import DynamicAssetDetailsSection from '../components/asset/DynamicAssetDetailsSection';
+import WorkstationDetailsView, { hasWorkstationDetails } from '../components/asset/workstation/WorkstationDetailsView';
 import RelationshipsTab from '../components/asset/RelationshipsTab';
 import AddRelationshipModal from '../components/asset/AddRelationshipModal';
 import { attachAssetRelationships, copyAsset, createAssetCost, deleteAssetAttachment, deleteAssetCost, downloadAssetAttachment, getAsset, getAssetAttachments, getAssetContracts, getAssetCosts, getAssetHistory, getAssetRelationships, modifyAssetType, previewAssetAttachmentUrl, saveAssetDepreciation, updateAsset, updateAssetCost, uploadAssetAttachments } from '../services/assetService';
@@ -933,6 +934,12 @@ function AssetDetailContent({
   onDeleteAttachment: (attachment: AssetAttachment) => void;
   onDownloadAllAttachments: () => void;
 }) {
+  const productTypeName = asset.productType?.displayName || '';
+  const isComputerAsset = Boolean(
+    productTypeName.toLowerCase().match(/computer|workstation|desktop|laptop|server/) ||
+    hasWorkstationDetails(asset)
+  );
+
   return (
     <>
       <Section title="Asset Details"><Grid2>
@@ -983,6 +990,7 @@ function AssetDetailContent({
         <Field label="Impact"         value={asset.impact} />
         <Field label="Asset Audited"  value={asset.assetAudited} />
       </Grid2></Section>
+      {isComputerAsset && <WorkstationDetailsView asset={asset} />}
       <DynamicAssetDetailsSection
         assetId={asset.id}
         productTypeId={asset.productTypeId}

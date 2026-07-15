@@ -9,6 +9,67 @@ export const getAssets   = (params: Record<string, unknown>): Promise<PaginatedR
 export const exportAssets = (params: Record<string, unknown>) =>
   axios.get(`${BASE}/export`, { params, responseType: 'blob' });
 
+export interface AssetImportField {
+  key: string;
+  label: string;
+  required?: boolean;
+}
+
+export interface AssetImportPreview {
+  fileName: string;
+  headers: string[];
+  rows: Record<string, string>[];
+  previewRows: Record<string, string>[];
+  totalRecords: number;
+  fields: AssetImportField[];
+}
+
+export interface AssetImportResultRow {
+  rowNumber: number;
+  assetName: string;
+  status: 'Imported' | 'Updated' | 'Skipped' | 'Failed';
+  message: string;
+  assetId?: number;
+}
+
+export interface AssetImportResult {
+  status: string;
+  totalRecords: number;
+  successfulRecords: number;
+  importedRecords: number;
+  updatedRecords: number;
+  skippedRecords: number;
+  failedRecords: number;
+  results: AssetImportResultRow[];
+}
+
+export const downloadAssetImportTemplate = () =>
+  axios.get(`${BASE}/import/template`, { responseType: 'blob' });
+
+export const getAssetImportSheets = (file: File): Promise<{ sheets: string[] }> => {
+  const form = new FormData();
+  form.append('file', file);
+  return axios.post(`${BASE}/import/sheets`, form, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data);
+};
+
+export const previewAssetImport = (file: File, fileFormat: string, sheetName?: string): Promise<AssetImportPreview> => {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('fileFormat', fileFormat);
+  if (sheetName) form.append('sheetName', sheetName);
+  return axios.post(`${BASE}/import/preview`, form, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data);
+};
+
+export const executeAssetImport = (data: {
+  rows: Record<string, string>[];
+  mapping: Record<string, string>;
+  importMode: string;
+  fileName?: string;
+  fileFormat?: string;
+  confirmReplace?: boolean;
+}): Promise<AssetImportResult> =>
+  axios.post(`${BASE}/import/execute`, data).then((r) => r.data);
+
 export const getAsset    = (id: number | string): Promise<Asset> =>
   axios.get(`${BASE}/${id}`).then((r) => r.data);
 

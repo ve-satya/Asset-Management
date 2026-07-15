@@ -241,7 +241,7 @@ export interface Asset {
   ram: string | null;
   virtualMemory: string | null;
   physicalMemory: string | null;
-  processors: unknown[];
+  processors: unknown;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

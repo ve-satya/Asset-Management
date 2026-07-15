@@ -285,8 +285,346 @@ model Asset {
   costs AssetCost[]
   attachments AssetAttachment[]
   depreciationConfig AssetDepreciationConfig?
+  computerDetails AssetComputerDetails?
+  networkAdapters AssetNetworkAdapter[]
+  assetProcessors AssetProcessor[]
+  hardDisks AssetHardDisk[]
+  keyboards AssetKeyboard[]
+  monitors AssetMonitor[]
+  motherboards AssetMotherboard[]
+  mice AssetMouse[]
+  memoryModules AssetMemoryModule[]
+  userAccounts AssetUserAccount[]
+  logicalDrives AssetLogicalDrive[]
+  physicalDrives AssetPhysicalDrive[]
+  printers AssetPrinter[]
+  videoCards AssetVideoCard[]
+  usbControllers AssetUsbController[]
+  ports AssetPort[]
+  soundCards AssetSoundCard[]
 
   @@map("assets")
+}
+
+model AssetComputerDetails {
+  id                 Int      @id @default(autoincrement())
+  assetId            Int      @unique @map("asset_id")
+  serviceTag         String?  @map("service_tag")
+  lastLoggedInUser   String?  @map("last_logged_in_user")
+  biosDate           String?  @map("bios_date")
+  smbiosVersion      String?  @map("smbios_version")
+  virtualMemory      String?  @map("virtual_memory")
+  virtualMemoryUnit  String?  @map("virtual_memory_unit")
+  logicalProcessors  String?  @map("logical_processors")
+  biosName           String?  @map("bios_name")
+  biosVersion        String?  @map("bios_version")
+  biosManufacturer   String?  @map("bios_manufacturer")
+  totalMemory        String?  @map("total_memory")
+  totalMemoryUnit    String?  @map("total_memory_unit")
+  domain             String?
+  totalSlots         String?  @map("total_slots")
+  operatingSystem    String?  @map("operating_system")
+  osVersion          String?  @map("os_version")
+  servicePack        String?  @map("service_pack")
+  productId          String?  @map("product_id")
+  buildNumber        String?  @map("build_number")
+  systemType         String?  @map("system_type")
+  licenseType        String?  @map("license_type")
+  licenseStatus      String?  @map("license_status")
+  systemDrive        String?  @map("system_drive")
+  vmPlatform         String?  @map("vm_platform")
+  installedVms       String?  @map("installed_vms")
+  allowedVms         String?  @map("allowed_vms")
+  createdOn          DateTime @default(now()) @map("created_on")
+  updatedOn          DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("asset_computer_details")
+}
+
+model AssetNetworkAdapter {
+  id             Int      @id @default(autoincrement())
+  assetId        Int      @map("asset_id")
+  ipAddress      String?  @map("ip_address")
+  macAddress     String?  @map("mac_address")
+  nicName        String?  @map("nic_name")
+  nicLease       String?  @map("nic_lease")
+  gateway        String?
+  network        String?
+  nicDescription String?  @map("nic_description")
+  netmask        String?
+  isDhcp         String?  @map("is_dhcp")
+  dhcpServer     String?  @map("dhcp_server")
+  createdOn      DateTime @default(now()) @map("created_on")
+  updatedOn      DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_network_adapters")
+}
+
+model AssetProcessor {
+  id                Int      @id @default(autoincrement())
+  assetId           Int      @map("asset_id")
+  processor         String?
+  serialNumber      String?  @map("serial_number")
+  cpuModel          String?  @map("cpu_model")
+  manufacturer      String?
+  processorCount    String?  @map("processor_count")
+  processorSpeedGhz String?  @map("processor_speed_ghz")
+  cpuStatus         String?  @map("cpu_status")
+  cpuStepping       String?  @map("cpu_stepping")
+  cpuFamily         String?  @map("cpu_family")
+  vendorInfo        String?  @map("vendor_info")
+  numberOfCores     String?  @map("number_of_cores")
+  createdOn         DateTime @default(now()) @map("created_on")
+  updatedOn         DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_processors")
+}
+
+model AssetHardDisk {
+  id           Int      @id @default(autoincrement())
+  assetId      Int      @map("asset_id")
+  model        String?
+  serialNumber String?  @map("serial_number")
+  freeSpace    String?  @map("free_space")
+  manufacturer String?
+  capacity     String?
+  driveType    String?  @map("drive_type")
+  createdOn    DateTime @default(now()) @map("created_on")
+  updatedOn    DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_hard_disks")
+}
+
+model AssetKeyboard {
+  id                     Int      @id @default(autoincrement())
+  assetId                Int      @map("asset_id")
+  keyboardType           String?  @map("keyboard_type")
+  keyboardSerialNumber   String?  @map("keyboard_serial_number")
+  keyboardManufacturer   String?  @map("keyboard_manufacturer")
+  createdOn              DateTime @default(now()) @map("created_on")
+  updatedOn              DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_keyboards")
+}
+
+model AssetMonitor {
+  id           Int      @id @default(autoincrement())
+  assetId      Int      @map("asset_id")
+  monitorType  String?  @map("monitor_type")
+  resolution   String?
+  serialNumber String?  @map("serial_number")
+  manufacturer String?
+  createdOn    DateTime @default(now()) @map("created_on")
+  updatedOn    DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_monitors")
+}
+
+model AssetMotherboard {
+  id               Int      @id @default(autoincrement())
+  assetId          Int      @map("asset_id")
+  product          String?
+  serialNumber     String?  @map("serial_number")
+  installedDate    String?  @map("installed_date")
+  manufacturer     String?
+  model            String?
+  version          String?
+  partNumber       String?  @map("part_number")
+  primaryBusType   String?  @map("primary_bus_type")
+  secondaryBusType String?  @map("secondary_bus_type")
+  deviceStatus     String?  @map("device_status")
+  description      String?
+  createdOn        DateTime @default(now()) @map("created_on")
+  updatedOn        DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_motherboards")
+}
+
+model AssetMouse {
+  id           Int      @id @default(autoincrement())
+  assetId      Int      @map("asset_id")
+  mouseType    String?  @map("mouse_type")
+  mouseButtons String?  @map("mouse_buttons")
+  serialNumber String?  @map("serial_number")
+  manufacturer String?
+  createdOn    DateTime @default(now()) @map("created_on")
+  updatedOn    DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_mice")
+}
+
+model AssetMemoryModule {
+  id           Int      @id @default(autoincrement())
+  assetId      Int      @map("asset_id")
+  moduleTag    String?  @map("module_tag")
+  memoryType   String?  @map("memory_type")
+  capacity     String?
+  socket       String?
+  bankLabel    String?  @map("bank_label")
+  frequencyMhz String?  @map("frequency_mhz")
+  createdOn    DateTime @default(now()) @map("created_on")
+  updatedOn    DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_memory_modules")
+}
+
+model AssetUserAccount {
+  id          Int      @id @default(autoincrement())
+  assetId     Int      @map("asset_id")
+  accountName String?  @map("account_name")
+  domainName  String?  @map("domain_name")
+  fullName    String?  @map("full_name")
+  description String?
+  status      String?
+  sid         String?
+  createdOn   DateTime @default(now()) @map("created_on")
+  updatedOn   DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_user_accounts")
+}
+
+model AssetLogicalDrive {
+  id            Int      @id @default(autoincrement())
+  assetId       Int      @map("asset_id")
+  drive         String?
+  driveType     String?  @map("drive_type")
+  capacity      String?
+  capacityUnit  String?  @map("capacity_unit")
+  freeSpace     String?  @map("free_space")
+  freeSpaceUnit String?  @map("free_space_unit")
+  fileType      String?  @map("file_type")
+  serialNumber  String?  @map("serial_number")
+  remoteHost    String?  @map("remote_host")
+  remotePath    String?  @map("remote_path")
+  createdOn     DateTime @default(now()) @map("created_on")
+  updatedOn     DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_logical_drives")
+}
+
+model AssetPhysicalDrive {
+  id            Int      @id @default(autoincrement())
+  assetId       Int      @map("asset_id")
+  driveName     String?  @map("drive_name")
+  driveType     String?  @map("drive_type")
+  manufacturer  String?
+  driverVersion String?  @map("driver_version")
+  driverProvider String? @map("driver_provider")
+  description   String?
+  createdOn     DateTime @default(now()) @map("created_on")
+  updatedOn     DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_physical_drives")
+}
+
+model AssetPrinter {
+  id        Int      @id @default(autoincrement())
+  assetId   Int      @map("asset_id")
+  name      String?
+  type      String?
+  model     String?
+  server    String?
+  default   String?
+  location  String?
+  createdOn DateTime @default(now()) @map("created_on")
+  updatedOn DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_printers")
+}
+
+model AssetVideoCard {
+  id                   Int      @id @default(autoincrement())
+  assetId              Int      @map("asset_id")
+  videoCardName        String?  @map("video_card_name")
+  videoCardMemory      String?  @map("video_card_memory")
+  videoCardChipset     String?  @map("video_card_chipset")
+  videoCardBiosVersion String?  @map("video_card_bios_version")
+  createdOn            DateTime @default(now()) @map("created_on")
+  updatedOn            DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_video_cards")
+}
+
+model AssetUsbController {
+  id        Int      @id @default(autoincrement())
+  assetId   Int      @map("asset_id")
+  usb       String?
+  createdOn DateTime @default(now()) @map("created_on")
+  updatedOn DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_usb_controllers")
+}
+
+model AssetPort {
+  id        Int      @id @default(autoincrement())
+  assetId   Int      @map("asset_id")
+  portName  String?  @map("port_name")
+  status    String?
+  createdOn DateTime @default(now()) @map("created_on")
+  updatedOn DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_ports")
+}
+
+model AssetSoundCard {
+  id            Int      @id @default(autoincrement())
+  assetId       Int      @map("asset_id")
+  soundCardName String?  @map("sound_card_name")
+  manufacturer  String?
+  createdOn     DateTime @default(now()) @map("created_on")
+  updatedOn     DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_sound_cards")
 }
 
 model AssetDepreciationConfig {
