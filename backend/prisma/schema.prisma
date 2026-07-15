@@ -882,3 +882,13 @@ model AssetDynamicFieldValue {
   @@map("asset_dynamic_field_values")
 }
 
+model WorkstationScanFile {
+  id        Int      @id @default(autoincrement())
+  fileName  String   @map("file_name")
+  status    String   @default("PENDING") @map("status")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("workstation_scan_files")
+}
+

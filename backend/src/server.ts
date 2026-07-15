@@ -4,6 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec, swaggerUiOptions } from './config/swagger';
+import { PrismaClient } from '@prisma/client';
 import errorHandler from './middleware/errorHandler';
 import productTypeRoutes from './routes/productTypeRoutes';
 import productTypeFieldRoutes from './routes/productTypeFieldRoutes';
@@ -24,9 +25,12 @@ import globalSoftwareLicenseRoutes from './routes/globalSoftwareLicenseRoutes';
 import servicePackRoutes from './routes/servicePackRoutes';
 import softwareSummaryRoutes from './routes/softwareSummaryRoutes';
 import userRoutes from './routes/userRoutes';
+import workstationScanRoutes from './routes/workstationScanRoutes';
+import { startWorkstationScanScheduler } from './jobs/scheduler';
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
+const prisma = new PrismaClient();
 
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -70,9 +74,12 @@ app.use('/api/license-agreements',                             licenseAgreementR
 app.use('/api/global-software-licenses',                       globalSoftwareLicenseRoutes);
 app.use('/api/service-packs',                                  servicePackRoutes);
 app.use('/api/software-summary',                               softwareSummaryRoutes);
+app.use('/api/workstation-scans', workstationScanRoutes);
 
 app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  startWorkstationScanScheduler(prisma);
 });
+
