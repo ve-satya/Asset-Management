@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Archive,
@@ -78,9 +78,33 @@ const REQUIRED_VISIBLE_COLUMNS = ['name'];
 const LS_KEY = 'asset_list_columns';
 const ASSET_VIEW_LS_KEY = 'asset_list_view_filter';
 const PRODUCT_FILTER_LS_KEY = 'asset_list_product_filter';
+const ASSET_TREE_WIDTH_LS_KEY = 'assetTreePanelWidth';
+const ASSET_TREE_MIN_WIDTH = 220;
+const ASSET_TREE_DEFAULT_WIDTH = 290;
+const ASSET_TREE_MAX_WIDTH = 550;
 
 function withRequiredColumns(keys: string[]) {
   return Array.from(new Set([...REQUIRED_VISIBLE_COLUMNS, ...keys]));
+}
+
+function clampAssetTreeWidth(value: number) {
+  return Math.min(ASSET_TREE_MAX_WIDTH, Math.max(ASSET_TREE_MIN_WIDTH, Math.round(value)));
+}
+
+function compareTreeNodesByName(left: TreeNode, right: TreeNode) {
+  return left.displayName.trim().localeCompare(right.displayName.trim(), undefined, {
+    sensitivity: 'base',
+    numeric: true,
+  });
+}
+
+function sortTreeAlphabetically(nodes: TreeNode[]): TreeNode[] {
+  return [...nodes]
+    .sort(compareTreeNodesByName)
+    .map((node) => ({
+      ...node,
+      children: sortTreeAlphabetically(node.children || []),
+    }));
 }
 
 const ASSET_VIEW_OPTIONS: DropdownOption[] = [
@@ -128,6 +152,8 @@ function buildTree(items: ProductTypeOption[]): TreeNode[] {
     else nonItRoot.children.push(node);
   });
 
+  itRoot.children = sortTreeAlphabetically(itRoot.children);
+  nonItRoot.children = sortTreeAlphabetically(nonItRoot.children);
   assetsGroup.children = [itRoot, nonItRoot];
   assetsRoot.children = [assetsGroup];
   return [assetsRoot];
@@ -319,7 +345,7 @@ function ActionsDropdown({ disabled }: { disabled: boolean }) {
   );
 }
 
-function ListViewDropdown({ onExportAssets }: { onExportAssets: () => void }) {
+function ListViewDropdown({ onImportAssets, onExportAssets }: { onImportAssets: () => void; onExportAssets: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -331,11 +357,6 @@ function ListViewDropdown({ onExportAssets }: { onExportAssets: () => void }) {
     return () => document.removeEventListener('mousedown', close);
   }, []);
 
-  function handlePlaceholder(action: 'Import Assets' | 'Export Assets') {
-    console.log(`${action} placeholder`);
-    setOpen(false);
-  }
-
   return (
     <div className="relative" ref={ref}>
       <ToolbarButton active={open} onClick={() => setOpen((value) => !value)}>
@@ -345,7 +366,7 @@ function ListViewDropdown({ onExportAssets }: { onExportAssets: () => void }) {
         <div className="absolute left-0 top-full z-30 mt-1 min-w-44 overflow-hidden rounded border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
           <button
             type="button"
-            onClick={() => handlePlaceholder('Import Assets')}
+            onClick={() => { setOpen(false); onImportAssets(); }}
             className="flex h-9 w-full items-center gap-2 px-3 text-left text-xs text-gray-700 hover:bg-sky-50 hover:text-sky-700 dark:text-gray-200 dark:hover:bg-sky-900/30 dark:hover:text-sky-200"
           >
             <Import size={15} className="shrink-0 text-gray-500 dark:text-gray-400" /> Import Assets
@@ -657,6 +678,11 @@ export default function AssetList() {
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: 25, total: 0, totalPages: 0 });
   const [treeSearch, setTreeSearch] = useState('');
   const [treeExpandAll, setTreeExpandAll] = useState<boolean | null>(null);
+  const [treePanelWidth, setTreePanelWidth] = useState(() => {
+    const saved = Number(localStorage.getItem(ASSET_TREE_WIDTH_LS_KEY));
+    return Number.isFinite(saved) && saved > 0 ? clampAssetTreeWidth(saved) : ASSET_TREE_DEFAULT_WIDTH;
+  });
+  const [treeResizing, setTreeResizing] = useState(false);
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [stateFilter, setStateFilter] = useState('');
   const [assetViewFilter, setAssetViewFilter] = useState(() => localStorage.getItem(ASSET_VIEW_LS_KEY) || '');
@@ -683,6 +709,7 @@ export default function AssetList() {
   const [exporting, setExporting] = useState(false);
   const debouncedColumnFilters = useDebounce(columnFilters, 300);
   const { toasts, showToast, removeToast } = useToast();
+  const resizeCleanupRef = useRef<null | (() => void)>(null);
 
   useEffect(() => {
     Promise.all([getAllProductTypes(), getAllAssetStates(), getAllProducts()])
@@ -698,6 +725,8 @@ export default function AssetList() {
   useEffect(() => { localStorage.setItem(LS_KEY, JSON.stringify(visibleCols)); }, [visibleCols]);
   useEffect(() => { localStorage.setItem(ASSET_VIEW_LS_KEY, assetViewFilter); }, [assetViewFilter]);
   useEffect(() => { localStorage.setItem(PRODUCT_FILTER_LS_KEY, productFilter); }, [productFilter]);
+  useEffect(() => { localStorage.setItem(ASSET_TREE_WIDTH_LS_KEY, String(treePanelWidth)); }, [treePanelWidth]);
+  useEffect(() => () => resizeCleanupRef.current?.(), []);
   useEffect(() => {
     if (selectedPtId) setSelectedNodeId(selectedPtId);
     else if (!selectedCategory) setSelectedNodeId(0);
@@ -849,6 +878,58 @@ export default function AssetList() {
     setSortDirection(null);
   }
 
+  function resizeTreePanel(nextWidth: number) {
+    setTreePanelWidth(clampAssetTreeWidth(nextWidth));
+  }
+
+  function handleTreeResizePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = treePanelWidth;
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+
+    resizeCleanupRef.current?.();
+    setTreeResizing(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    function handleMove(moveEvent: PointerEvent) {
+      resizeTreePanel(startWidth + moveEvent.clientX - startX);
+    }
+
+    function handleUp() {
+      setTreeResizing(false);
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      window.removeEventListener('pointercancel', handleUp);
+      resizeCleanupRef.current = null;
+    }
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+    window.addEventListener('pointercancel', handleUp);
+    resizeCleanupRef.current = handleUp;
+  }
+
+  function handleTreeResizeKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'Home' && event.key !== 'End') return;
+    event.preventDefault();
+    if (event.key === 'Home') {
+      resizeTreePanel(ASSET_TREE_MIN_WIDTH);
+      return;
+    }
+    if (event.key === 'End') {
+      resizeTreePanel(ASSET_TREE_MAX_WIDTH);
+      return;
+    }
+    const step = event.shiftKey ? 40 : 16;
+    resizeTreePanel(treePanelWidth + (event.key === 'ArrowRight' ? step : -step));
+  }
+
   function singularExportScope(value: string) {
     return value
       .trim()
@@ -928,9 +1009,14 @@ export default function AssetList() {
     }
   }
 
+  const treePanelStyle = { '--asset-tree-panel-width': `${treePanelWidth}px` } as CSSProperties;
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100 lg:flex-row">
-      <aside className="flex max-h-64 w-full shrink-0 flex-col border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 lg:h-full lg:max-h-none lg:w-64 lg:border-b-0 lg:border-r">
+      <aside
+        className="flex max-h-64 w-full shrink-0 flex-col border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 lg:h-full lg:max-h-none lg:w-[var(--asset-tree-panel-width)] lg:border-b-0"
+        style={treePanelStyle}
+      >
         <div className="border-b border-gray-200 p-1.5 dark:border-gray-700">
           <div className="relative">
             <Search size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -971,6 +1057,19 @@ export default function AssetList() {
         </div>
       </aside>
 
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-valuemin={ASSET_TREE_MIN_WIDTH}
+        aria-valuemax={ASSET_TREE_MAX_WIDTH}
+        aria-valuenow={treePanelWidth}
+        tabIndex={0}
+        onPointerDown={handleTreeResizePointerDown}
+        onKeyDown={handleTreeResizeKeyDown}
+        title="Resize asset tree"
+        className={`hidden w-1 shrink-0 cursor-col-resize border-l border-r border-gray-200 bg-gray-50 outline-none transition-colors hover:bg-sky-100 focus:bg-sky-100 focus:ring-1 focus:ring-sky-400 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-sky-900/30 dark:focus:bg-sky-900/30 lg:block ${treeResizing ? 'bg-sky-200 dark:bg-sky-800/50' : ''}`}
+      />
+
       <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-white dark:bg-gray-900">
         <div className="flex min-h-12 flex-wrap items-center gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700">
           <h1 className="mr-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{pageTitle}</h1>
@@ -981,7 +1080,10 @@ export default function AssetList() {
             </ToolbarButton>
           )}
           <ActionsDropdown disabled={selected.length === 0} />
-          <ListViewDropdown onExportAssets={() => setExportOpen(true)} />
+          <ListViewDropdown
+            onImportAssets={() => navigate(selectedTreeNode?.productTypeId ? `/assets/import?asset-product-type-id=${selectedTreeNode.productTypeId}` : '/assets/import')}
+            onExportAssets={() => setExportOpen(true)}
+          />
           <ToolbarButton>New Scan</ToolbarButton>
           <ToolbarButton active={filtersOpen} onClick={() => setFiltersOpen((value) => !value)}>Filters</ToolbarButton>
           <ToolbarButton title="Delete selected" disabled={selected.length === 0} onClick={() => setDeleteTarget(selected)}><Trash2 size={16} /></ToolbarButton>

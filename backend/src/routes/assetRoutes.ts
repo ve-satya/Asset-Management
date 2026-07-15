@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { getAssets, getAsset, createAsset, copyAsset, updateAsset, modifyAssetType, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, attachAssetRelationships, deleteAssetRelationship, getAssetAttachments, uploadAssetAttachmentsMiddleware, uploadAssetAttachments, downloadAssetAttachment, previewAssetAttachment, deleteAssetAttachment, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, saveAssetDepreciation, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets } from '../controllers/assetController';
+import { getAssets, getAsset, createAsset, copyAsset, updateAsset, modifyAssetType, deleteAsset, getAssetHistory, getAssetRelationships, createAssetRelationship, attachAssetRelationships, deleteAssetRelationship, getAssetAttachments, uploadAssetAttachmentsMiddleware, uploadAssetAttachments, downloadAssetAttachment, previewAssetAttachment, deleteAssetAttachment, getAssetContracts, createAssetContract, deleteAssetContract, getAssetCosts, saveAssetDepreciation, createAssetCost, updateAssetCost, deleteAssetCost, exportAssets, uploadAssetImportMiddleware, importAssetsTemplate, getAssetImportSheets, previewAssetImport, executeAssetImport } from '../controllers/assetController';
 
 const router = express.Router();
 
@@ -15,6 +15,10 @@ const validators = [
 
 router.get('/',    getAssets);
 router.get('/export', exportAssets);
+router.get('/import/template', importAssetsTemplate);
+router.post('/import/sheets', uploadAssetImportMiddleware, getAssetImportSheets);
+router.post('/import/preview', uploadAssetImportMiddleware, previewAssetImport);
+router.post('/import/execute', executeAssetImport);
 router.post('/:id/copy', copyAsset);
 router.put('/:id/modify-type', modifyAssetType);
 router.get('/:id/history', getAssetHistory);

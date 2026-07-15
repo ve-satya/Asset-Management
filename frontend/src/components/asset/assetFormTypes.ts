@@ -1,4 +1,5 @@
 import type { Asset, NamedOption } from '../../types';
+import type { WorkstationDetailsFormData } from './workstation/workstationTypes';
 
 export type ProductOption = { id: number; name: string; productTypeId: number };
 
@@ -51,6 +52,7 @@ export interface AssetFormState {
   totalSlots: string;
   osName: string;
   osVersion: string;
+  workstationDetails: WorkstationDetailsFormData;
   dynamicFieldValues: Record<string, string | boolean>;
 }
 

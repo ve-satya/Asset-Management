@@ -16,6 +16,14 @@ interface SectionGroup {
   fields: DynamicAssetField[];
 }
 
+const WORKSTATION_STATIC_FIELD_KEYS = new Set([
+  'serviceTag',
+  'biosVersion',
+  'osName',
+  'physicalMemory',
+  'domain',
+]);
+
 /**
  * Dynamic metadata-driven asset form.
  *
@@ -45,7 +53,7 @@ export default function AssetDynamicFormRenderer({ productTypeId, form, onDynami
 
   const groups = useMemo<SectionGroup[]>(() => {
     const map = new Map<string, SectionGroup>();
-    fields.forEach((field) => {
+    fields.filter((field) => !WORKSTATION_STATIC_FIELD_KEYS.has(field.fieldKey)).forEach((field) => {
       const sourceName = field.sourceProductType?.displayName || 'Dynamic';
       const sectionName = field.sectionName || `${sourceName} Details`;
       const key = `${field.productTypeId}:${sectionName}`;

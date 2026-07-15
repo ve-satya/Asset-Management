@@ -6,6 +6,7 @@ import Assets from './pages/Assets';
 import AssetList from './pages/AssetList';
 import AssetDetailPage from './pages/AssetDetailPage';
 import AssetFormPage from './pages/AssetFormPage';
+import AssetImportWizard from './pages/AssetImportWizard';
 import SoftwareList from './pages/SoftwareList';
 import SoftwareFormPage from './pages/SoftwareFormPage';
 import SoftwareDetailPage from './pages/SoftwareDetailPage';
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/dashboard"       element={<Dashboard />} />
           <Route path="/assets"          element={<Assets />} />
           <Route path="/assets/list"     element={<AssetList />} />
+          <Route path="/assets/import"   element={<AssetImportWizard />} />
           <Route path="/assets/create"   element={<AssetFormPage />} />
           <Route path="/assets/edit/:id" element={<AssetFormPage />} />
           <Route path="/assets/detail"   element={<AssetDetailPage />} />
