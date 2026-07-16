@@ -935,8 +935,31 @@ function AssetDetailContent({
   onDownloadAllAttachments: () => void;
 }) {
   const productTypeName = asset.productType?.displayName || '';
+  const isAccessPointAsset = productTypeName.toLowerCase().match(/access points?/);
+  const isFaxAsset = productTypeName.toLowerCase().match(/^faxes?$/);
+  const isFirewallAsset = productTypeName.toLowerCase().match(/fire\s*walls?/);
+  const isIpPhoneAsset = productTypeName.toLowerCase().match(/ip phones?/);
+  const isCiscoIpPhoneAsset = ['cisco ip phone', 'cisco ip phones'].includes(productTypeName.trim().toLowerCase());
+  const isIpsAsset = ['ips', 'ipses'].includes(productTypeName.trim().toLowerCase());
+  const isMobileDeviceAsset = productTypeName.toLowerCase().match(/mobile devices?/);
+  const isPrinterAsset = productTypeName.toLowerCase().match(/^printers?$/);
+  const isSwitchAsset = productTypeName.toLowerCase().match(/^switch(?:es)?$/);
+  const isRouterAsset = productTypeName.toLowerCase().match(/^routers?$/);
+  const isNtpAsset = productTypeName.toLowerCase().match(/^ntps?$/);
+  const isRackAsset = productTypeName.toLowerCase().match(/^racks?$/);
+  const isStorageDeviceAsset = productTypeName.toLowerCase().match(/^storage devices?$/);
+  const isRoomSensorAsset = productTypeName.toLowerCase().match(/^room sensors?$/);
+  const isUpsAsset = ['ups', 'upses'].includes(productTypeName.trim().toLowerCase());
   const isComputerAsset = Boolean(
     productTypeName.toLowerCase().match(/computer|workstation|desktop|laptop|server/) ||
+    isPrinterAsset ||
+    isSwitchAsset ||
+    isRouterAsset ||
+    isNtpAsset ||
+    isRackAsset ||
+    isStorageDeviceAsset ||
+    isRoomSensorAsset ||
+    isUpsAsset ||
     hasWorkstationDetails(asset)
   );
 
@@ -990,12 +1013,14 @@ function AssetDetailContent({
         <Field label="Impact"         value={asset.impact} />
         <Field label="Asset Audited"  value={asset.assetAudited} />
       </Grid2></Section>
-      {isComputerAsset && <WorkstationDetailsView asset={asset} />}
-      <DynamicAssetDetailsSection
-        assetId={asset.id}
-        productTypeId={asset.productTypeId}
-        savedValues={asset.dynamicFieldValues}
-      />
+      {isComputerAsset && <WorkstationDetailsView asset={asset} showFaxDetails={Boolean(isFaxAsset)} showFirewallDetails={Boolean(isFirewallAsset)} showIpPhoneDetails={Boolean(isIpPhoneAsset)} showCiscoIpPhoneDetails={isCiscoIpPhoneAsset} showIpsDetails={isIpsAsset} showMobileDeviceDetails={Boolean(isMobileDeviceAsset)} showPrinterDetails={Boolean(isPrinterAsset)} showSwitchDetails={Boolean(isSwitchAsset)} showRouterDetails={Boolean(isRouterAsset)} showNtpDetails={Boolean(isNtpAsset)} showRackDetails={Boolean(isRackAsset)} showStorageDeviceDetails={Boolean(isStorageDeviceAsset)} showRoomSensorDetails={Boolean(isRoomSensorAsset)} showUpsDetails={Boolean(isUpsAsset)} />}
+      {!isAccessPointAsset && !isFaxAsset && !isFirewallAsset && !isIpPhoneAsset && !isIpsAsset && !isMobileDeviceAsset && !isPrinterAsset && !isSwitchAsset && !isRouterAsset && !isNtpAsset && !isRackAsset && !isStorageDeviceAsset && !isRoomSensorAsset && !isUpsAsset && (
+        <DynamicAssetDetailsSection
+          assetId={asset.id}
+          productTypeId={asset.productTypeId}
+          savedValues={asset.dynamicFieldValues}
+        />
+      )}
       <AssetAttachmentsSection
         attachments={attachments}
         uploading={uploading}
