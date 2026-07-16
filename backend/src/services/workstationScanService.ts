@@ -114,16 +114,288 @@ export class WorkstationScanImportService {
 
     if (existing) {
       const updateData: any = { ...data };
+      const changes: Array<{ field: string; oldValue: any; newValue: any }> = [];
+
       if (!existing.serviceTag && serviceTag) {
         updateData.serviceTag = serviceTag;
         updateData.assetTag = serviceTag;
       }
-      return this.prisma.asset.update({ where: { id: existing.id }, data: updateData });
+
+      const fieldsToTrack = [
+        { key: 'name', old: existing.name, new: data.name },
+        { key: 'macAddress', old: existing.macAddress, new: data.macAddress },
+        { key: 'osName', old: existing.osName, new: data.osName },
+        { key: 'osVersion', old: existing.osVersion, new: data.osVersion },
+        { key: 'osBuildNumber', old: existing.osBuildNumber, new: data.osBuildNumber },
+        { key: 'ram', old: existing.ram, new: data.ram },
+        { key: 'manufacturer', old: existing.manufacturer, new: data.manufacturer },
+        { key: 'smbiosVersion', old: existing.smbiosVersion, new: data.smbiosVersion },
+        { key: 'biosVersion', old: existing.biosVersion, new: data.biosVersion },
+        { key: 'biosManufacturer', old: existing.biosManufacturer, new: data.biosManufacturer },
+        { key: 'biosDate', old: existing.biosDate, new: data.biosDate },
+        { key: 'domain', old: existing.domain, new: data.domain },
+        { key: 'lastScanStatus', old: existing.lastScanStatus, new: data.lastScanStatus },
+        { key: 'scanState', old: existing.scanState, new: data.scanState },
+      ];
+
+      const hasChanges = fieldsToTrack.some(f => f.old !== f.new);
+      if (hasChanges) {
+        await this.prisma.asset.update({ where: { id: existing.id }, data: updateData });
+
+        await this.prisma.assetHistory.createMany({
+          data: fieldsToTrack
+            .filter(f => f.old !== f.new)
+            .map(f => ({
+              assetId: existing.id,
+              actionType: 'UPDATE',
+              fieldName: f.key,
+              oldValue: String(f.old ?? ''),
+              newValue: String(f.new ?? ''),
+            })),
+        });
+      }
+
+      return existing;
     }
 
-    return this.prisma.asset.create({
+    const newNode = await this.prisma.asset.create({
       data: { ...data, serviceTag, assetTag: serviceTag, productTypeId: await this.resolveDefaultProductTypeId() },
     });
+
+    await this.prisma.assetHistory.create({
+      data: {
+        assetId: newNode.id,
+        actionType: 'CREATE',
+        comments: 'Asset created from workstation scan import',
+      },
+    });
+
+    return newNode;
+  }
+
+  private updateAndTrackChange<T>(
+    oldValue: T,
+    newValue: T,
+    tableName: string,
+    fieldName: string,
+    changesDescription: string[],
+  ): { changed: boolean; oldValue: T; newValue: T } {
+    let old = oldValue;
+    let newVal = newValue;
+
+    if (oldValue instanceof Date && newValue instanceof Date) {
+      old = (oldValue.getTime() as unknown) as T;
+      newVal = (newValue.getTime() as unknown) as T;
+    }
+
+    if (old !== newVal) {
+      changesDescription.push(`${tableName}.${fieldName}: ${oldValue} -> ${newValue}`);
+      return { changed: true, oldValue, newValue };
+    }
+    return { changed: false, oldValue, newValue };
+  }
+
+  private parseDate(value: any): Date | null {
+    if (!value) return null;
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  private async findAssetByNode(nodeElement: ParsedNode): Promise<any | null> {
+    const assetTag = getAttr(nodeElement, 'AssetTag') || getAttr(nodeElement, 'ServiceTag');
+    if (assetTag) {
+      const existing = await this.prisma.asset.findFirst({ where: { assetTag } });
+      if (existing) return existing;
+    }
+    const computerName = getAttr(nodeElement, 'ComputerName');
+    if (computerName) {
+      const existing = await this.prisma.asset.findFirst({ where: { name: computerName } });
+      if (existing) return existing;
+    }
+    const serialNumber = getAttr(nodeElement, 'SerialNumber');
+    if (serialNumber) {
+      const existing = await this.prisma.asset.findFirst({ where: { orgSerialNumber: serialNumber } });
+      if (existing) return existing;
+    }
+    return null;
+  }
+
+  private async createAsset(data: ParsedNode): Promise<any> {
+    const productTypeId = await this.resolveDefaultProductTypeId();
+
+    const newNode = await this.prisma.asset.create({
+      data: {
+        productTypeId,
+        name: getAttr(data, 'ComputerName') ?? null,
+        assetTag: getAttr(data, 'AssetTag') ?? getAttr(data, 'ServiceTag') ?? null,
+        orgSerialNumber: getAttr(data, 'SerialNumber') ?? null,
+        productId: getAttr(data, 'AssetProductId') ?? null,
+        vendorId: getAttr(data, 'AssetVendorId') ?? null,
+        assetStateId: getAttr(data, 'AssetStateId') ?? null,
+        department: getAttr(data, 'DepartmentId') ?? null,
+        associatedToAssets: getAttr(data, 'AssociatedTo') ?? null,
+        barcode: getAttr(data, 'BarCodeQRCode') ?? null,
+        siteId: getAttr(data, 'SiteInstanceId') ?? null,
+        assignedUserId: getAttr(data, 'UserId') ?? null,
+        acquisitionDate: this.parseDate(getAttr(data, 'AcquisionDate')),
+        expiryDate: this.parseDate(getAttr(data, 'ExpiryDate')),
+        warrantyExpiryDate: this.parseDate(getAttr(data, 'WarrantyExpiryDate')),
+        purchaseCost: getAttr(data, 'PurchaseCost') ?? null,
+        location: getAttr(data, 'Location') ?? null,
+        stateComments: getAttr(data, 'StateComments') ?? null,
+        lastScanTime: this.parseDate(getAttr(data, 'LastScanTime')),
+        retainUserSiteAsAssetSite: getAttr(data, 'IsRetain') ?? null,
+      },
+    });
+
+    await this.prisma.assetHistory.create({
+      data: {
+        assetId: newNode.id,
+        actionType: 'CREATE',
+        comments: 'Asset created from workstation scan import',
+      },
+    });
+
+    return newNode;
+  }
+
+  private async updateAssetIfChanged(
+    existingNode: any,
+    nodeElement: ParsedNode,
+    nodeId: number,
+  ): Promise<void> {
+    const changesDescription: string[] = [];
+    const fieldChanges: Array<{ field: string; oldValue: any; newValue: any }> = [];
+    let updated = false;
+
+    if (nodeId > 0 && existingNode) {
+      const nameChange = this.updateAndTrackChange(existingNode.name ?? null, getAttr(nodeElement, 'ComputerName') ?? null, 'Asset', 'name', changesDescription);
+      if (nameChange.changed) fieldChanges.push({ field: 'name', oldValue: nameChange.oldValue, newValue: nameChange.newValue });
+      updated ||= nameChange.changed;
+
+      const assetTagChange = this.updateAndTrackChange(existingNode.assetTag ?? null, getAttr(nodeElement, 'AssetTag') ?? getAttr(nodeElement, 'ServiceTag') ?? null, 'Asset', 'assetTag', changesDescription);
+      if (assetTagChange.changed) fieldChanges.push({ field: 'assetTag', oldValue: assetTagChange.oldValue, newValue: assetTagChange.newValue });
+      updated ||= assetTagChange.changed;
+
+      const orgSerialChange = this.updateAndTrackChange(existingNode.orgSerialNumber ?? null, getAttr(nodeElement, 'SerialNumber') ?? null, 'Asset', 'orgSerialNumber', changesDescription);
+      if (orgSerialChange.changed) fieldChanges.push({ field: 'orgSerialNumber', oldValue: orgSerialChange.oldValue, newValue: orgSerialChange.newValue });
+      updated ||= orgSerialChange.changed;
+
+      const productIdChange = this.updateAndTrackChange(existingNode.productId ?? null, getAttr(nodeElement, 'AssetProductId') ?? null, 'Asset', 'productId', changesDescription);
+      if (productIdChange.changed) fieldChanges.push({ field: 'productId', oldValue: productIdChange.oldValue, newValue: productIdChange.newValue });
+      updated ||= productIdChange.changed;
+
+      const productTypeIdChange = this.updateAndTrackChange(existingNode.productTypeId ?? null, getAttr(nodeElement, 'AssetProductTypeId') ?? null, 'Asset', 'productTypeId', changesDescription);
+      if (productTypeIdChange.changed) fieldChanges.push({ field: 'productTypeId', oldValue: productTypeIdChange.oldValue, newValue: productTypeIdChange.newValue });
+      updated ||= productTypeIdChange.changed;
+
+      const vendorIdChange = this.updateAndTrackChange(existingNode.vendorId ?? null, getAttr(nodeElement, 'AssetVendorId') ?? null, 'Asset', 'vendorId', changesDescription);
+      if (vendorIdChange.changed) fieldChanges.push({ field: 'vendorId', oldValue: vendorIdChange.oldValue, newValue: vendorIdChange.newValue });
+      updated ||= vendorIdChange.changed;
+
+      const assetStateIdChange = this.updateAndTrackChange(existingNode.assetStateId ?? null, getAttr(nodeElement, 'AssetStateId') ?? null, 'Asset', 'assetStateId', changesDescription);
+      if (assetStateIdChange.changed) fieldChanges.push({ field: 'assetStateId', oldValue: assetStateIdChange.oldValue, newValue: assetStateIdChange.newValue });
+      updated ||= assetStateIdChange.changed;
+
+      const departmentChange = this.updateAndTrackChange(existingNode.department ?? null, getAttr(nodeElement, 'DepartmentId') ?? null, 'Asset', 'department', changesDescription);
+      if (departmentChange.changed) fieldChanges.push({ field: 'department', oldValue: departmentChange.oldValue, newValue: departmentChange.newValue });
+      updated ||= departmentChange.changed;
+
+      const associatedToAssetsChange = this.updateAndTrackChange(existingNode.associatedToAssets ?? null, getAttr(nodeElement, 'AssociatedTo') ?? null, 'Asset', 'associatedToAssets', changesDescription);
+      if (associatedToAssetsChange.changed) fieldChanges.push({ field: 'associatedToAssets', oldValue: associatedToAssetsChange.oldValue, newValue: associatedToAssetsChange.newValue });
+      updated ||= associatedToAssetsChange.changed;
+
+      const barcodeChange = this.updateAndTrackChange(existingNode.barcode ?? null, getAttr(nodeElement, 'BarCodeQRCode') ?? null, 'Asset', 'barcode', changesDescription);
+      if (barcodeChange.changed) fieldChanges.push({ field: 'barcode', oldValue: barcodeChange.oldValue, newValue: barcodeChange.newValue });
+      updated ||= barcodeChange.changed;
+
+      const siteIdChange = this.updateAndTrackChange(existingNode.siteId ?? null, getAttr(nodeElement, 'SiteInstanceId') ?? null, 'Asset', 'siteId', changesDescription);
+      if (siteIdChange.changed) fieldChanges.push({ field: 'siteId', oldValue: siteIdChange.oldValue, newValue: siteIdChange.newValue });
+      updated ||= siteIdChange.changed;
+
+      const assignedUserIdChange = this.updateAndTrackChange(existingNode.assignedUserId ?? null, getAttr(nodeElement, 'UserId') ?? null, 'Asset', 'assignedUserId', changesDescription);
+      if (assignedUserIdChange.changed) fieldChanges.push({ field: 'assignedUserId', oldValue: assignedUserIdChange.oldValue, newValue: assignedUserIdChange.newValue });
+      updated ||= assignedUserIdChange.changed;
+
+      const acquisitionDateChange = this.updateAndTrackChange(existingNode.acquisitionDate ?? null, this.parseDate(getAttr(nodeElement, 'AcquisionDate')), 'Asset', 'acquisitionDate', changesDescription);
+      if (acquisitionDateChange.changed) fieldChanges.push({ field: 'acquisitionDate', oldValue: acquisitionDateChange.oldValue, newValue: acquisitionDateChange.newValue });
+      updated ||= acquisitionDateChange.changed;
+
+      const expiryDateChange = this.updateAndTrackChange(existingNode.expiryDate ?? null, this.parseDate(getAttr(nodeElement, 'ExpiryDate')), 'Asset', 'expiryDate', changesDescription);
+      if (expiryDateChange.changed) fieldChanges.push({ field: 'expiryDate', oldValue: expiryDateChange.oldValue, newValue: expiryDateChange.newValue });
+      updated ||= expiryDateChange.changed;
+
+      const warrantyExpiryDateChange = this.updateAndTrackChange(existingNode.warrantyExpiryDate ?? null, this.parseDate(getAttr(nodeElement, 'WarrantyExpiryDate')), 'Asset', 'warrantyExpiryDate', changesDescription);
+      if (warrantyExpiryDateChange.changed) fieldChanges.push({ field: 'warrantyExpiryDate', oldValue: warrantyExpiryDateChange.oldValue, newValue: warrantyExpiryDateChange.newValue });
+      updated ||= warrantyExpiryDateChange.changed;
+
+      const purchaseCostChange = this.updateAndTrackChange(existingNode.purchaseCost ?? null, getAttr(nodeElement, 'PurchaseCost') ?? null, 'Asset', 'purchaseCost', changesDescription);
+      if (purchaseCostChange.changed) fieldChanges.push({ field: 'purchaseCost', oldValue: purchaseCostChange.oldValue, newValue: purchaseCostChange.newValue });
+      updated ||= purchaseCostChange.changed;
+
+      const locationChange = this.updateAndTrackChange(existingNode.location ?? null, getAttr(nodeElement, 'Location') ?? null, 'Asset', 'location', changesDescription);
+      if (locationChange.changed) fieldChanges.push({ field: 'location', oldValue: locationChange.oldValue, newValue: locationChange.newValue });
+      updated ||= locationChange.changed;
+
+      const stateCommentsChange = this.updateAndTrackChange(existingNode.stateComments ?? null, getAttr(nodeElement, 'StateComments') ?? null, 'Asset', 'stateComments', changesDescription);
+      if (stateCommentsChange.changed) fieldChanges.push({ field: 'stateComments', oldValue: stateCommentsChange.oldValue, newValue: stateCommentsChange.newValue });
+      updated ||= stateCommentsChange.changed;
+
+      const lastScanTimeChange = this.updateAndTrackChange(existingNode.lastScanTime ?? null, this.parseDate(getAttr(nodeElement, 'LastScanTime')), 'Asset', 'lastScanTime', changesDescription);
+      if (lastScanTimeChange.changed) fieldChanges.push({ field: 'lastScanTime', oldValue: lastScanTimeChange.oldValue, newValue: lastScanTimeChange.newValue });
+      updated ||= lastScanTimeChange.changed;
+
+      const retainUserSiteAsAssetSiteChange = this.updateAndTrackChange(existingNode.retainUserSiteAsAssetSite ?? null, getAttr(nodeElement, 'IsRetain') ?? null, 'Asset', 'retainUserSiteAsAssetSite', changesDescription);
+      if (retainUserSiteAsAssetSiteChange.changed) fieldChanges.push({ field: 'retainUserSiteAsAssetSite', oldValue: retainUserSiteAsAssetSiteChange.oldValue, newValue: retainUserSiteAsAssetSiteChange.newValue });
+      updated ||= retainUserSiteAsAssetSiteChange.changed;
+
+      if (updated) {
+        await this.prisma.asset.update({
+          where: { id: nodeId },
+          data: {
+            name: getAttr(nodeElement, 'ComputerName') ?? null,
+            assetTag: getAttr(nodeElement, 'AssetTag') ?? getAttr(nodeElement, 'ServiceTag') ?? null,
+            orgSerialNumber: getAttr(nodeElement, 'SerialNumber') ?? null,
+            productId: getAttr(nodeElement, 'AssetProductId') ?? null,
+            productTypeId: getAttr(nodeElement, 'AssetProductTypeId') ?? null,
+            vendorId: getAttr(nodeElement, 'AssetVendorId') ?? null,
+            assetStateId: getAttr(nodeElement, 'AssetStateId') ?? null,
+            department: getAttr(nodeElement, 'DepartmentId') ?? null,
+            associatedToAssets: getAttr(nodeElement, 'AssociatedTo') ?? null,
+            barcode: getAttr(nodeElement, 'BarCodeQRCode') ?? null,
+            siteId: getAttr(nodeElement, 'SiteInstanceId') ?? null,
+            assignedUserId: getAttr(nodeElement, 'UserId') ?? null,
+            acquisitionDate: this.parseDate(getAttr(nodeElement, 'AcquisionDate')),
+            expiryDate: this.parseDate(getAttr(nodeElement, 'ExpiryDate')),
+            warrantyExpiryDate: this.parseDate(getAttr(nodeElement, 'WarrantyExpiryDate')),
+            purchaseCost: getAttr(nodeElement, 'PurchaseCost') ?? null,
+            location: getAttr(nodeElement, 'Location') ?? null,
+            stateComments: getAttr(nodeElement, 'StateComments') ?? null,
+            lastScanTime: this.parseDate(getAttr(nodeElement, 'LastScanTime')),
+            retainUserSiteAsAssetSite: getAttr(nodeElement, 'IsRetain') ?? null,
+          },
+        });
+
+        await this.prisma.assetHistory.createMany({
+          data: fieldChanges.map(change => ({
+            assetId: nodeId,
+            actionType: 'UPDATE',
+            fieldName: change.field,
+            oldValue: String(change.oldValue ?? ''),
+            newValue: String(change.newValue ?? ''),
+          })),
+        });
+      }
+    }
+  }
+
+  private async upsertAssetFromNode(nodeElement: ParsedNode): Promise<any> {
+    const asset = await this.findAssetByNode(nodeElement);
+    if (!asset) {
+      return await this.createAsset(nodeElement);
+    }
+    await this.updateAssetIfChanged(asset, nodeElement, asset.id);
+    return asset;
   }
 
   private async upsertComputerDetails(assetId: number, hardwareInfo: ParsedNode): Promise<void> {

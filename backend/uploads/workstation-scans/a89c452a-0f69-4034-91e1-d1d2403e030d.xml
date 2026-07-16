@@ -1,0 +1,396 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<DocRoot>
+	<Node ComputerName="COM-79QHKS3" ServiceTag="79QHKO9" TaskId="13" MacAddress="50:28:4A:45:2F:20###" LastScanTime="02-10-2024 03:51:02 PM">
+		<agentTaskInfo AgentTaskID="10"/>
+		<scriptVersion Version="5000"/>
+		<Hardware_Info>
+			<Computer Name="COM-79QHKS3" Manufacturer="Dell Inc." PrimaryOwnerName="admin" UserName=".\Naeem Ahmad" WorkGroup="WORKGROUP" TotalPhysicalMemory="16815702016" DomainName="WORKGROUP" Model="Precision 3580" BiosName="1.15.0" BiosManufacturer="Dell Inc." SMBiosVersion="1.15.0" BiosVersion="DELL   - 2" BiosDate="20240715000000.000000+000" ServiceTag="79QHKO9" DNSDomain="" DNSHostName="" MemorySlotsCount="2" isLaptop="10"/>
+			<OperatingSystem Name="Microsoft Windows 11 Pro" Version="10.0.22631" BuildNumber="22631" ServicePackMajorVersion="0" ServicePackMinorVersion="0" SerialNumber="00355-63302-97093-AAOEM" TotalVisibleMemorySize="16421584" FreePhysicalMemory="1198132" TotalVirtualMemorySize="45920104" FreeVirtualMemory="10447332"/>
+			<CPU CPUCount="1">
+				<CPU_Info DeviceID="CPU0" CPUName="13th Gen Intel(R) Core(TM) i5-1350P" CPUSpeed="1900" CPUManufacturer="GenuineIntel" CPUModel="205" NumberOfCores="12"/>
+			</CPU>
+			<MemoryModule>
+				<MemoryModule_Info Name="Physical Memory 0" Capacity="8589934592" BankLabel="BANK 0" DeviceLocator="DIMM 1" MemoryType="0" TypeDetail="128"/>
+				<MemoryModule_Info Name="Physical Memory 1" Capacity="8589934550" BankLabel="BANK 0" DeviceLocator="DIMM 2" MemoryType="0" TypeDetail="128"/>
+			</MemoryModule>
+			<HardDisk>
+				<HardDisk_Info HDName="NVMe BC901 NVMe SK hynix 512GB" HDModel="NVMe BC905 NVMe SK hynix 512GB" HDSize="512105932800" HDSerialNumber="0000_0000_0000_0000_ACE4_2E00_2B2B_889E." HDDescription="Disk drive" HDManufacturer="(Standard disk drives)" TotalCylinders="62268" BytesPerSector="512" SectorsPerTrack="63"/>
+			</HardDisk>
+			<LogicDrive>
+				<LogicDrive_Info Name="C:" Description="Local Fixed Disk cs" Type="Local Disk" Size="509067915264" FreeSpace="219078787072" SerialNumber="42BE5046" FileSystem="NTFS"/>
+			</LogicDrive>
+			<PhysicalDrive>
+				<PhysicalDrive_Info Name="NVMe BC901 NVMe SK hynix 512GB" Description="Disk drive"/>
+			</PhysicalDrive>
+			<KeyBoard Name="Enhanced (101- or 102-key)"/>
+			<Mouse Name="HID-compliant mouse" ButtonsCount="0" Manufacturer="Microsoft"/>
+			<Monitors>
+				<Monitor_Info Name="Integrated Monitor" DisplayType="Integrated Monitor" MonitorType="Integrated Monitor" Manufacturer="(Standard monitor types)" Resolution="" SerialNumber="-"/>
+			</Monitors>
+			<Network>
+				<Network_Info Name="Intel(R) Wi-Fi 6E AX211 160MHz" Index="2" MACAddress="50:28:4A:45:2F:18" DNSHostName="COM-79QHKS3" DHCPEnabled="True" DHCPLeaseObtained="20241002154731.000000+330" DHCPLeaseExpires="20241003154731.000000+330" DHCPServer="192.168.0.5" IpAddress="192.168.0.190" Gateway="192.168.0.1" DnsServer="192.168.0.1" Subnet="255.255.255.0"/>
+			</Network>
+			<SoundCard SoundCardName="Intel® Smart Sound Technology for USB Audio" SoundCardManufacturer="Intel(R) Corporation"/>
+			<VideoCard>
+				<VideoCard_Info VideoCardName="Intel(R) Iris(R) Xe Graphics" VideoCardChipset="Intel(R) Iris(R) Xe Graphics Family" VideoCardMemory="134217728"/>
+			</VideoCard>
+			<SerialPort>
+				<SerialPort_Info Name="Intel(R) Active Management Technology - SOL (COM3)" BaudRate="115200" Status="OK"/>
+				<SerialPort_Info Name="Standard Serial over Bluetooth link (COM5)" BaudRate="9600" Status="OK"/>
+				<SerialPort_Info Name="Standard Serial over Bluetooth link (COM4)" BaudRate="9650" Status="OK"/>
+			</SerialPort>
+			<ParallelPort></ParallelPort>
+			<USB>
+				<USB_Info Name="Intel(R) USB 3.20 eXtensible Host Controller - 1.20 (Microsoft)" Manufacturer="Generic USB xHCI Host Controller"/>
+				<USB_Info Name="" Manufacturer="Generic USB4 Host Router"/>
+				<USB_Info Name="Intel(R) USB 3.10 eXtensible Host Controller - 1.20 (Microsoft)" Manufacturer="Generic USB xHCI Host Controller"/>
+			</USB>
+			<Printer>
+				<Printer_Info Name="OneNote (Desktop)" Model="Send to Microsoft OneNote 16 Driver" Default="False" Network="False" Local="True" PortName="nul:"/>
+				<Printer_Info Name="OneNote for Windows 10" Model="Microsoft Software Printer Driver" Default="False" Network="False" Local="True" PortName="Microsoft.Office.OneNote_16001.14326.22008.0_x64__8wekyb3d8bbwe_microsoft.onenoteim_S-1-5-21-2761948901-2876889171-836019621-1002"/>
+				<Printer_Info Name="Microsoft Print to PDF" Model="Microsoft Print To PDF" Default="True" Network="False" Local="True" PortName="PORTPROMPT:"/>
+			</Printer>
+			<HotFix>
+				<HotFix_Info HotFixID="KB5042099" InstalledBy="NT AUTHORITY\SYSTEM" InstalledOn="8/15/2024" Description="Update"/>
+				<HotFix_Info HotFixID="KB5027397" InstalledBy="NT AUTHORITY\SYSTEM" InstalledOn="3/14/2024" Description="Update"/>
+				<HotFix_Info HotFixID="KB5043076" InstalledBy="NT AUTHORITY\SYSTEM" InstalledOn="9/11/2024" Description="Security Update"/>
+				<HotFix_Info HotFixID="KB5043937" InstalledBy="NT AUTHORITY\SYSTEM" InstalledOn="9/11/2024" Description="Security Update"/>
+			</HotFix>
+		</Hardware_Info>
+		<Software_Info>
+			<MicrosoftOfficeKeys></MicrosoftOfficeKeys>
+			<WindowsKey ProductID="00355-63302-97093-AAOEM" ProductKey="WN244-98Y7F-2FGRY-3K6RC-DDB6G"/>
+			<InstalledProgramsList>
+				<Software Name="IMSAgent 1.5.0" Version="1.5.0" Vendor="IMSAgent" Usage="Not Known" 
+				Key=""/>
+								<Software Name="IMSAgent 1.5.2" Version="2.5.0" Vendor="IMSAgent" Usage="Not Known" 
+				Key="1234-43-6547-89"/>
+												<Software Name="IMSAgent 1.5.8" Version="1.6.0" Vendor="IMSAgent" Usage="Not Known" 
+				Key="1234-43-6547-80"/>
+				<Software Name="Zoom Workplace" Version="6.0.11 (39959)" Vendor="Zoom Video Communications, Inc." Location="C:\Users\Naeem\AppData\Roaming\Zoom\bin" Usage="Not Known" Key="ZoomUMX"/>
+				<Software Name="Python 3.12.5 (64-bit)" Version="3.12.5150.0" Vendor="Python Software Foundation" Usage="Not Known" Key="{65f0caff-14d5-41c8-bfcc-cf071c618bc3}"/>
+				<Software Name="Microsoft Visual Studio Code (User)" Version="1.93.0" Vendor="Microsoft Corporation" Location="C:\Users\Naeem\AppData\Local\Programs\Microsoft VS Code\" InstallDate="20240905" Usage="Not Known" Key="{771FD6B0-FA20-440A-A002-3B3BAC16DC50}_is1"/>
+				<Software Name="7-Zip 15.14 (x64)" Version="15.14" Vendor="Igor Pavlov" Location="C:\Program Files\7-Zip\" Usage="Not Known" Key="7-Zip"/>
+				<Software Name="Dell Display Manager 2.0" Version="2.0.0.139" Vendor="Dell Inc." Usage="Not Known" Key="Dell Display Manager 2.0"/>
+				<Software Name="Dell Peripheral Manager" Version="1.6.3" Vendor="Dell Inc." 
+				Usage="Not Known" Key=""/>
+				<Software Name="Git" Version="2.46.0" Vendor="The Git Development Community" Location="C:\Program Files\Git\" InstallDate="20240816" Usage="Not Known" Key="Git_is1"/>
+				<Software Name="Microsoft Visual Studio 2010 Tools for Office Runtime (x64)" Version="10.0.60910" Vendor="Microsoft Corporation" Location="C:\Program Files\Common Files\Microsoft Shared\VSTO\10.0\" Usage="Not Known" Key="Microsoft Visual Studio 2010 Tools for Office Runtime (x64)"/>
+				<Software Name="Mozilla Firefox (x64 en-US)" Version="130.0.1" Vendor="Mozilla" Location="C:\Program Files\Mozilla Firefox" Usage="Not Known" Key="Mozilla Firefox 130.0.1 (x64 en-US)"/>
+				<Software Name="Mozilla Maintenance Service" Version="114.0" Vendor="Mozilla" Usage="Not Known" Key="MozillaMaintenanceService"/>
+				<Software Name="Notepad++ (64-bit x64)" Version="8.5.3" Vendor="Notepad++ Team" Usage="Not Known" Key="Notepad++"/>
+				<Software Name="Microsoft 365 Apps for business - en-us" Version="16.0.18025.20104" Vendor="Microsoft Corporation" Location="C:\Program Files\Microsoft Office" Usage="Not Known" Key="O365BusinessRetail - en-us"/>
+				<Software Name="Microsoft OneDrive" Version="24.171.0825.0002" Vendor="Microsoft Corporation" Usage="Not Known" Key="OneDriveSetup.exe"/>
+				<Software Name="WinMerge 2.16.42.1 x64" Version="2.16.42.1" Vendor="Thingamahoochie Software" Location="C:\Program Files\WinMerge\" InstallDate="20240825" Usage="Not Known" Key="WinMerge_is1"/>
+				<Software Name="Microsoft .NET AppHost Pack - 7.0.20 (x64_arm)" Version="56.80.15184" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{004C6218-4F46-4ECD-9825-0AF4AB2299A8}"/>
+				<Software Name="Microsoft .NET AppHost Pack - 6.0.33 (x64_arm64)" Version="48.132.18378" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{01081DE2-00A3-48A9-8958-CDC543D8EF42}"/>
+				<Software Name="Microsoft .NET AppHost Pack - 6.0.33 (x64_x86)" Version="48.132.18378" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{03171181-C838-4C5C-8615-BFAFAC6E19B0}"/>
+				<Software Name="Microsoft .NET Runtime - 6.0.33 (x64)" Version="48.132.18378" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{07BE9B02-0247-471C-B06F-A3B1A8FA9216}"/>
+				<Software Name="IIS Express Application Compatibility Database for x64" Usage="Not Known" Key="{08274920-8908-45c2-9258-8ad67ff77b09}.sdb"/>
+				<Software Name="Dell SupportAssist Remediation" Version="5.5.6.18729" Vendor="Dell Inc." Location="C:\Program Files\Dell\SARemediation\agent\" InstallDate="20230607" Usage="Not Known" Key="{0ACC4393-7CDB-4512-800B-0404A9DF75E6}"/>
+				<Software Name="Python 3.12.5 Standard Library (64-bit)" Version="3.12.5150.0" Vendor="Python Software Foundation" Location="" InstallDate="20240813" Usage="Not Known" Key="{0DC6C3A0-5CF6-46F6-B639-80DA74882478}"/>
+				<Software Name="Microsoft ODBC Driver 17 for SQL Server" Version="17.10.6.1" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{0E0F96AC-80DE-4400-A40C-429D63293651}"/>
+				<Software Name="Dell Optimizer" Version="4.0.201.0" Vendor="Dell" Location="C:\Program Files\Dell\DellOptimizer\" InstallDate="20230419" Usage="Not Known" Key="{1344E072-D68B-48FF-BD2A-C1CCCC511A50}"/>
+				<Software Name="Microsoft ASP.NET Core 8.0.8 Shared Framework (x64)" Version="8.0.8.24369" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{1A631874-52CA-3CD6-84C2-0465F1280EDA}"/>
+				<Software Name="Microsoft .NET AppHost Pack - 7.0.20 (x64)" Version="56.80.15184" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{1EE86997-97BB-4CC5-A5C9-824D4A8C4C33}"/>
+				<Software Name="Microsoft.NET.Runtime.MonoTargets.Sdk (x64)" Version="6.0.33.0" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{1EEE70F0-6C5A-4F19-937C-13EA7C4578D6}"/>
+				<Software Name="Microsoft .NET Runtime - 7.0.20 (x64)" Version="56.80.15184" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{221BB52A-B763-4C9D-AA62-4B0B6C9AAD62}"/>
+				<Software Name="VMware Horizon HTML5 Multimedia Redirection Client" Version="8.12.1" Vendor="VMware, Inc." Location="" InstallDate="20240703" Usage="Not Known" Key="{26084D90-0229-4757-B609-CEC89B4BEE3A}"/>
+				<Software Name="Microsoft ASP.NET Core 6.0.33 Targeting Pack (x64)" Version="6.0.33.24379" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{2AFD77B1-2D50-3C97-9355-1A6DFE55A31A}"/>
+				<Software Name="vs_Graphics_Singletonx64" Version="17.11.35103" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{2B8109E2-0A6D-473D-BF68-056E3F186793}"/>
+				<Software Name="Application Verifier x64 External Package (OnecoreUAP)" Version="10.1.22621.3233" Vendor="Microsoft" Location="" InstallDate="20240814" Usage="Not Known" Key="{2C78EC40-921E-1C02-01FC-A1B6B0489B8C}"/>
+				<Software Name="Universal CRT Tools x64" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{2C897543-D940-0177-58DE-0D00653DE0B2}"/>
+				<Software Name="Application Verifier x64 External Package" Version="10.1.22000.832" Vendor="Microsoft" Location="" InstallDate="20230607" Usage="Not Known" Key="{2CBA883F-51A6-3D7D-DBB9-0527D39433CB}"/>
+				<Software Name="Microsoft Visual C++ 2022 X64 Debug Runtime - 14.40.33810" Version="14.40.33810" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{3003CC13-9BC4-48D1-95D6-14B2AFE0683B}"/>
+				<Software Name="Microsoft ASP.NET Core 6.0.33 Shared Framework (x64)" Version="6.0.33.24379" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{36CB0F53-A98E-36D1-B1D8-3C1625F579EF}"/>
+				<Software Name="Microsoft SQL Server 2019 LocalDB" Version="15.0.4153.1" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{36E492B8-CB83-4DA5-A5D2-D99A8E8228A1}"/>
+				<Software Name="Microsoft.NET.Sdk.Aspire.Manifest-8.0.100 (x64)" Version="64.64.18482" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{38DF0526-2425-4999-B77C-82281D15F35C}"/>
+				<Software Name="Dell SupportAssist OS Recovery Plugin for Dell Update" Version="5.5.9.18923" Vendor="Dell Inc." Location="C:\Program Files\Dell\SARemediation\plugin\" InstallDate="20240418" Usage="Not Known" Key="{39BF0E71-7A16-4A80-BBCE-FBDD2D1CC2D5}"/>
+				<Software Name="Microsoft .NET Host - 8.0.8 (x64)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{3BA242F8-BDB5-4096-9FBC-333CD663BBAD}"/>
+				<Software Name="Microsoft Windows Desktop Runtime - 5.0.17 (x64)" Version="40.68.31219" Vendor="Microsoft Corporation" Location="" InstallDate="20230419" Usage="Not Known" Key="{3C31CBA1-A0D9-4B95-A807-AD2313D12F47}"/>
+				<Software Name="Python 3.12.5 Documentation (64-bit)" Version="3.12.5150.0" Vendor="Python Software Foundation" Location="" InstallDate="20240813" Usage="Not Known" Key="{3E498CAA-A927-434A-9A52-1C0BAB891020}"/>
+				<Software Name="Microsoft Command Line Utilities 15 for SQL Server" Version="15.0.1300.359" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{41C0DB18-1790-465E-B0DD-D9CAA35CACBE}"/>
+				<Software Name="Microsoft Windows Desktop Targeting Pack - 8.0.8 (x64)" Version="64.32.18376" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{42EC60F8-0BB6-4F58-8D0E-370CAB21A961}"/>
+				<Software Name="Microsoft.NET.Workload.Mono.Toolchain.net7.Manifest (x64)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{433283AA-1F1F-493A-836F-EDE6388F718A}"/>
+				<Software Name="Microsoft Windows Desktop Runtime - 6.0.28 (x64)" Version="48.112.10435" Vendor="Microsoft Corporation" Location="" InstallDate="20240411" Usage="Not Known" Key="{443A7BE8-E5BE-4514-BDAB-0A872E3E846B}"/>
+				<Software Name="Aspire.ProjectTemplates (x64)" Version="8.2.0.0" Vendor="Microsoft Corporation" Location="" InstallDate="20240908" Usage="Not Known" Key="{482658E3-82C9-49FA-BE8D-AEFD24113B29}"/>
+				<Software Name="Aspire.Hosting.Sdk (x64)" Version="8.2.0.0" Vendor="Microsoft Corporation" Location="" InstallDate="20240908" Usage="Not Known" Key="{484D550C-2274-4638-86F5-F8BC243CDF7E}"/>
+				<Software Name="Python 3.12.5 Executables (64-bit)" Version="3.12.5150.0" Vendor="Python Software Foundation" Location="" InstallDate="20240813" Usage="Not Known" Key="{49C6B471-DE43-4ECA-B4F2-2CE5D7BF8F6D}"/>
+				<Software Name="Microsoft .NET Runtime - 6.0.28 (x64)" Version="48.112.10439" Vendor="Microsoft Corporation" Location="" InstallDate="20240411" Usage="Not Known" Key="{4BCC5DFD-5D10-4ACC-AAA9-8A1578A9F0C6}"/>
+				<Software Name="Dell Command | Update for Windows 10" Version="4.3.0" Vendor="Dell Inc." Location="C:\Program Files\Dell\CommandUpdate\" InstallDate="20230419" Usage="Not Known" Key="{4CCADC13-F3AE-454F-B724-33F6D4E52022}"/>
+				<Software Name="Microsoft.NET.Workload.Emscripten.net7.Manifest (x64)" Version="64.32.18242" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{518CABDD-A838-4C9D-873E-5B3390DCE8AA}"/>
+				<Software Name="VMware Horizon Media Redirection for Microsoft Teams" Version="8.12.1" Vendor="VMware, Inc." Location="" InstallDate="20240703" Usage="Not Known" Key="{595EF4D8-03AA-4486-BC12-F8F5F8450A59}"/>
+				<Software Name="Microsoft Visual C++ 2022 X64 Additional Runtime - 14.40.33810" Version="14.40.33810" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{59CED48F-EBFE-480C-8A38-FC079C2BEC0F}"/>
+				<Software Name="Microsoft .NET Runtime - 5.0.17 (x64)" Version="40.68.31213" Vendor="Microsoft Corporation" Location="" InstallDate="20230419" Usage="Not Known" Key="{5A66E598-37BD-4C8A-A7CB-A71C32ABCD78}"/>
+				<Software Name="Microsoft System CLR Types for SQL Server 2019" Version="15.0.2000.5" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{5BC7E9EB-13E8-45DB-8A60-F2481FEB4595}"/>
+				<Software Name="Microsoft Windows Desktop Targeting Pack - 6.0.33 (x64)" Version="48.132.18374" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{5CF4E75C-03D0-445A-8ADD-6EB0FE4B4648}"/>
+				<Software Name="VMware Horizon Client" Version="8.12.1.44700" Vendor="VMware, Inc." Location="C:\Program Files\VMware\VMware Horizon View Client\" InstallDate="20240703" Usage="Not Known" Key="{6143E07B-39E7-42C7-85FF-FDB0693443DC}"/>
+				<Software Name="Dell Core Services" Version="1.0.248.0" Vendor="Dell, Inc." Location="C:\Program Files\Dell\" InstallDate="20230419" Usage="Not Known" Key="{6250A087-31F9-47E2-A0EF-56ABF31B610E}"/>
+				<Software Name="Microsoft Windows Desktop Targeting Pack - 7.0.20 (x64)" Version="56.80.15245" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{644C2637-F41C-49AF-97A5-C7BE2979BB88}"/>
+				<Software Name="Azure Data Studio" Version="1.47.0" Vendor="Microsoft Corporation" Location="C:\Program Files\Azure Data Studio\" InstallDate="20231128" Usage="Not Known" Key="{6591F69E-6588-4980-81ED-C8FCBD7EC4B8}_is1"/>
+				<Software Name="Microsoft Windows Desktop Runtime - 8.0.8 (x64)" Version="64.32.18376" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{663E7053-3B36-4AE5-8223-234867FAEAE6}"/>
+				<Software Name="vs_devenx64vmsi" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{67B8CF3A-C2F5-424F-B172-E0A2B8D5D2D5}"/>
+				<Software Name="Workflow Manager Client 1.0" Version="2.1.10525.2" Vendor="Microsoft Corporation" Location="C:\Program Files\Reference Assemblies\Microsoft\Workflow Manager\1.0\" InstallDate="20230607" Usage="Not Known" Key="{69CD1F2D-DF68-4E23-9108-1B70783F2855}"/>
+				<Software Name="Microsoft .NET AppHost Pack - 6.0.33 (x64_arm)" Version="48.132.18378" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{6B7E3789-27EB-42C2-8954-20D0FCF9BAD9}"/>
+				<Software Name="VS JIT Debugger" Version="17.0.157.0" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{6C1EDC0A-E71D-44D2-821C-213A5CD15498}"/>
+				<Software Name="Microsoft .NET Runtime - 6.0.20 (x64)" Version="48.83.63169" Vendor="Microsoft Corporation" Location="" InstallDate="20231021" Usage="Not Known" Key="{6CE8AD8C-E6D5-4BF7-91C3-7F8106A5CD93}"/>
+				<Software Name="Microsoft .NET 7.0 Templates 8.0.300 (x64)" Version="28.7.63663" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{6D5F3E71-29A1-4B10-A518-D4FF58C4C1D7}"/>
+				<Software Name="Microsoft Visual Studio Installer" Version="3.11.2177.7163" Vendor="Microsoft Corporation" Location="&quot;C:\Program Files (x86)\Microsoft Visual Studio\Installer&quot;" InstallDate="20230607" Usage="Not Known" Key="{6F320B93-EE3C-4826-85E0-ADF79F8D4C61}"/>
+				<Software Name="Microsoft Windows Desktop Runtime - 7.0.20 (x64)" Version="56.80.15245" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{72C29BED-666F-4E5E-BC49-DF44C890742E}"/>
+				<Software Name="Windows App Certification Kit Native Components" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{750766A0-28E0-2EC0-B83C-7C6F1236B041}"/>
+				<Software Name="Microsoft .NET 8.0 Templates 8.0.400 (x64)" Version="32.10.13214" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{755A96BB-AB66-4671-AA4E-99177657E625}"/>
+				<Software Name="Microsoft.NET.Sdk.tvOS.Manifest-8.0.100 (x64)" Version="17.5.8020" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{7598809C-469F-479E-AC9C-7E2E422B676B}"/>
+				<Software Name="Microsoft .NET Host FX Resolver - 6.0.20 (x64)" Version="48.83.63169" Vendor="Microsoft Corporation" Location="" InstallDate="20231021" Usage="Not Known" Key="{76FA02FF-603F-48BB-9E3F-17ED5DB861E8}"/>
+				<Software Name="Microsoft .NET Host FX Resolver - 6.0.28 (x64)" Version="48.112.10439" Vendor="Microsoft Corporation" Location="" InstallDate="20240411" Usage="Not Known" Key="{7C4254A1-17EE-4840-B9D3-7CA9B34C75CD}"/>
+				<Software Name="Microsoft .NET Targeting Pack - 7.0.20 (x64)" Version="56.80.15184" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{7C8005BF-9A78-4548-9680-1C04500D689D}"/>
+				<Software Name="Microsoft Analysis Services OLE DB Provider" Version="16.0.5143.0" Vendor="Microsoft Corporation" Location="" InstallDate="20231128" Usage="Not Known" Key="{7CA9BDB2-DC47-44B5-B384-8938B461CC38}"/>
+				<Software Name="Windows SDK DirectX x64 Remote" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{7E23CCDF-D8BD-36F8-CB1F-1DDE0D2B3F07}"/>
+				<Software Name="Microsoft .NET Host FX Resolver - 8.0.8 (x64)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{7FE24458-0796-4428-99C2-9A0F8DAB93CC}"/>
+				<Software Name="Microsoft.NET.Sdk.Android.Manifest-8.0.100 (x64)" Version="34.0.113" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{82E988D4-4794-49D0-8185-B49CD842BFFB}"/>
+				<Software Name="Microsoft Web Deploy 4.0" Version="10.0.8305" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{82FD8C73-C24D-433C-85A9-48AE93570410}"/>
+				<Software Name="Global VPN Client" Version="4.10.8" Vendor="SonicWall" Location="C:\Program Files\SonicWall\Global VPN Client\" InstallDate="20230829" Usage="Not Known" Key="{83C9BF15-02E7-4049-9758-EE61175CFB7B}"/>
+				<Software Name="DB Browser for SQLite" Version="3.13.99" Vendor="DB Browser for SQLite Team" Location="C:\Program Files\DB Browser for SQLite\" InstallDate="20240812" Usage="Not Known" Key="{84FA58C5-3D4A-4BDB-8901-467DD1B78E60}"/>
+				<Software Name="Microsoft .NET AppHost Pack - 7.0.20 (x64_arm64)" Version="56.80.15184" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{866F4150-A781-40E0-80E7-5DF0E4F36BDD}"/>
+				<Software Name="Microsoft ASP.NET Core 7.0.20 Targeting Pack (x64)" Version="7.0.20.24269" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{87DB9F7C-C794-39A6-93FE-D72AF734237A}"/>
+				<Software Name="Microsoft .NET Host FX Resolver - 5.0.17 (x64)" Version="40.68.31213" Vendor="Microsoft Corporation" Location="" InstallDate="20230419" Usage="Not Known" Key="{8BA25391-0BE6-443A-8EBF-86A29BAFC479}"/>
+				<Software Name="Microsoft .NET Toolset 8.0.400 (x64)" Version="32.8.13214" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{8C62C8E8-64AE-448E-B98C-127E2BBED5D6}"/>
+				<Software Name="Microsoft.NET.Sdk.Maui.Manifest-8.0.100 (x64)" Version="8.0.72" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{8D04CA7E-1BE1-4797-BCB9-8558C64B0FFA}"/>
+				<Software Name="Microsoft Visual Studio Tools for Applications 2019 x64 Hosting Support" Version="16.0.31110" Vendor="Microsoft Corporation" Location="" InstallDate="20231128" Usage="Not Known" Key="{8E7A3713-551D-333A-9271-10EF4D77A80F}"/>
+				<Software Name="Office 16 Click-to-Run Licensing Component" Version="16.0.18025.20104" Vendor="Microsoft Corporation" Location="" InstallDate="20241001" Usage="Not Known" Key="{90160000-007E-0000-1000-0000000FF1CE}"/>
+				<Software Name="Office 16 Click-to-Run Extensibility Component" Version="16.0.18025.20104" Vendor="Microsoft Corporation" Location="" InstallDate="20241001" Usage="Not Known" Key="{90160000-008C-0000-1000-0000000FF1CE}"/>
+				<Software Name="DiagnosticsHub_CollectionService" Version="17.10.34627" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{92A47FAD-5C85-400C-8B00-698D4C5F7031}"/>
+				<Software Name="Microsoft .NET Runtime - 8.0.8 (x64)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{9ACB23DB-4D32-49ED-A5E3-F4E2F8D9D2AA}"/>
+				<Software Name="Microsoft .NET AppHost Pack - 6.0.33 (x64)" Version="48.132.18378" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{9C91AE94-81AB-4A5F-8B95-FB1478450EC6}"/>
+				<Software Name="Microsoft.NET.Workload.Emscripten.net6.Manifest (x64)" Version="64.32.18242" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{9D1150CA-4E91-4CEA-8653-6D7026137090}"/>
+				<Software Name="Microsoft .NET AppHost Pack - 8.0.8 (x64)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{9EFD0CF9-17ED-422A-8227-16DFDD867EC4}"/>
+				<Software Name="Microsoft ASP.NET Core 8.0.8 Targeting Pack (x64)" Version="8.0.8.24369" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{9F6AA59A-AF40-32FB-9707-DDB1D80D42C3}"/>
+				<Software Name="Dell SupportAssist" Version="4.0.3.61633" Vendor="Dell Inc." Location="C:\Program Files\Dell\SupportAssistAgent\" InstallDate="20240627" Usage="Not Known" Key="{A1FC489C-7909-4E08-9685-6C77BA2053DE}"/>
+				<Software Name="Microsoft.NET.Sdk.iOS.Manifest-8.0.100 (x64)" Version="17.5.8020" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{A2742BEF-A88C-4CF2-B337-773AF36676E1}"/>
+				<Software Name="IIS 10.0 Express" Version="10.0.08608" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{A43F6F96-4CED-4152-8086-AF954755E324}"/>
+				<Software Name="Python 3.12.5 Development Libraries (64-bit)" Version="3.12.5150.0" Vendor="Python Software Foundation" Location="" InstallDate="20240813" Usage="Not Known" Key="{A576F2EB-97DB-4B01-9422-B8E1FA15B92B}"/>
+				<Software Name="Microsoft Windows Desktop Runtime - 6.0.33 (x64)" Version="48.132.18374" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{A59F43A6-AADB-42EB-883B-2FE4E3AA3A69}"/>
+				<Software Name="Microsoft .NET Standard Targeting Pack - 2.1.0 (x64)" Version="24.0.28113" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{A7036CFB-B403-4598-85FF-D397ABB88173}"/>
+				<Software Name="Microsoft .NET Targeting Pack - 6.0.33 (x64)" Version="48.132.18378" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{A721F6FD-9ED5-4D0A-9D14-FB1F7E97D24F}"/>
+				<Software Name="Microsoft Teams Meeting Add-in for Microsoft Office" Version="1.24.25503" Vendor="Microsoft" Location="" InstallDate="20240926" Usage="Not Known" Key="{A7AB73A3-CB10-4AA5-9D38-6AEFFBDE4C91}"/>
+				<Software Name="icecap_collection_x64" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{A7BC9345-F48F-4F6C-8F23-222F6B64B737}"/>
+				<Software Name="Aspire.Hosting (x64)" Version="8.1.0.0" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{AD1183FA-28C6-4086-B7D0-77B1EE1DF9FF}"/>
+				<Software Name="IIS Express Application Compatibility Database for x86" Usage="Not Known" Key="{ad846bae-d44b-4722-abad-f7420e08bcd9}.sdb"/>
+				<Software Name="vs_minshellinteropx64msi" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{B219BF5E-0743-49F3-9ADD-543A18FFAE79}"/>
+				<Software Name="Microsoft .NET AppHost Pack - 7.0.20 (x64_x86)" Version="56.80.15184" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{B241FC20-E3D2-4597-8B98-9B784C6526A0}"/>
+				<Software Name="Python 3.12.5 Core Interpreter (64-bit)" Version="3.12.5150.0" Vendor="Python Software Foundation" Location="" InstallDate="20240813" Usage="Not Known" Key="{B2ACF787-C0C6-4049-B5E0-728FDE281A0C}"/>
+				<Software Name="Node.js" Version="20.16.0" Vendor="Node.js Foundation" Location="" InstallDate="20240815" Usage="Not Known" Key="{B7FAA479-7426-4FEC-9160-B776E16AECF1}"/>
+				<Software Name="ExpressConnect Drivers &amp; Services" Version="4.1022.1025" Vendor="Intel(R)" Location="C:\Program Files\ExpressConnect\" InstallDate="20230419" Usage="Not Known" Key="{B879FC3D-4B00-4B2B-8400-8B342285F20B}"/>
+				<Software Name="Microsoft Visual C++ 2022 X64 Minimum Runtime - 14.40.33810" Version="14.40.33810" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{B8B3BB4A-A10D-4F51-91B7-A64FFAC31EA7}"/>
+				<Software Name="Aspire.Dashboard.Sdk.win-x64 (x64)" Version="8.1.0.0" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{BCDD296C-4922-4B9C-8F38-BF126444D327}"/>
+				<Software Name="Microsoft ASP.NET Core 7.0.20 Shared Framework (x64)" Version="7.0.20.24269" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{BD401329-F877-391C-9E5A-FEB423C5A196}"/>
+				<Software Name="Microsoft.NET.Sdk.macOS.Manifest-8.0.100 (x64)" Version="14.5.8020" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{C085AB41-9D75-4C13-9DFD-0DF43C0E03C6}"/>
+				<Software Name="Python 3.12.5 Test Suite (64-bit)" Version="3.12.5150.0" Vendor="Python Software Foundation" Location="" InstallDate="20240813" Usage="Not Known" Key="{C0BCA7FE-EABE-4740-B19D-FAF0C1DFF90C}"/>
+				<Software Name="Python 3.12.5 Tcl/Tk Support (64-bit)" Version="3.12.5150.0" Vendor="Python Software Foundation" Location="" InstallDate="20240813" Usage="Not Known" Key="{C3052A24-45DB-4723-AD99-9025FC199975}"/>
+				<Software Name="Python 3.12.5 pip Bootstrap (64-bit)" Version="3.12.5150.0" Vendor="Python Software Foundation" Location="" InstallDate="20240813" Usage="Not Known" Key="{C43FD2AD-079B-409F-ADE9-FD287B1F79F0}"/>
+				<Software Name="Microsoft Update Health Tools" Version="5.72.0.0" Vendor="Microsoft Corporation" Location="" InstallDate="20231103" Usage="Not Known" Key="{C6FD611E-7EFE-488C-A0E0-974C09EF6473}"/>
+				<Software Name="Application Verifier x64 External Package (DesktopEditions)" Version="10.1.22621.3233" Vendor="Microsoft" Location="" InstallDate="20240814" Usage="Not Known" Key="{C85A0AA9-2CF5-7B43-C078-4E8B7CE362D2}"/>
+				<Software Name="Microsoft.NET.Workload.Mono.Toolchain.net6.Manifest (x64)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{C85DF635-763A-4B7F-A325-D9C885E48148}"/>
+				<Software Name="Microsoft .NET Host - 6.0.28 (x64)" Version="48.112.10439" Vendor="Microsoft Corporation" Location="" InstallDate="20240411" Usage="Not Known" Key="{CA84969C-64F9-4606-A998-E692A5DA9B9F}"/>
+				<Software Name="Microsoft .NET 6.0 Templates 8.0.400 (x64)" Version="24.8.13214" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{CEB672C4-D459-43C5-8A41-5802B125D74C}"/>
+				<Software Name="Microsoft .NET SDK 8.0.400 (x64) from Visual Studio" Version="8.4.24.37502" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{D77DA550-2511-4108-8019-D02DAF4F637E}"/>
+				<Software Name="Microsoft .NET Targeting Pack - 8.0.8 (x64)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{DA718382-BEB8-4B6D-BAF5-138A03F8CF26}"/>
+				<Software Name="vs_communityx64msi" Version="17.11.35103" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{DCF89732-E559-4900-8844-7C6B27F28808}"/>
+				<Software Name="PuTTY release 0.81 (64-bit)" Version="0.81.0.0" Vendor="Simon Tatham" Location="" InstallDate="20240826" Usage="Not Known" Key="{DDC95F26-92B1-4546-9678-5DC68DF76BA0}"/>
+				<Software Name="vs_minshellx64msi" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{DFE9C1B1-B059-46C6-8272-A4975CE7C844}"/>
+				<Software Name="Microsoft.NET.Workload.Emscripten.Current.Manifest (x64)" Version="64.32.18242" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{E1EE241B-E1C5-4AE4-8350-172935F11BB0}"/>
+				<Software Name="DellOptimizerUI" Version="4.0.201.0" Vendor="Dell" Location="C:\Program Files (x86)\Dell\DellOptimizer\" InstallDate="20230419" Usage="Not Known" Key="{E27862BD-4371-4245-896A-7EBE989B6F7F}"/>
+				<Software Name="Microsoft.NET.Workload.Mono.Toolchain.Current.Manifest (x64)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{E4C64A61-464D-4130-8722-5E9BD38A0424}"/>
+				<Software Name="Microsoft .NET Host - 5.0.17 (x64)" Version="40.68.31213" Vendor="Microsoft Corporation" Location="" InstallDate="20230419" Usage="Not Known" Key="{E663ED1E-899C-40E8-91D0-8D37B95E3C69}"/>
+				<Software Name="Microsoft .NET AppHost Pack - 8.0.8 (x64_x86)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{E81E3299-FFE8-442B-8EA2-5F72CFF0AF9A}"/>
+				<Software Name="Microsoft.NET.Sdk.MacCatalyst.Manifest-8.0.100 (x64)" Version="17.5.8020" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{EA580BD5-7685-4B4D-B4D2-144FF6BECC92}"/>
+				<Software Name="Microsoft OLE DB Driver for SQL Server" Version="18.6.7.0" Vendor="Microsoft Corporation" Location="" InstallDate="20231128" Usage="Not Known" Key="{EBC362C3-E2BD-41A6-BC10-F07D52F1509E}"/>
+				<Software Name="Microsoft ASP.NET Core Module V2 for IIS Express" Version="17.0.22116.0" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{F0E9CE77-BF19-4BBE-B228-A42F782F82E4}"/>
+				<Software Name="Microsoft Build of OpenJDK with Hotspot 11.0.16.1+1 (x64)" Version="11.0.16.101" Vendor="Microsoft" Location="C:\Program Files\Microsoft\jdk-11.0.16.101-hotspot\" InstallDate="20230607" Usage="Not Known" Key="{F207B40D-1DB3-42FB-9DB7-D761C4F1076E}"/>
+				<Software Name="VS Script Debugging Common" Version="17.0.157.0" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{F5796163-6EC6-488A-B2DE-E1E94477F6AD}"/>
+				<Software Name="VS WCF Debugging" Version="17.0.157.0" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{F7F70D15-A1C1-42D5-A47F-AD0AC223C5AD}"/>
+				<Software Name="Microsoft.NET.Runtime.MonoAOTCompiler.Task (x64)" Version="6.0.33.0" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{F85F99B9-8314-4C4F-9291-63A296114D26}"/>
+				<Software Name="IntelliTraceProfilerProxy" Version="15.0.21225.01" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{F8B9E8C8-61E8-4E9E-879D-F3F498AD0230}"/>
+				<Software Name="Aspire.Hosting.Orchestration.win-x64 (x64)" Version="8.1.0.0" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{FA3B2C96-9B9F-4688-94F6-B6C058501CAB}"/>
+				<Software Name="Microsoft ASP.NET Core Module for IIS Express" Version="12.2.18292.0" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{FAFEE5E3-E00A-4CE8-B495-8F66A5FAB236}"/>
+				<Software Name="Microsoft .NET AppHost Pack - 8.0.8 (x64_arm64)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{FBF244F9-0912-4C4D-86C0-DF787B787A9A}"/>
+				<Software Name="Visual Studio Professional 2022" Version="17.11.0" Vendor="Microsoft Corporation" Location="C:\Program Files\Microsoft Visual Studio\2022\Professional" InstallDate="20230607" Usage="Not Known" Key="2eacc94a"/>
+				<Software Name="Adobe Flash Player 10 Plugin" Version="10.1.102.64" Vendor="Adobe Systems Incorporated" Usage="Not Known" Key="Adobe Flash Player Plugin"/>
+				<Software Name="Core FTP LE (x64)" Usage="Not Known" Key="CoreFTP(x64)"/>
+				<Software Name="Dropbox" Version="208.4.5824" Vendor="Dropbox, Inc." Location="C:\Program Files (x86)\Dropbox\Client" Usage="Not Known" Key="Dropbox"/>
+				<Software Name="Foxit Reader" Version="10.0.0.35798" Vendor="Foxit Software Inc." Location="C:\Program Files (x86)\Foxit Software\Foxit Reader\" InstallDate="20230607" Usage="Not Known" Key="Foxit Reader_is1"/>
+				<Software Name="Google Chrome" Version="129.0.6668.72" Vendor="Google LLC" Location="C:\Program Files\Google\Chrome\Application" InstallDate="20241002" Usage="Not Known" Key="Google Chrome"/>
+				<Software Name="Kaspersky Security Center Network Agent" Version="15.1.0.7138" Vendor="Kaspersky" Location="C:\Program Files (x86)\Kaspersky Lab\NetworkAgent\" InstallDate="" Usage="Not Known" Key="InstallWIX_{BCF4CF24-88AB-45E1-A6E6-40C8278A70C5}"/>
+				<Software Name="Microsoft Edge" Version="129.0.2792.65" Vendor="Microsoft Corporation" Location="C:\Program Files (x86)\Microsoft\Edge\Application" InstallDate="20240928" Usage="Not Known" Key="Microsoft Edge"/>
+				<Software Name="Microsoft Edge Update" Version="1.3.195.21" Usage="Not Known" Key="Microsoft Edge Update"/>
+				<Software Name="Microsoft Edge WebView2 Runtime" Version="129.0.2792.65" Vendor="Microsoft Corporation" Location="C:\Program Files (x86)\Microsoft\EdgeWebView\Application" InstallDate="20240928" Usage="Not Known" Key="Microsoft EdgeWebView"/>
+				<Software Name="Microsoft Help Viewer 2.3" Version="2.3.28307" Vendor="Microsoft Corporation" Location="C:\Program Files (x86)\Microsoft Help Viewer\v2.3\" Usage="Not Known" Key="Microsoft Help Viewer 2.3"/>
+				<Software Name="OnePlus USB Drivers 1.00" Version="1.00" Vendor="OnePlus, Inc" Location="C:\Program Files (x86)\OnePlus USB Drivers\" InstallDate="20231031" Usage="Not Known" Key="OnePlus USB Drivers 1.00"/>
+				<Software Name="Kaspersky Endpoint Security for Windows" Version="11.18.5.438" Location="C:\Program Files (x86)\Kaspersky Lab\KES.12.6.0\" Usage="Not Known" Key="{00000001-54AA-4F60-AB96-5A3966550F53}"/>
+				<Software Name="Windows Mobile Extension SDK Contracts" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{01E7E930-A0F4-5340-5E2D-92EFC9D5821D}"/>
+				<Software Name="Windows SDK Desktop Tools x86" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{02594FB6-9905-CBB9-10E8-EFCFB7122D7C}"/>
+				<Software Name="Windows SDK for Windows Store Managed Apps Libs" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{0374E0D0-98AE-0078-841E-DE9F70EDCB90}"/>
+				<Software Name="Web Components" Version="3.0.7.21" Location="C:\Program Files (x86)\Web Components\" InstallDate="20240723" Usage="Not Known" Key="{03B13AF8-9625-478A-AF0E-205337B9415A}_is1"/>
+				<Software Name="Dropbox Update Helper" Version="1.3.911.1" Vendor="Dropbox, Inc." Location="" InstallDate="20240620" Usage="Not Known" Key="{099218A5-A723-43DC-8DB5-6173656A1E94}"/>
+				<Software Name="Microsoft Visual C++ 2022 X86 Minimum Runtime - 14.40.33810" Version="14.40.33810" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{0C3457A0-3DCE-4A33-BEF0-9B528C557771}"/>
+				<Software Name="Visual Studio 2017 Isolated Shell for SSMS" Version="15.0.28308.421" Vendor="Microsoft Corporation" Location="" InstallDate="20231128" Usage="Not Known" Key="{0C69A55F-BC72-4AFB-BAEF-C5DEF9C32B9A}"/>
+				<Software Name="WinRT Intellisense Mobile - en-us" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{0F2D2736-F436-3F10-FB30-9D279F58305B}"/>
+				<Software Name="Windows SDK Signing Tools" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{0F5E7D7D-8969-DC1B-205D-024FB54A0417}"/>
+				<Software Name="Microsoft SQL Server Management Studio - 19.2" Version="19.2.56.2" Vendor="Microsoft Corporation" Usage="Not Known" Key="{0fa2021d-5bc7-44f9-ab33-4a60fa6b77ad}"/>
+				<Software Name="Microsoft .NET CoreRuntime SDK" Version="1.1.27004.0" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{12702494-9E6A-3F5E-9441-2B7D258A639B}"/>
+				<Software Name="Windows Team Extension SDK" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{14705B25-5AC2-82AC-DB79-A35219016ABB}"/>
+				<Software Name="Windows SDK AddOn" Version="10.1.0.0" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{15941C7F-810D-41DF-8C5A-8D0490277AFB}"/>
+				<Software Name="Microsoft Windows Desktop Targeting Pack - 7.0.20 (x86)" Version="56.80.15245" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{160B3BBA-225E-4939-B0BD-3171D9D68F45}"/>
+				<Software Name="Microsoft .NET Framework 4.7.2 Targeting Pack" Version="4.7.03062" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{1784A8CD-F7FE-47E2-A87D-1F31E7242D0D}"/>
+				<Software Name="Windows SDK Desktop Libs x64" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{1A457607-6262-3949-63D4-E1F85A3D95FD}"/>
+				<Software Name="Microsoft .NET Framework Cumulative Intellisense Pack for Visual Studio (ENU)" Version="4.8.09037" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{1A9C3A1A-566B-4CFA-8B27-71FC623963BE}"/>
+				<Software Name="Universal CRT Redistributable" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{1D228B5E-62E8-737B-3478-78A795EBB8EC}"/>
+				<Software Name="Windows IoT Extension SDK Contracts" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{1FF69612-5A91-3565-7EE3-0539A04E3B8D}"/>
+				<Software Name="ClickOnce Bootstrapper Package for Microsoft .NET Framework" Version="4.8.09037" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{22E13608-4DB0-4977-A267-3AAFA09CD54A}"/>
+				<Software Name="Windows SDK Desktop Libs x86" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{24DAC073-46EA-ED5D-860A-845E8A27F426}"/>
+				<Software Name="Dell Optimizer Core" Version="4.0.201.0" Vendor="Dell Inc." Usage="Not Known" Key="{286A9ADE-A581-43E8-AA85-6F5D58C7DC88}"/>
+				<Software Name="Microsoft ASP.NET Core 7.0.20 Shared Framework (x86)" Version="7.0.20.24269" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{28BDB469-F7EA-3C09-B19E-C533A1D43BD4}"/>
+				<Software Name="vs_minshellsharedmsi" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{2A1FB39E-C04E-4DD1-A8E9-5AF8E4DC5DDA}"/>
+				<Software Name="Windows App Certification Kit x64" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{2CF6B1B1-3D60-A198-E401-093F7BA784F0}"/>
+				<Software Name="SDK ARM Additions" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{2D2C18BA-7B10-0A98-F662-9D397CAEA0C3}"/>
+				<Software Name="Windows SDK" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{2DF27D5D-478A-CC3F-EF64-E461BC3B3580}"/>
+				<Software Name="Microsoft .NET Framework 4.6.1 SDK" Version="4.6.01055" Vendor="Microsoft Corporation" Location="" InstallDate="20231201" Usage="Not Known" Key="{2F0ECC80-B9E4-4485-8083-CD32F22ABD92}"/>
+				<Software Name="Windows SDK Desktop Libs arm" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{2F5EB743-8C97-930F-F41E-2EC8D5D5565B}"/>
+				<Software Name="Windows SDK Desktop Headers arm64" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{30092A0E-1D50-8D66-E5EB-01F6AA8C1FFE}"/>
+				<Software Name="icecap_collectionresources" Version="17.11.35103" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{311BAE3E-A1A9-44CD-AD58-C6539CD3E86C}"/>
+				<Software Name="Windows SDK for Windows Store Apps DirectX x86 Remote" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{31A3EB09-E226-B0E5-FA70-FF4B3CAD2ECF}"/>
+				<Software Name="Windows SDK Facade Windows WinMD Versioned" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{31B6D021-BC97-82C5-9C42-16AB86C37215}"/>
+				<Software Name="Windows SDK Desktop Headers arm" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{31D517CE-04EE-F508-87C6-A503372B02A1}"/>
+				<Software Name="Microsoft .NET Host - 8.0.8 (x86)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{3209B242-F6A9-4EA3-87D0-0855DECFB5FF}"/>
+				<Software Name="Windows SDK for Windows Store Apps Tools" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{35552522-5930-E1A1-B1E9-FF78918E1543}"/>
+				<Software Name="Visual C++ Library CRT ARM64 Appx Package" Version="14.41.34120" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{383B01AE-764D-43B4-8AF8-3170D2A48139}"/>
+				<Software Name="Universal CRT Tools x86" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{384A28F5-6B08-01FB-BE75-EBC673BBCACF}"/>
+				<Software Name="MSI Development Tools" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{3891A7DE-A85F-9B4E-2B84-50162AFA1E48}"/>
+				<Software Name="Microsoft Windows Communication Foundation Diagnostic Pack for x86" Version="17.11.35102" Vendor="Microsoft" Location="" InstallDate="20240814" Usage="Not Known" Key="{397C6D8E-D69D-3748-AC48-B49C16CEDF0C}"/>
+				<Software Name="vs_tipsmsi" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{39D747CD-E324-4687-B068-7E2EC1066B2C}"/>
+				<Software Name="WinRT Intellisense IoT - Other Languages" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{3A8F388C-D0F7-0A66-0EDE-D477B1B1B2F4}"/>
+				<Software Name="Windows SDK Desktop Headers x64" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{3A928615-B22E-42B6-A30A-CB7B1135F1CF}"/>
+				<Software Name="WinRT Intellisense UAP - Other Languages" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{3C25B44A-1D95-9E5E-57E3-19D9AE3C3BC1}"/>
+				<Software Name="Windows Desktop Extension SDK" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{3F737DA8-C5B7-8740-6B07-BA73B5E62CDF}"/>
+				<Software Name="Microsoft ASP.NET Core 8.0.8 Targeting Pack (x86)" Version="8.0.8.24369" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{405586AB-4481-3D44-A4EF-BE06EBB7C6E3}"/>
+				<Software Name="Windows SDK Redistributables" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{417DF3A3-09A1-3EAE-9F6C-5EB8DB4AD0F2}"/>
+				<Software Name="WinRT Intellisense UAP - en-us" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{4308116D-A763-144D-DC81-6243BE6B2ADF}"/>
+				<Software Name="windows_toolscorepkg" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{44001BA1-EEA5-4EE9-9FEC-2F3F52FDB74C}"/>
+				<Software Name="WinRT Intellisense IoT - en-us" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{44E4AFD9-74E0-9631-4CE0-E7C779624FE2}"/>
+				<Software Name="vs_vswebprotocolselectormsi" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{45BF09E7-745C-4EA8-AB3D-2F734AB57EB2}"/>
+				<Software Name="Microsoft Visual C++ 2015-2022 Redistributable (x86) - 14.40.33810" Version="14.40.33810.0" Vendor="Microsoft Corporation" Usage="Not Known" Key="{47109d57-d746-4f8b-9618-ed6a17cc922b}"/>
+				<Software Name="Microsoft .NET CoreRuntime For CoreCon" Version="1.0.0.0" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{48A8F171-52F2-372B-8414-EA50617708BE}"/>
+				<Software Name="Windows SDK for Windows Store Apps Metadata" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{4A130AF9-EC97-7D26-1FB0-03A0E5CC672B}"/>
+				<Software Name="Microsoft .NET Runtime - 7.0.20 (x86)" Version="56.80.15184" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{4DAE978C-6175-400D-A508-2403109B89E9}"/>
+				<Software Name="Microsoft .NET Targeting Pack - 7.0.20 (x86)" Version="56.80.15184" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{535F2658-B9C6-4CFC-85E9-C025EBE72CB4}"/>
+				<Software Name="WinRT Intellisense Desktop - Other Languages" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{538E91F2-5231-E289-051F-DB55DE88CF56}"/>
+				<Software Name="Windows SDK Desktop Tools arm64" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{54E5E684-132E-23D3-CBF6-962122E2C568}"/>
+				<Software Name="vs_CoreEditorFonts" Version="17.6.33605" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{56FB5923-1A95-4D55-BE78-CD42B50E67AD}"/>
+				<Software Name="vs_filehandler_amd64" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{5845E00D-7409-475B-B7F3-D88C2598D7D4}"/>
+				<Software Name="icecap_collection_neutral" Version="17.11.35103" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{58D16D0C-E3A5-44F4-B44D-FE43AD45F251}"/>
+				<Software Name="Microsoft .NET Runtime - 8.0.8 (x86)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{5AC5E5D4-940F-4577-B982-CE3C3F7C571B}"/>
+				<Software Name="Microsoft Visual C++ 2015-2022 Redistributable (x64) - 14.40.33810" Version="14.40.33810.0" Vendor="Microsoft Corporation" Usage="Not Known" Key="{5af95fd8-a22e-458f-acee-c61bd787178e}"/>
+				<Software Name="Windows IoT Extension SDK" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{5B64C01B-2798-A2F6-89C3-AC03906F8788}"/>
+				<Software Name="Kits Configuration Installer" Version="10.1.22621.3233" Vendor="Microsoft" Location="" InstallDate="20240814" Usage="Not Known" Key="{5D7663D4-8EF0-0323-8F60-1FC5EECB77E5}"/>
+				<Software Name="vs_filehandler_x86" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{5E7CA2F5-FE75-4D40-8533-653524E82407}"/>
+				<Software Name="Microsoft Visual C++ 2022 X86 Additional Runtime - 14.40.33810" Version="14.40.33810" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{5EA6C998-D5AC-4ED9-89C3-9F25B17CCD3D}"/>
+				<Software Name="WinRT Intellisense PPI - Other Languages" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{5EBB309A-2974-F721-42A9-0212E54B3693}"/>
+				<Software Name="Windows SDK for Windows Store Apps Contracts" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{5F1CD2CB-9C4E-BF51-9C82-DE916CA5E4AE}"/>
+				<Software Name="Windows Team Extension SDK Contracts" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{5F1D4DE5-BFF3-503B-D05F-40ED6927DE17}"/>
+				<Software Name="Windows SDK for Windows Store Apps" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{6136B5FC-9FAD-B577-C5EA-AF2D266B7293}"/>
+				<Software Name="Microsoft .NET Host FX Resolver - 8.0.8 (x86)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{62F76737-408B-4CFD-8B8B-5FA4CADDE189}"/>
+				<Software Name="SQL Server Management Studio Language Pack - English" Version="19.2.56.2" Vendor="Microsoft Corp." Location="" InstallDate="20231128" Usage="Not Known" Key="{64A020B1-26F4-4B68-A4E8-6622BA034D0E}"/>
+				<Software Name="vs_clickoncesigntoolmsi" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{6CAA3F5E-6F43-48D7-9465-2543DCD3EB62}"/>
+				<Software Name="vs_minshellmsires" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{6E1E4E9A-2444-420C-A425-9C219C795A4F}"/>
+				<Software Name="Windows SDK Desktop Headers x86" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{6F1B1243-7C12-5398-F575-5102906569A6}"/>
+				<Software Name="Visual C++ Library CRT Desktop Appx Package" Version="14.41.34120" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{6F489261-387F-42F1-ACD3-AF2D9B2E642A}"/>
+				<Software Name="Windows Software Development Kit - Windows 10.0.22621.3233" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Usage="Not Known" Key="{71684ad3-afc2-4a65-9d45-92ef58510f18}"/>
+				<Software Name="Microsoft NetStandard SDK" Version="15.0.51105" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{737FDDA7-B944-4CB5-92D9-3D56373BD301}"/>
+				<Software Name="Microsoft ASP.NET Diagnostic Pack for Visual Studio" Version="17.11.230.51983" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{747471DC-6F72-3D4E-854B-F222E6D58E30}"/>
+				<Software Name="Windows App Certification Kit x64 (OnecoreUAP)" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{7625FDE9-5B15-1CDF-3810-EC60A67F6D39}"/>
+				<Software Name="Windows SDK for Windows Store Apps Headers" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{76749279-BE8A-20AF-F257-0A79E080CF7E}"/>
+				<Software Name="Windows SDK Modern Non-Versioned Developer Tools" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{76D32574-2D58-5B25-A3D7-8B2CB4873306}"/>
+				<Software Name="Windows Desktop Extension SDK Contracts" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{779B6704-D2FB-9087-C7FB-0AA1586F6FCD}"/>
+				<Software Name="icecap_collectionresourcesx64" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{79843879-0BDC-474A-8172-5193A6A38A13}"/>
+				<Software Name="Microsoft ASP.NET Core 8.0.8 Shared Framework (x86)" Version="8.0.8.24369" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{7B2D558D-210D-349B-816A-C7BF57748E3C}"/>
+				<Software Name="Dell Digital Delivery Services" Version="5.2.0.0" Vendor="Dell Inc." Location="C:\Program Files (x86)\Dell Digital Delivery Services\" InstallDate="20240717" Usage="Not Known" Key="{7B4345F5-8B57-4716-B159-8A779BA8F8B0}"/>
+				<Software Name="vs_Graphics_Singletonx86" Version="17.11.35103" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{7BB84A04-38DB-46BA-8020-10BBEA0EEF51}"/>
+				<Software Name="Microsoft TestPlatform SDK Local Feed" Version="17.10.0.9037153" Vendor="Microsoft" Location="" InstallDate="20240814" Usage="Not Known" Key="{7F86DEBA-AF7D-43F2-8312-DBCB65F116A9}"/>
+				<Software Name="Windows SDK DirectX x86 Remote" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{8122ABB9-0148-144D-F136-C3AFF4B985DB}"/>
+				<Software Name="Microsoft Visual C++ 2013 x86 Minimum Runtime - 12.0.40664" Version="12.0.40664" Vendor="Microsoft Corporation" Location="" InstallDate="20231128" Usage="Not Known" Key="{8122DAB1-ED4D-3676-BB0A-CA368196543E}"/>
+				<Software Name="Windows SDK Desktop Libs arm64" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{82931C8D-83CC-CF2E-F4FA-9AF0829BCA22}"/>
+				<Software Name="vs_minshellinteropsharedmsi" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{850190D6-F1E2-42BB-89F9-6E73A0836599}"/>
+				<Software Name="Microsoft ASP.NET Core 7.0.20 Targeting Pack (x86)" Version="7.0.20.24269" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{85662951-18B2-3C85-A696-D58BDBD16A80}"/>
+				<Software Name="vcpp_crt.redist.clickonce" Version="14.40.33810" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{86A92FDF-05A2-4B6E-AEE8-EFB68E7FF6B5}"/>
+				<Software Name="vs_clickoncebootstrappermsi" Version="17.11.35103" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{890533B4-4F0A-4726-8F54-A8A1B27BC42B}"/>
+				<Software Name="Microsoft .NET Framework 4.6.1 Targeting Pack" Version="4.6.01055" Vendor="Microsoft Corporation" Location="" InstallDate="20231201" Usage="Not Known" Key="{8BC3EEC9-090F-4C53-A8DA-1BEC913040F9}"/>
+				<Software Name="WinAppDeploy" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{8E3AB865-9E38-1E5F-7B49-C8E3A70C6303}"/>
+				<Software Name="Microsoft Windows Desktop Targeting Pack - 8.0.8 (x86)" Version="64.32.18376" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{8ED653AE-3C4A-44BC-BA64-82A9EE29FCA1}"/>
+				<Software Name="Microsoft .NET Framework 4.6.1 Targeting Pack (ENU)" Version="4.6.01055" Vendor="Microsoft Corporation" Location="" InstallDate="20231201" Usage="Not Known" Key="{8EEB28EE-5141-411C-9CF0-9952264FE4AF}"/>
+				<Software Name="Universal CRT Extension SDK" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{90AAE845-42CE-EC12-4041-8ADF7BE765E7}"/>
+				<Software Name="Windows SDK EULA" Version="10.1.22000.832" Vendor="Microsoft Corporations" Location="" InstallDate="20230607" Usage="Not Known" Key="{93F9D7FA-F2FD-837D-E53F-D79767071E44}"/>
+				<Software Name="Microsoft .NET Framework 4.8 SDK" Version="4.8.03928" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{949C0535-171C-480F-9CF4-D25C9E60FE88}"/>
+				<Software Name="Windows SDK ARM Desktop Tools" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{963BD0BD-2098-D21C-AA37-39876C732819}"/>
+				<Software Name="Microsoft ASP.NET Web Tools Packages 17.0 - ENU" Version="17.0.40305.0" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{987786F9-7B57-3254-9FEA-2FF662C784B1}"/>
+				<Software Name="Universal CRT Headers Libraries and Sources" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{98D5C5AA-993C-1371-C7AF-8F8A0E8CAF86}"/>
+				<Software Name="Microsoft ASP.NET Core 6.0.33 Targeting Pack (x86)" Version="6.0.33.24379" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{999441BF-4BB0-315C-AD06-6F04034B8E6B}"/>
+				<Software Name="Microsoft Windows Desktop Runtime - 6.0.33 (x86)" Version="48.132.18374" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{9B2DADBD-59B7-412C-9043-6FA553AAB0FB}"/>
+				<Software Name="Visual C++ Library CRT Appx Resource Package" Version="14.41.34120" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{9CAA3F00-F098-42CD-B46C-05C2031CFAE0}"/>
+				<Software Name="vs_SQLClickOnceBootstrappermsi" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{9CBEF6C3-C91E-4838-A4BE-EEC6FB65AC5E}"/>
+				<Software Name="Microsoft Visual C++ 2013 Redistributable (x86) - 12.0.40664" Version="12.0.40664.0" Vendor="Microsoft Corporation" Usage="Not Known" Key="{9dff3540-fc85-4ed5-ac84-9e3c7fd8bece}"/>
+				<Software Name="Microsoft Visual C++ 2022 X86 Debug Runtime - 14.40.33810" Version="14.40.33810" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{A0B90EAF-8FC1-49B2-A7D6-7F9B1FEFDD43}"/>
+				<Software Name="Windows Mobile Extension SDK" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{A3D0A593-20CD-83E6-83DE-6068053F2BDF}"/>
+				<Software Name="vs_communitysharedmsi" Version="17.11.35103" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{A4A2A751-37FE-4EEA-89CC-12004BFD4C86}"/>
+				<Software Name="Microsoft .NET Framework 4.8 Targeting Pack (ENU)" Version="4.8.03761" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{A4EA9EE5-7CFF-4C5F-B159-B9B4E5D2BDE2}"/>
+				<Software Name="Microsoft Visual Studio Setup WMI Provider" Version="3.11.2133.16870" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{A59EAC01-288D-41BA-B6F2-3DF78DEA16E0}"/>
+				<Software Name="vs_githubprotocolhandlermsi" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{AB3E3E33-5938-42C8-8A56-DD883DA35667}"/>
+				<Software Name="WinRT Intellisense Desktop - en-us" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{B3CFDD53-69FB-E652-4F3D-D3781CF7F66E}"/>
+				<Software Name="Microsoft .NET Framework 4.7.2 Targeting Pack (ENU)" Version="4.7.03062" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{B517DBD3-B542-4FC8-9957-FFB2C3E65D1D}"/>
+				<Software Name="SDK ARM Redistributables" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{B5F4C6AF-DC6F-F6A4-1087-D068F4660610}"/>
+				<Software Name="SSMS Post Install Tasks" Version="19.2.56.2" Vendor="Microsoft Corporation" Location="" InstallDate="20231128" Usage="Not Known" Key="{B7370289-BE1B-4D14-8457-4BCE0F21BFC7}"/>
+				<Software Name="Microsoft Windows Desktop Targeting Pack - 6.0.33 (x86)" Version="48.132.18374" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{B74D30E1-7B46-409F-B984-FD49EF9B2B8F}"/>
+				<Software Name="vs_clickoncebootstrappermsires" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{BA2E09EF-8839-49DC-A949-639C569FB2F4}"/>
+				<Software Name="Microsoft .NET Framework 4.8 Targeting Pack" Version="4.8.03761" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{BAAF5851-0759-422D-A1E9-90061B597188}"/>
+				<Software Name="VS Immersive Activate Helper" Version="17.0.157.0" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{BE00F49A-2FA1-46E6-B30F-A2653BF7CD75}"/>
+				<Software Name="Windows SDK Desktop Tools x64" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{BED088F5-660E-C8E2-9FF4-F652445CC5FA}"/>
+				<Software Name="Microsoft .NET Targeting Pack - 6.0.33 (x86)" Version="48.132.18378" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{C2888160-41D8-45A4-98A4-20E19DB684B9}"/>
+				<Software Name="WinRT Intellisense PPI - en-us" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{C5BEF528-FEAA-9607-907E-0972D86AD06F}"/>
+				<Software Name="Windows SDK Modern Versioned Developer Tools" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{C65278B7-2A3B-2D88-1489-991195ECF5F2}"/>
+				<Software Name="Microsoft UniversalWindowsPlatform SDK" Version="15.9.16" Vendor="Microsoft" Location="" InstallDate="20230607" Usage="Not Known" Key="{C756420B-C91C-4410-8092-F49C24CEF594}"/>
+				<Software Name="Windows App Certification Kit SupportedApiList x86" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{C7C6D595-1045-1CDB-DDB8-F0DCB03B63B2}"/>
+				<Software Name="Windows SDK for Windows Store Apps Libs" Version="10.1.22000.832" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{C8977C7D-F685-8282-3C78-6276E03E3B32}"/>
+				<Software Name="Kaspersky Endpoint Security for Windows" Version="12.6.0.438" Vendor="AO Kaspersky Lab" Location="C:\Program Files (x86)\Kaspersky Lab\KES.12.6.0\" InstallDate="20240911" Usage="Not Known" Key="{C9EF800D-54AA-4F60-AB96-5A3966550F53}"/>
+				<Software Name="Microsoft .NET Framework 4.6.1 Developer Pack" Version="4.6.1055" Vendor="Microsoft Corporation" Usage="Not Known" Key="{cb2c12b3-4bbd-487c-8a02-2af811a76cba}"/>
+				<Software Name="vs_communitymsires" Version="17.11.35103" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{CF279433-F65F-4251-A230-559DBB860887}"/>
+				<Software Name="Integration Services" Version="16.0.5395.0" Vendor="Microsoft Corporation" Location="" InstallDate="20231128" Usage="Not Known" Key="{D116588C-C4FE-4BA9-8D56-4D734F82D83C}"/>
+				<Software Name="Microsoft Windows Desktop Runtime - 7.0.20 (x86)" Version="56.80.15245" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{D21715FE-E342-4744-A499-76ECE655DE5C}"/>
+				<Software Name="Universal General MIDI DLS Extension SDK" Version="10.1.22621.3233" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{D3B0EFC4-878A-CA8C-7C79-1160CDF637D1}"/>
+				<Software Name="Microsoft Visual C++ 2013 x86 Additional Runtime - 12.0.40664" Version="12.0.40664" Vendor="Microsoft Corporation" Location="" InstallDate="20231128" Usage="Not Known" Key="{D401961D-3A20-3AC7-943B-6139D5BD490A}"/>
+				<Software Name="Windows Software Development Kit - Windows 10.0.22000.832" Version="10.1.22000.832" Vendor="Microsoft Corporation" Usage="Not Known" Key="{d6a76ead-c762-4d93-9c24-1fa3efa1e12d}"/>
+				<Software Name="SQL Server Management Studio" Version="19.2.56.2" Vendor="Microsoft Corp." Location="" InstallDate="20231128" Usage="Not Known" Key="{D74DBD2E-1A0A-4D12-97AB-BFB4B9E6BF5F}"/>
+				<Software Name="Microsoft ASP.NET Core 6.0.33 Shared Framework (x86)" Version="6.0.33.24379" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{E1C33E3B-5E1D-3408-BB41-01E6D48022F9}"/>
+				<Software Name="Visual C++ Library CRT Appx Package" Version="14.41.34120" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{E503D4B9-DD36-4B58-BA27-F01631BF9253}"/>
+				<Software Name="Microsoft .NET Runtime - 6.0.33 (x86)" Version="48.132.18378" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{E5F13F9F-49F6-418F-B6ED-D1F37350FDC1}"/>
+				<Software Name="Microsoft Visual Studio Tools for Applications 2019 x86 Hosting Support" Version="16.0.31110" Vendor="Microsoft Corporation" Location="" InstallDate="20231128" Usage="Not Known" Key="{E7A0CD34-1F9B-3496-ADB3-2F180D302F6A}"/>
+				<Software Name="Microsoft Visual Studio Setup Configuration" Version="3.11.2133.16870" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{EE86461C-2B52-4E27-A5ED-4D59819BDD08}"/>
+				<Software Name="Microsoft Visual Studio Setup Configuration" Version="3.11.2133.16870" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key=""/>
+				<Software Name="Microsoft Visual Studio Setup Configuration" Version="3.11.2133.16870" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key=""/>
+				<Software Name="Microsoft .NET Native SDK" Version="15.0.24211.58" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{EF0C772D-F5E3-36D0-BDAB-FD378533CD41}"/>
+				<Software Name="Microsoft .NET Targeting Pack - 8.0.8 (x86)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{F00684B4-E14C-4B29-A872-CEF869864496}"/>
+				<Software Name="Microsoft .NET Native SDK" Version="15.0.24211.07" Vendor="Microsoft Corporation" Location="" InstallDate="20230607" Usage="Not Known" Key="{EF0C772D-F5E3-36D0-BDAB-FD378533CD40}"/>
+				<Software Name="Microsoft .NET Targeting Pack - 8.0.8 (x86)" Version="64.32.18380" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{F00684B4-E14C-4B29-A872-CEF86986449A}"/>
+				<Software Name="Entity Framework 6.2.0 Tools  for Visual Studio 2022 tech update" Version="6.2.0.0" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{F0495FAC-8E08-4F2F-801C-12880B242781}"/>
+				<Software Name="Realtek Audio Driver" Version="6.0.9700.1" Vendor="Realtek Semiconductor Corp." Location="C:\Program Files (x86)\Realtek\Audio\Drivers" InstallDate="20240920" Usage="Not Known" Key=""/>
+				<Software Name="Microsoft Visual Studio Tools for Applications 2019" Version="16.0.31110" Vendor="Microsoft Corporation" Usage="Not Known" Key="{f3fbabb4-bcfb-45eb-8fff-9b784fd68c38}"/>
+				<Software Name="vs_FileTracker_Singleton" Version="17.11.35102" 
+				Vendor="Microsoft Corporation" Location="" InstallDate="20240814" 
+				Usage="Not Known" Key=""/>
+				<Software Name="vs_BlendMsi" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{F82603BE-9975-4B01-B586-84E5E6301C0D}"/>
+				<Software Name="vs_devenvsharedmsi" Version="17.11.35102" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{F8821BBC-45BE-481C-9A8C-EA9C87174F44}"/>
+				<Software Name="Python Launcher" Version="3.12.5150.0" Vendor="Python Software Foundation" Location="" InstallDate="20240813" Usage="Not Known" Key="{F88968D7-7934-415F-910A-4C35E6528C6C}"/>
+				<Software Name="Microsoft Windows Desktop Runtime - 8.0.8 (x86)" Version="64.32.18376" Vendor="Microsoft Corporation" Location="" InstallDate="20240814" Usage="Not Known" Key="{FD1476AE-CD75-4088-AE44-D6D95BA02663}"/>
+				<Software Name="Windows Internet Explorer 11" Version="11.1.22621.0"/>
+			</InstalledProgramsList>
+			<OracleInfo></OracleInfo>
+		</Software_Info>
+	</Node>
+</DocRoot>
