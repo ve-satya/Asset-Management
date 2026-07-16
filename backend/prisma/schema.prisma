@@ -302,6 +302,18 @@ model Asset {
   usbControllers AssetUsbController[]
   ports AssetPort[]
   soundCards AssetSoundCard[]
+  mobileNetworks AssetMobileNetwork[]
+  mobileCertificates AssetMobileCertificate[]
+  printerInputUnits AssetPrinterInputUnit[]
+  printerMarkerSubUnits AssetPrinterMarkerSubUnit[]
+  printerOutputUnits AssetPrinterOutputUnit[]
+  printerMarkerSupplyUnits AssetPrinterMarkerSupplyUnit[]
+  switchPorts AssetSwitchPort[]
+  deviceInterfaces AssetDeviceInterface[]
+  netAppPhysicalDisks AssetNetAppPhysicalDisk[]
+  netAppVolumes AssetNetAppVolume[]
+  netAppAggregators AssetNetAppAggregator[]
+  sensors AssetSensor[]
 
   @@map("assets")
 }
@@ -335,6 +347,133 @@ model AssetComputerDetails {
   vmPlatform         String?  @map("vm_platform")
   installedVms       String?  @map("installed_vms")
   allowedVms         String?  @map("allowed_vms")
+  sysUpTime          String?  @map("sys_up_time")
+  sysLocation        String?  @map("sys_location")
+  manufacturerSerialNumber String? @map("manufacturer_serial_number")
+  sysName            String?  @map("sys_name")
+  sysDescription     String?  @map("sys_description")
+  firmwareRevision   String?  @map("firmware_revision")
+  monitoringProtocol String?  @map("monitoring_protocol")
+  uplinkDependency   String?  @map("uplink_dependency")
+  ciSerialNumber     String?  @map("ci_serial_number")
+  noOfInterfaces     String?  @map("no_of_interfaces")
+  firewallVendor     String?  @map("firewall_vendor")
+  firewallSerialNumber String? @map("firewall_serial_number")
+  ciType             String?  @map("ci_type")
+  firewallProductName String? @map("firewall_product_name")
+  systemDescription  String?  @map("system_description")
+  firewallType       String?  @map("firewall_type")
+  firewallManufacturer String? @map("firewall_manufacturer")
+  dnsName            String?  @map("dns_name")
+  phoneDn            String?  @map("phone_dn")
+  fipsModeEnabled    String?  @map("fips_mode_enabled")
+  bootLoadId         String?  @map("boot_load_id")
+  hardwareRevision   String?  @map("hardware_revision")
+  appLoadId          String?  @map("app_load_id")
+  uniqueDeviceIdentifier String? @map("unique_device_identifier")
+  ciscoIpPhoneVersion String? @map("cisco_ip_phone_version")
+  messageWaiting     String?  @map("message_waiting")
+  javaPoolFreeMemory String?  @map("java_pool_free_memory")
+  javaPoolFreeMemoryUnit String? @map("java_pool_free_memory_unit")
+  systemFreeMemory   String?  @map("system_free_memory")
+  systemFreeMemoryUnit String? @map("system_free_memory_unit")
+  javaHeapFreeMemory String?  @map("java_heap_free_memory")
+  javaHeapFreeMemoryUnit String? @map("java_heap_free_memory_unit")
+  timeZone           String?  @map("time_zone")
+  hardwareVersion    String?  @map("hardware_version")
+  softwareVersion    String?  @map("software_version")
+  mobileModel        String?  @map("mobile_model")
+  imei               String?
+  modemFirmwareVersion String? @map("modem_firmware_version")
+  udid               String?
+  isPersonalAsset    String?  @map("is_personal_asset")
+  mobileSerialNumber String?  @map("mobile_serial_number")
+  availableCapacity  String?  @map("available_capacity")
+  availableCapacityUnit String? @map("available_capacity_unit")
+  totalCapacity      String?  @map("total_capacity")
+  totalCapacityUnit  String?  @map("total_capacity_unit")
+  osType             String?  @map("os_type")
+  mobileBuildVersion String?  @map("mobile_build_version")
+  mobileOsVersion    String?  @map("mobile_os_version")
+  hardwareEncryption String?  @map("hardware_encryption")
+  passcodeCompliant  String?  @map("passcode_compliant")
+  passcodeCompliantProfile String? @map("passcode_compliant_profile")
+  passcodePresent    String?  @map("passcode_present")
+  allowAddingGameCenterFriends String? @map("allow_adding_game_center_friends")
+  allowInstallingApplications String? @map("allow_installing_applications")
+  allowInApplicationPurchase String? @map("allow_in_application_purchase")
+  allowUseOfCamera   String?  @map("allow_use_of_camera")
+  allowFaceTime      String?  @map("allow_face_time")
+  allowMultiPlayerGaming String? @map("allow_multi_player_gaming")
+  allowScreenCapture String?  @map("allow_screen_capture")
+  allowAutomaticSyncWhenRoaming String? @map("allow_automatic_sync_when_roaming")
+  allowVoiceDialing  String?  @map("allow_voice_dialing")
+  forceEncryptedBackups String? @map("force_encrypted_backups")
+  acceptCookies      String?  @map("accept_cookies")
+  allowUseOfItunesMusicStore String? @map("allow_use_of_itunes_music_store")
+  allowUseOfSafari   String?  @map("allow_use_of_safari")
+  allowUseOfYouTube  String?  @map("allow_use_of_youtube")
+  allowPopups        String?  @map("allow_popups")
+  enableAutoFill     String?  @map("enable_auto_fill")
+  enableJavaScript   String?  @map("enable_java_script")
+  allowExplicitMusicAndPodcasts String? @map("allow_explicit_music_and_podcasts")
+  forceFraudWarning  String?  @map("force_fraud_warning")
+  activateDataNetwork String? @map("activate_data_network")
+  allowBackgroundData String? @map("allow_background_data")
+  allowBluetooth     String?  @map("allow_bluetooth")
+  allowNfc           String?  @map("allow_nfc")
+  deviceAdmin        String?  @map("device_admin")
+  printerSerialNumber String? @map("printer_serial_number")
+  printerCapacity    String?  @map("printer_capacity")
+  printerCapacityUnit String? @map("printer_capacity_unit")
+  memoryType         String?  @map("memory_type")
+  configRegister     String?  @map("config_register")
+  estimatedBandwidth String?  @map("estimated_bandwidth")
+  flashSize          String?  @map("flash_size")
+  flashSizeUnit      String?  @map("flash_size_unit")
+  switchOsVersion    String?  @map("switch_os_version")
+  processorBoardId   String?  @map("processor_board_id")
+  cpuInMb            String?  @map("cpu_in_mb")
+  cpuType            String?  @map("cpu_type")
+  dramSize           String?  @map("dram_size")
+  dramSizeUnit       String?  @map("dram_size_unit")
+  nvramSize          String?  @map("nvram_size")
+  nvramSizeUnit      String?  @map("nvram_size_unit")
+  numberOfPorts      String?  @map("number_of_ports")
+  ios                String?
+  systemLocation     String?  @map("system_location")
+  endOfSupportDate   String?  @map("end_of_support_date")
+  contactPerson      String?  @map("contact_person")
+  loginDetails       String?  @map("login_details")
+  noOfVlans          String?  @map("no_of_vlans")
+  routerModel        String?  @map("router_model")
+  cpuRevision        String?  @map("cpu_revision")
+  building           String?
+  department         String?
+  cabinet            String?
+  contactName        String?  @map("contact_name")
+  floor              String?
+  ciComments         String?  @map("ci_comments")
+  rackUnitsInUse     String?  @map("rack_units_in_use")
+  rackUnits          String?  @map("rack_units")
+  powerConsumption   String?  @map("power_consumption")
+  assignedTo         String?  @map("assigned_to")
+  footprint          String?
+  storageDeviceType  String?  @map("storage_device_type")
+  modelNumber        String?  @map("model_number")
+  totalDisks         String?  @map("total_disks")
+  failedDisks        String?  @map("failed_disks")
+  volumes            String?
+  totalAggregates    String?  @map("total_aggregates")
+  allocatedDisks     String?  @map("allocated_disks")
+  spareDisks         String?  @map("spare_disks")
+  numberOfDrives     String?  @map("number_of_drives")
+  storageTotalCapacity String? @map("storage_total_capacity")
+  storageTotalCapacityUnit String? @map("storage_total_capacity_unit")
+  batteryRemainingTimeHours String? @map("battery_remaining_time_hours")
+  batteryCapacityPercent String? @map("battery_capacity_percent")
+  batteryCurrent     String?  @map("battery_current")
+  batteryVoltage     String?  @map("battery_voltage")
   createdOn          DateTime @default(now()) @map("created_on")
   updatedOn          DateTime @updatedAt @map("updated_on")
 
@@ -570,6 +709,182 @@ model AssetPrinter {
   @@map("asset_printers")
 }
 
+model AssetPrinterInputUnit {
+  id            Int      @id @default(autoincrement())
+  assetId       Int      @map("asset_id")
+  index         String?  @map("unit_index")
+  inputUnitName String?  @map("input_unit_name")
+  inputType     String?  @map("input_type")
+  vendor        String?
+  capacity      String?
+  currentLevel  String?  @map("current_level")
+  createdOn     DateTime @default(now()) @map("created_on")
+  updatedOn     DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_printer_input_units")
+}
+
+model AssetPrinterMarkerSubUnit {
+  id                Int      @id @default(autoincrement())
+  assetId           Int      @map("asset_id")
+  index             String?  @map("unit_index")
+  printingTechnique String?  @map("printing_technique")
+  markerLifeCount   String?  @map("marker_life_count")
+  createdOn         DateTime @default(now()) @map("created_on")
+  updatedOn         DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_printer_marker_sub_units")
+}
+
+model AssetPrinterOutputUnit {
+  id             Int      @id @default(autoincrement())
+  assetId        Int      @map("asset_id")
+  index          String?  @map("unit_index")
+  outputUnitName String?  @map("output_unit_name")
+  outputType     String?  @map("output_type")
+  vendor         String?
+  capacity       String?
+  currentLevel   String?  @map("current_level")
+  createdOn      DateTime @default(now()) @map("created_on")
+  updatedOn      DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_printer_output_units")
+}
+
+model AssetPrinterMarkerSupplyUnit {
+  id                       Int      @id @default(autoincrement())
+  assetId                  Int      @map("asset_id")
+  index                    String?  @map("unit_index")
+  markerSupplyType         String?  @map("marker_supply_type")
+  markerSupplyDescription  String?  @map("marker_supply_description")
+  markerSupplyMaxCapacity  String?  @map("marker_supply_max_capacity")
+  markerSupplyLevel        String?  @map("marker_supply_level")
+  printerMarkerSupplyUnits String?  @map("printer_marker_supply_units")
+  createdOn                DateTime @default(now()) @map("created_on")
+  updatedOn                DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_printer_marker_supply_units")
+}
+
+model AssetSwitchPort {
+  id               Int      @id @default(autoincrement())
+  assetId          Int      @map("asset_id")
+  portIndex        String?  @map("port_index")
+  adminState       String?  @map("admin_state")
+  description      String?
+  operationalState String?  @map("operational_state")
+  speedMbps        String?  @map("speed_mbps")
+  type             String?
+  createdOn        DateTime @default(now()) @map("created_on")
+  updatedOn        DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_switch_ports")
+}
+
+model AssetDeviceInterface {
+  id              Int      @id @default(autoincrement())
+  assetId         Int      @map("asset_id")
+  index           String?  @map("interface_index")
+  interfaceName   String?  @map("interface_name")
+  interfaceType   String?  @map("interface_type")
+  speedMbps       String?  @map("speed_mbps")
+  physicalAddress String?  @map("physical_address")
+  ipAddress       String?  @map("ip_address")
+  netmask         String?
+  createdOn       DateTime @default(now()) @map("created_on")
+  updatedOn       DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_device_interfaces")
+}
+
+model AssetNetAppPhysicalDisk {
+  id               Int      @id @default(autoincrement())
+  assetId          Int      @map("asset_id")
+  raidIndex        String?  @map("raid_index")
+  raidVolumeId     String?  @map("raid_volume_id")
+  raidGroupId      String?  @map("raid_group_id")
+  diskName         String?  @map("disk_name")
+  shelf            String?
+  bay              String?
+  model            String?
+  type             String?
+  status           String?
+  totalSize        String?  @map("total_size")
+  usedSize         String?  @map("used_size")
+  serialNumber     String?  @map("serial_number")
+  firmwareRevision String?  @map("firmware_revision")
+  createdOn        DateTime @default(now()) @map("created_on")
+  updatedOn        DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_netapp_physical_disks")
+}
+
+model AssetNetAppVolume {
+  id              Int      @id @default(autoincrement())
+  assetId         Int      @map("asset_id")
+  volumeIndex     String?  @map("volume_index")
+  volumeName      String?  @map("volume_name")
+  status          String?
+  aggregationName String?  @map("aggregation_name")
+  createdOn       DateTime @default(now()) @map("created_on")
+  updatedOn       DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_netapp_volumes")
+}
+
+model AssetNetAppAggregator {
+  id               Int      @id @default(autoincrement())
+  assetId          Int      @map("asset_id")
+  aggregationIndex String?  @map("aggregation_index")
+  aggregationName  String?  @map("aggregation_name")
+  status           String?
+  createdOn        DateTime @default(now()) @map("created_on")
+  updatedOn        DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_netapp_aggregators")
+}
+
+model AssetSensor {
+  id         Int      @id @default(autoincrement())
+  assetId    Int      @map("asset_id")
+  name       String?
+  sensorType String?  @map("sensor_type")
+  createdOn  DateTime @default(now()) @map("created_on")
+  updatedOn  DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_sensors")
+}
+
 model AssetVideoCard {
   id                   Int      @id @default(autoincrement())
   assetId              Int      @map("asset_id")
@@ -625,6 +940,47 @@ model AssetSoundCard {
 
   @@index([assetId])
   @@map("asset_sound_cards")
+}
+
+model AssetMobileNetwork {
+  id                     Int      @id @default(autoincrement())
+  assetId                Int      @map("asset_id")
+  bluetoothMac           String?  @map("bluetooth_mac")
+  carrierSettingsVersion String?  @map("carrier_settings_version")
+  cellularTechnology     String?  @map("cellular_technology")
+  currentCarrierNetwork  String?  @map("current_carrier_network")
+  currentMcc             String?  @map("current_mcc")
+  currentMnc             String?  @map("current_mnc")
+  iccid                  String?
+  dataRoamingEnabled     String?  @map("data_roaming_enabled")
+  roamingEnabled         String?  @map("roaming_enabled")
+  voiceRoamingEnabled    String?  @map("voice_roaming_enabled")
+  phoneNumber            String?  @map("phone_number")
+  simCarrierNetwork      String?  @map("sim_carrier_network")
+  subscriberMcc          String?  @map("subscriber_mcc")
+  subscriberMnc          String?  @map("subscriber_mnc")
+  wifiMac                String?  @map("wifi_mac")
+  createdOn              DateTime @default(now()) @map("created_on")
+  updatedOn              DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_mobile_networks")
+}
+
+model AssetMobileCertificate {
+  id        Int      @id @default(autoincrement())
+  assetId   Int      @map("asset_id")
+  name      String?
+  identity  String?
+  createdOn DateTime @default(now()) @map("created_on")
+  updatedOn DateTime @updatedAt @map("updated_on")
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_mobile_certificates")
 }
 
 model AssetDepreciationConfig {

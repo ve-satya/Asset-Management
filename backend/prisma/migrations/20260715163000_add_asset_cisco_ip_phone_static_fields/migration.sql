@@ -1,0 +1,16 @@
+ALTER TABLE "asset_computer_details"
+ADD COLUMN IF NOT EXISTS "phone_dn" TEXT,
+ADD COLUMN IF NOT EXISTS "fips_mode_enabled" TEXT,
+ADD COLUMN IF NOT EXISTS "boot_load_id" TEXT,
+ADD COLUMN IF NOT EXISTS "hardware_revision" TEXT,
+ADD COLUMN IF NOT EXISTS "app_load_id" TEXT,
+ADD COLUMN IF NOT EXISTS "unique_device_identifier" TEXT,
+ADD COLUMN IF NOT EXISTS "cisco_ip_phone_version" TEXT,
+ADD COLUMN IF NOT EXISTS "message_waiting" TEXT,
+ADD COLUMN IF NOT EXISTS "java_pool_free_memory" TEXT,
+ADD COLUMN IF NOT EXISTS "java_pool_free_memory_unit" TEXT,
+ADD COLUMN IF NOT EXISTS "system_free_memory" TEXT,
+ADD COLUMN IF NOT EXISTS "system_free_memory_unit" TEXT,
+ADD COLUMN IF NOT EXISTS "java_heap_free_memory" TEXT,
+ADD COLUMN IF NOT EXISTS "java_heap_free_memory_unit" TEXT,
+ADD COLUMN IF NOT EXISTS "time_zone" TEXT;

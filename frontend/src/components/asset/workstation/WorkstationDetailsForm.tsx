@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Minus, Pencil, Plus, Trash2 } from 'lucide-react';
-import { Field, Section, inputClass } from '../AssetFormLayout';
+import { Field, InfoTooltip, Section, inputClass } from '../AssetFormLayout';
 import type {
   HardDiskDto,
   KeyboardDto,
@@ -22,7 +22,7 @@ import type {
   WorkstationTableColumn,
 } from './workstationTypes';
 
-type CollectionKey =
+export type CollectionKey =
   | 'networkAdapters'
   | 'processors'
   | 'hardDisks'
@@ -38,11 +38,38 @@ type CollectionKey =
   | 'videoCards'
   | 'usbControllers'
   | 'ports'
-  | 'soundCards';
+  | 'soundCards'
+  | 'mobileNetworks'
+  | 'mobileCertificates'
+  | 'printerInputUnits'
+  | 'printerMarkerSubUnits'
+  | 'printerOutputUnits'
+  | 'printerMarkerSupplyUnits'
+  | 'switchPorts'
+  | 'deviceInterfaces'
+  | 'netAppPhysicalDisks'
+  | 'netAppVolumes'
+  | 'netAppAggregators'
+  | 'sensors';
 
 interface Props {
   value: WorkstationDetailsFormData;
   onChange: (next: WorkstationDetailsFormData) => void;
+  visibleCollections?: CollectionKey[];
+  showFaxDetails?: boolean;
+  showFirewallDetails?: boolean;
+  showIpPhoneDetails?: boolean;
+  showCiscoIpPhoneDetails?: boolean;
+  showIpsDetails?: boolean;
+  showMobileDeviceDetails?: boolean;
+  showPrinterDetails?: boolean;
+  showSwitchDetails?: boolean;
+  showRouterDetails?: boolean;
+  showNtpDetails?: boolean;
+  showRackDetails?: boolean;
+  showStorageDeviceDetails?: boolean;
+  showRoomSensorDetails?: boolean;
+  showUpsDetails?: boolean;
 }
 
 interface TableConfig<T extends Record<string, string>> {
@@ -99,9 +126,49 @@ const TABLES: TableConfig<Record<string, string>>[] = [
   { key: 'usbControllers', title: 'USB Controllers', maxRecords: 100, emptyRow: { usb: '' }, columns: [{ key: 'usb', label: 'USB', required: true }] },
   { key: 'ports', title: 'Ports', maxRecords: 100, emptyRow: { portName: '', status: '' }, columns: [{ key: 'portName', label: 'Port Name', required: true }, { key: 'status', label: 'Status' }] },
   { key: 'soundCards', title: 'Sound Cards', maxRecords: 100, emptyRow: { soundCardName: '', manufacturer: '' }, columns: [{ key: 'soundCardName', label: 'Sound Card Name' }, { key: 'manufacturer', label: 'Manufacturer' }] },
+  { key: 'mobileNetworks', title: 'Mobile Networks', maxRecords: 100, emptyRow: { bluetoothMac: '', carrierSettingsVersion: '', cellularTechnology: '', currentCarrierNetwork: '', currentMcc: '', currentMnc: '', iccid: '', dataRoamingEnabled: '', roamingEnabled: '', voiceRoamingEnabled: '', phoneNumber: '', simCarrierNetwork: '', subscriberMcc: '', subscriberMnc: '', wifiMac: '' }, columns: [
+    { key: 'bluetoothMac', label: 'Bluetooth MAC' }, { key: 'carrierSettingsVersion', label: 'Carrier Settings Version' }, { key: 'cellularTechnology', label: 'Cellular Technology' }, { key: 'currentCarrierNetwork', label: 'Current Carrier Network' }, { key: 'currentMcc', label: 'Current MCC' }, { key: 'currentMnc', label: 'Current MNC' }, { key: 'iccid', label: 'ICCID' }, { key: 'dataRoamingEnabled', label: 'Data Roaming Enabled' }, { key: 'roamingEnabled', label: 'Roaming Enabled' }, { key: 'voiceRoamingEnabled', label: 'Voice Roaming Enabled' }, { key: 'phoneNumber', label: 'Phone Number' }, { key: 'simCarrierNetwork', label: 'SIM Carrier Network' }, { key: 'subscriberMcc', label: 'Subscriber MCC' }, { key: 'subscriberMnc', label: 'Subscriber MNC' }, { key: 'wifiMac', label: 'WiFi MAC' },
+  ] },
+  { key: 'mobileCertificates', title: 'Certificates', maxRecords: 100, emptyRow: { name: '', identity: '' }, columns: [
+    { key: 'name', label: 'Name' }, { key: 'identity', label: 'Identity' },
+  ] },
+  { key: 'printerInputUnits', title: 'Printer Input Units', maxRecords: 100, emptyRow: { index: '', inputUnitName: '', inputType: '', vendor: '', capacity: '', currentLevel: '' }, columns: [
+    { key: 'index', label: 'Index', required: true }, { key: 'inputUnitName', label: 'Input Unit Name' }, { key: 'inputType', label: 'Input Type' }, { key: 'vendor', label: 'Vendor' }, { key: 'capacity', label: 'Capacity' }, { key: 'currentLevel', label: 'Current Level' },
+  ] },
+  { key: 'printerMarkerSubUnits', title: 'Printer Marker Sub Units', maxRecords: 100, emptyRow: { index: '', printingTechnique: '', markerLifeCount: '' }, columns: [
+    { key: 'index', label: 'Index', required: true }, { key: 'printingTechnique', label: 'Printing Technique' }, { key: 'markerLifeCount', label: 'Marker Life Count' },
+  ] },
+  { key: 'printerOutputUnits', title: 'Printer Output Units', maxRecords: 100, emptyRow: { index: '', outputUnitName: '', outputType: '', vendor: '', capacity: '', currentLevel: '' }, columns: [
+    { key: 'index', label: 'Index', required: true }, { key: 'outputUnitName', label: 'Output Unit Name' }, { key: 'outputType', label: 'Output Type' }, { key: 'vendor', label: 'Vendor' }, { key: 'capacity', label: 'Capacity' }, { key: 'currentLevel', label: 'Current Level' },
+  ] },
+  { key: 'printerMarkerSupplyUnits', title: 'Printer Marker Supply Units', maxRecords: 100, emptyRow: { index: '', markerSupplyType: '', markerSupplyDescription: '', markerSupplyMaxCapacity: '', markerSupplyLevel: '', printerMarkerSupplyUnits: '' }, columns: [
+    { key: 'index', label: 'Index', required: true }, { key: 'markerSupplyType', label: 'Marker Supply Type' }, { key: 'markerSupplyDescription', label: 'Marker Supply Description' }, { key: 'markerSupplyMaxCapacity', label: 'Marker Supply Max Capacity' }, { key: 'markerSupplyLevel', label: 'Marker Supply Level' }, { key: 'printerMarkerSupplyUnits', label: 'Printer Marker Supply Units' },
+  ] },
+  { key: 'switchPorts', title: 'Switch Ports', maxRecords: 1000, emptyRow: { portIndex: '', adminState: '', description: '', operationalState: '', speedMbps: '', type: '' }, columns: [
+    { key: 'portIndex', label: 'Port Index', required: true }, { key: 'adminState', label: 'Admin State' }, { key: 'description', label: 'Description' }, { key: 'operationalState', label: 'Operational State' }, { key: 'speedMbps', label: 'Speed (Mbps)' }, { key: 'type', label: 'Type' },
+  ] },
+  { key: 'deviceInterfaces', title: 'Device Interfaces', maxRecords: 500, emptyRow: { index: '', interfaceName: '', interfaceType: '', speedMbps: '', physicalAddress: '', ipAddress: '', netmask: '' }, columns: [
+    { key: 'index', label: 'Index', required: true }, { key: 'interfaceName', label: 'Interface Name' }, { key: 'interfaceType', label: 'Interface Type' }, { key: 'speedMbps', label: 'Speed(Mbps)' }, { key: 'physicalAddress', label: 'Physical Address' }, { key: 'ipAddress', label: 'IP Address' }, { key: 'netmask', label: 'Netmask' },
+  ] },
+  { key: 'netAppPhysicalDisks', title: 'NetApp Physical Disks', maxRecords: 100, emptyRow: { raidIndex: '', raidVolumeId: '', raidGroupId: '', diskName: '', shelf: '', bay: '', model: '', type: '', status: '', totalSize: '', usedSize: '', serialNumber: '', firmwareRevision: '' }, columns: [
+    { key: 'raidIndex', label: 'Raid Index', required: true }, { key: 'raidVolumeId', label: 'Raid Volume ID', required: true }, { key: 'raidGroupId', label: 'Raid Group ID', required: true }, { key: 'diskName', label: 'Disk Name' }, { key: 'shelf', label: 'Shelf' }, { key: 'bay', label: 'Bay' }, { key: 'model', label: 'Model' }, { key: 'type', label: 'Type' }, { key: 'status', label: 'Status' }, { key: 'totalSize', label: 'Total Size' }, { key: 'usedSize', label: 'Used Size' }, { key: 'serialNumber', label: 'Serial Number' }, { key: 'firmwareRevision', label: 'Firmware Revision' },
+  ] },
+  { key: 'netAppVolumes', title: 'NetApp Volumes', maxRecords: 100, emptyRow: { volumeIndex: '', volumeName: '', status: '', aggregationName: '' }, columns: [
+    { key: 'volumeIndex', label: 'Volume Index', required: true }, { key: 'volumeName', label: 'Volume Name' }, { key: 'status', label: 'Status' }, { key: 'aggregationName', label: 'Aggregation Name' },
+  ] },
+  { key: 'netAppAggregators', title: 'NetApp Aggregators', maxRecords: 100, emptyRow: { aggregationIndex: '', aggregationName: '', status: '' }, columns: [
+    { key: 'aggregationIndex', label: 'Aggregation Index', required: true }, { key: 'aggregationName', label: 'Aggregation Name' }, { key: 'status', label: 'Status' },
+  ] },
+  { key: 'sensors', title: 'Sensors', maxRecords: 100, emptyRow: { name: '', sensorType: '' }, columns: [
+    { key: 'name', label: 'Name', required: true }, { key: 'sensorType', label: 'Sensor Type' },
+  ] },
 ];
 
-export default function WorkstationDetailsForm({ value, onChange }: Props) {
+export default function WorkstationDetailsForm({ value, onChange, visibleCollections, showFaxDetails = false, showFirewallDetails = false, showIpPhoneDetails = false, showCiscoIpPhoneDetails = false, showIpsDetails = false, showMobileDeviceDetails = false, showPrinterDetails = false, showSwitchDetails = false, showRouterDetails = false, showNtpDetails = false, showRackDetails = false, showStorageDeviceDetails = false, showRoomSensorDetails = false, showUpsDetails = false }: Props) {
+  const visibleCollectionSet = visibleCollections ? new Set(visibleCollections) : null;
+  const visibleTables = visibleCollectionSet ? TABLES.filter((table) => visibleCollectionSet.has(table.key)) : TABLES;
+  const showComputerSections = !visibleCollectionSet;
+
   function setField<K extends keyof WorkstationDetailsFormData>(key: K, nextValue: WorkstationDetailsFormData[K]) {
     onChange({ ...value, [key]: nextValue });
   }
@@ -112,59 +179,562 @@ export default function WorkstationDetailsForm({ value, onChange }: Props) {
 
   return (
     <>
-      <Section title="Computer Details">
-        <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
-          <div className="space-y-3">
-            <Field label="Service Tag"><input value={value.serviceTag} onChange={(e) => setField('serviceTag', e.target.value)} className={inputClass()} /></Field>
-            <Field label="Last Logged In User"><input value={value.lastLoggedInUser} onChange={(e) => setField('lastLoggedInUser', e.target.value)} className={inputClass()} /></Field>
-            <Field label="BIOS Date"><input type="date" value={value.biosDate} onChange={(e) => setField('biosDate', e.target.value)} className={inputClass()} /></Field>
-            <Field label="SMBIOS Version"><input value={value.smbiosVersion} onChange={(e) => setField('smbiosVersion', e.target.value)} className={inputClass()} /></Field>
-            <Field label="Virtual Memory"><UnitInput value={value.virtualMemory} unit={value.virtualMemoryUnit} onValue={(next) => setField('virtualMemory', next)} onUnit={(next) => setField('virtualMemoryUnit', next)} /></Field>
-            <Field label="Logical Processors"><input type="number" min="0" value={value.logicalProcessors} onChange={(e) => setField('logicalProcessors', e.target.value)} className={inputClass()} /></Field>
-          </div>
-          <div className="space-y-3">
-            <Field label="BIOS Name"><input value={value.biosName} onChange={(e) => setField('biosName', e.target.value)} className={inputClass()} /></Field>
-            <Field label="BIOS Version"><input value={value.biosVersion} onChange={(e) => setField('biosVersion', e.target.value)} className={inputClass()} /></Field>
-            <Field label="BIOS Manufacturer"><input value={value.biosManufacturer} onChange={(e) => setField('biosManufacturer', e.target.value)} className={inputClass()} /></Field>
-            <Field label="Total Memory"><UnitInput value={value.totalMemory} unit={value.totalMemoryUnit} onValue={(next) => setField('totalMemory', next)} onUnit={(next) => setField('totalMemoryUnit', next)} /></Field>
-            <Field label="Domain"><input value={value.domain} onChange={(e) => setField('domain', e.target.value)} className={inputClass()} placeholder="--Select--" /></Field>
-            <Field label="Total Slots"><input type="number" min="0" value={value.totalSlots} onChange={(e) => setField('totalSlots', e.target.value)} className={inputClass()} /></Field>
-          </div>
-        </div>
-      </Section>
+      {showComputerSections && (
+        <>
+          <Section title="Computer Details">
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="Service Tag"><input value={value.serviceTag} onChange={(e) => setField('serviceTag', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Last Logged In User"><input value={value.lastLoggedInUser} onChange={(e) => setField('lastLoggedInUser', e.target.value)} className={inputClass()} /></Field>
+                <Field label="BIOS Date"><input type="date" value={value.biosDate} onChange={(e) => setField('biosDate', e.target.value)} className={inputClass()} /></Field>
+                <Field label="SMBIOS Version"><input value={value.smbiosVersion} onChange={(e) => setField('smbiosVersion', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Virtual Memory"><UnitInput value={value.virtualMemory} unit={value.virtualMemoryUnit} onValue={(next) => setField('virtualMemory', next)} onUnit={(next) => setField('virtualMemoryUnit', next)} /></Field>
+                <Field label="Logical Processors"><input type="number" min="0" value={value.logicalProcessors} onChange={(e) => setField('logicalProcessors', e.target.value)} className={inputClass()} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="BIOS Name"><input value={value.biosName} onChange={(e) => setField('biosName', e.target.value)} className={inputClass()} /></Field>
+                <Field label="BIOS Version"><input value={value.biosVersion} onChange={(e) => setField('biosVersion', e.target.value)} className={inputClass()} /></Field>
+                <Field label="BIOS Manufacturer"><input value={value.biosManufacturer} onChange={(e) => setField('biosManufacturer', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Total Memory"><UnitInput value={value.totalMemory} unit={value.totalMemoryUnit} onValue={(next) => setField('totalMemory', next)} onUnit={(next) => setField('totalMemoryUnit', next)} /></Field>
+                <Field label="Domain"><input value={value.domain} onChange={(e) => setField('domain', e.target.value)} className={inputClass()} placeholder="--Select--" /></Field>
+                <Field label="Total Slots"><input type="number" min="0" value={value.totalSlots} onChange={(e) => setField('totalSlots', e.target.value)} className={inputClass()} /></Field>
+              </div>
+            </div>
+          </Section>
 
-      <Section title="OS">
-        <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
-          <div className="space-y-3">
-            <Field label="Operating System"><input value={value.operatingSystem} onChange={(e) => setField('operatingSystem', e.target.value)} className={inputClass()} /></Field>
-            <Field label="Service Pack"><input value={value.servicePack} onChange={(e) => setField('servicePack', e.target.value)} className={inputClass()} /></Field>
-            <Field label="Build Number"><input value={value.buildNumber} onChange={(e) => setField('buildNumber', e.target.value)} className={inputClass()} /></Field>
-            <Field label="License Type"><input value={value.licenseType} onChange={(e) => setField('licenseType', e.target.value)} className={inputClass()} /></Field>
-            <Field label="System Drive"><input value={value.systemDrive} onChange={(e) => setField('systemDrive', e.target.value)} className={inputClass()} /></Field>
-          </div>
-          <div className="space-y-3">
-            <Field label="OS Version"><input value={value.osVersion} onChange={(e) => setField('osVersion', e.target.value)} className={inputClass()} /></Field>
-            <Field label="Product ID"><input value={value.productId} onChange={(e) => setField('productId', e.target.value)} className={inputClass()} /></Field>
-            <Field label="System Type"><input value={value.systemType} onChange={(e) => setField('systemType', e.target.value)} className={inputClass()} /></Field>
-            <Field label="License Status"><input value={value.licenseStatus} onChange={(e) => setField('licenseStatus', e.target.value)} className={inputClass()} /></Field>
-          </div>
-        </div>
-      </Section>
+          <Section title="OS">
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="Operating System"><input value={value.operatingSystem} onChange={(e) => setField('operatingSystem', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Service Pack"><input value={value.servicePack} onChange={(e) => setField('servicePack', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Build Number"><input value={value.buildNumber} onChange={(e) => setField('buildNumber', e.target.value)} className={inputClass()} /></Field>
+                <Field label="License Type"><input value={value.licenseType} onChange={(e) => setField('licenseType', e.target.value)} className={inputClass()} /></Field>
+                <Field label="System Drive"><input value={value.systemDrive} onChange={(e) => setField('systemDrive', e.target.value)} className={inputClass()} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="OS Version"><input value={value.osVersion} onChange={(e) => setField('osVersion', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Product ID"><input value={value.productId} onChange={(e) => setField('productId', e.target.value)} className={inputClass()} /></Field>
+                <Field label="System Type"><input value={value.systemType} onChange={(e) => setField('systemType', e.target.value)} className={inputClass()} /></Field>
+                <Field label="License Status"><input value={value.licenseStatus} onChange={(e) => setField('licenseStatus', e.target.value)} className={inputClass()} /></Field>
+              </div>
+            </div>
+          </Section>
 
-      <Section title="Virtual Host Details">
-        <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
-          <Field label="VM Platform">
-            <select value={value.vmPlatform} onChange={(e) => setField('vmPlatform', e.target.value)} className={inputClass()}>
-              <option value="">--Select--</option>
-              {VM_PLATFORMS.map((platform) => <option key={platform} value={platform}>{platform}</option>)}
-            </select>
-          </Field>
-          <Field label="Installed VMs"><input type="number" min="0" value={value.installedVms} readOnly className={inputClass(false, true)} /></Field>
-          <Field label="Allowed VMs"><input type="number" min="0" value={value.allowedVms} onChange={(e) => setField('allowedVms', e.target.value)} className={inputClass()} /></Field>
-        </div>
-      </Section>
+          <Section title="Virtual Host Details">
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <Field label="VM Platform">
+                <select value={value.vmPlatform} onChange={(e) => setField('vmPlatform', e.target.value)} className={inputClass()}>
+                  <option value="">--Select--</option>
+                  {VM_PLATFORMS.map((platform) => <option key={platform} value={platform}>{platform}</option>)}
+                </select>
+              </Field>
+              <Field label="Installed VMs"><input type="number" min="0" value={value.installedVms} readOnly className={inputClass(false, true)} /></Field>
+              <Field label="Allowed VMs"><input type="number" min="0" value={value.allowedVms} onChange={(e) => setField('allowedVms', e.target.value)} className={inputClass()} /></Field>
+            </div>
+          </Section>
+        </>
+      )}
 
-      {TABLES.map((table) => (
+      {showFaxDetails && (
+        <Section title="Fax">
+          <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+            <div className="space-y-3">
+              <Field label="sysUpTime"><input value={value.sysUpTime} onChange={(e) => setField('sysUpTime', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Manufacturer Serial Number"><input value={value.manufacturerSerialNumber} onChange={(e) => setField('manufacturerSerialNumber', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysDescription"><textarea value={value.sysDescription} onChange={(e) => setField('sysDescription', e.target.value)} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>
+            </div>
+            <div className="space-y-3">
+              <Field label="sysLocation"><input value={value.sysLocation} onChange={(e) => setField('sysLocation', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysName"><input value={value.sysName} onChange={(e) => setField('sysName', e.target.value)} className={inputClass()} /></Field>
+            </div>
+          </div>
+        </Section>
+      )}
+
+      {showFirewallDetails && (
+        <>
+          <Section title="FireWall">
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="sysName"><input value={value.sysName} onChange={(e) => setField('sysName', e.target.value)} className={inputClass()} /></Field>
+                <Field label="sysLocation"><input value={value.sysLocation} onChange={(e) => setField('sysLocation', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Firmware Revision"><input value={value.firmwareRevision} onChange={(e) => setField('firmwareRevision', e.target.value)} className={inputClass()} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="sysUpTime"><input value={value.sysUpTime} onChange={(e) => setField('sysUpTime', e.target.value)} className={inputClass()} /></Field>
+                <Field label="sysDescription"><textarea value={value.sysDescription} onChange={(e) => setField('sysDescription', e.target.value)} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>
+                <Field label="Manufacturer Serial Number"><input value={value.manufacturerSerialNumber} onChange={(e) => setField('manufacturerSerialNumber', e.target.value)} className={inputClass()} /></Field>
+              </div>
+            </div>
+          </Section>
+
+          <Section title={<>CI Type Additional Fields Section <InfoTooltip text="Additional CI fields for this asset type." /></>}>
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="Monitoring Protocol"><input value={value.monitoringProtocol} onChange={(e) => setField('monitoringProtocol', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Serial Number"><input value={value.ciSerialNumber} onChange={(e) => setField('ciSerialNumber', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Vendor"><input value={value.firewallVendor} onChange={(e) => setField('firewallVendor', e.target.value)} className={inputClass()} /></Field>
+                <Field label="CI Type"><input value={value.ciType} onChange={(e) => setField('ciType', e.target.value)} className={inputClass()} /></Field>
+                <Field label="System Description"><input value={value.systemDescription} onChange={(e) => setField('systemDescription', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Service Tag"><input value={value.serviceTag} onChange={(e) => setField('serviceTag', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Manufacturer"><input value={value.firewallManufacturer} onChange={(e) => setField('firewallManufacturer', e.target.value)} className={inputClass()} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="Uplink Dependency"><input value={value.uplinkDependency} onChange={(e) => setField('uplinkDependency', e.target.value)} className={inputClass()} /></Field>
+                <Field label="No. of. Interface"><input value={value.noOfInterfaces} onChange={(e) => setField('noOfInterfaces', e.target.value)} className={inputClass()} /></Field>
+                <Field label="SerialNumber"><input value={value.firewallSerialNumber} onChange={(e) => setField('firewallSerialNumber', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Product Name"><input value={value.firewallProductName} onChange={(e) => setField('firewallProductName', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Type"><input value={value.firewallType} onChange={(e) => setField('firewallType', e.target.value)} className={inputClass()} /></Field>
+                <Field label="DNS Name"><input value={value.dnsName} onChange={(e) => setField('dnsName', e.target.value)} className={inputClass()} /></Field>
+              </div>
+            </div>
+          </Section>
+        </>
+      )}
+
+      {showIpPhoneDetails && (
+        <Section title="IP Phone">
+          <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+            <div className="space-y-3">
+              <Field label="sysName"><input value={value.sysName} onChange={(e) => setField('sysName', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysLocation"><input value={value.sysLocation} onChange={(e) => setField('sysLocation', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Manufacturer Serial Number"><input value={value.manufacturerSerialNumber} onChange={(e) => setField('manufacturerSerialNumber', e.target.value)} className={inputClass()} /></Field>
+            </div>
+            <div className="space-y-3">
+              <Field label="sysDescription"><textarea value={value.sysDescription} onChange={(e) => setField('sysDescription', e.target.value)} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>
+              <Field label="sysUpTime"><input value={value.sysUpTime} onChange={(e) => setField('sysUpTime', e.target.value)} className={inputClass()} /></Field>
+            </div>
+          </div>
+        </Section>
+      )}
+
+      {showCiscoIpPhoneDetails && (
+        <Section title="Cisco IP Phone">
+          <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+            <div className="space-y-3">
+              <Field label="Phone DN"><input value={value.phoneDn} onChange={(e) => setField('phoneDn', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Fips Mode Enabled"><input value={value.fipsModeEnabled} onChange={(e) => setField('fipsModeEnabled', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Boot Load ID"><input value={value.bootLoadId} onChange={(e) => setField('bootLoadId', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Hardware Revision"><input value={value.hardwareRevision} onChange={(e) => setField('hardwareRevision', e.target.value)} className={inputClass()} /></Field>
+              <Field label="App Load ID"><input value={value.appLoadId} onChange={(e) => setField('appLoadId', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Unique Device Identifier"><input value={value.uniqueDeviceIdentifier} onChange={(e) => setField('uniqueDeviceIdentifier', e.target.value)} className={inputClass()} /></Field>
+            </div>
+            <div className="space-y-3">
+              <Field label="version"><input value={value.ciscoIpPhoneVersion} onChange={(e) => setField('ciscoIpPhoneVersion', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Message Waiting"><input value={value.messageWaiting} onChange={(e) => setField('messageWaiting', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Java Pool Free Memory"><UnitInput value={value.javaPoolFreeMemory} unit={value.javaPoolFreeMemoryUnit} onValue={(next) => setField('javaPoolFreeMemory', next)} onUnit={(next) => setField('javaPoolFreeMemoryUnit', next)} /></Field>
+              <Field label="System Free Memory"><UnitInput value={value.systemFreeMemory} unit={value.systemFreeMemoryUnit} onValue={(next) => setField('systemFreeMemory', next)} onUnit={(next) => setField('systemFreeMemoryUnit', next)} /></Field>
+              <Field label="Java Heap Free Memory"><UnitInput value={value.javaHeapFreeMemory} unit={value.javaHeapFreeMemoryUnit} onValue={(next) => setField('javaHeapFreeMemory', next)} onUnit={(next) => setField('javaHeapFreeMemoryUnit', next)} /></Field>
+              <Field label="Time Zone"><input value={value.timeZone} onChange={(e) => setField('timeZone', e.target.value)} className={inputClass()} /></Field>
+            </div>
+          </div>
+        </Section>
+      )}
+
+      {showIpsDetails && (
+        <Section title="IPS">
+          <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+            <div className="space-y-3">
+              <Field label="Hardware Version"><input value={value.hardwareVersion} onChange={(e) => setField('hardwareVersion', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysUpTime"><input value={value.sysUpTime} onChange={(e) => setField('sysUpTime', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Manufacturer Serial Number"><input value={value.manufacturerSerialNumber} onChange={(e) => setField('manufacturerSerialNumber', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysDescription"><textarea value={value.sysDescription} onChange={(e) => setField('sysDescription', e.target.value)} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>
+            </div>
+            <div className="space-y-3">
+              <Field label="Software Version"><input value={value.softwareVersion} onChange={(e) => setField('softwareVersion', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysLocation"><input value={value.sysLocation} onChange={(e) => setField('sysLocation', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysName"><input value={value.sysName} onChange={(e) => setField('sysName', e.target.value)} className={inputClass()} /></Field>
+            </div>
+          </div>
+        </Section>
+      )}
+
+      {showMobileDeviceDetails && (
+        <>
+          <Section title="Device Details">
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="Model"><input value={value.mobileModel} onChange={(e) => setField('mobileModel', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Modem Firmware Version"><input value={value.modemFirmwareVersion} onChange={(e) => setField('modemFirmwareVersion', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Is Personal Asset"><CheckInput value={value.isPersonalAsset} onChange={(next) => setField('isPersonalAsset', next)} /></Field>
+                <Field label="Available Capacity"><UnitInput value={value.availableCapacity} unit={value.availableCapacityUnit} onValue={(next) => setField('availableCapacity', next)} onUnit={(next) => setField('availableCapacityUnit', next)} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="IMEI"><input value={value.imei} onChange={(e) => setField('imei', e.target.value)} className={inputClass()} /></Field>
+                <Field label="UDID"><input value={value.udid} onChange={(e) => setField('udid', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Serial Number"><input value={value.mobileSerialNumber} onChange={(e) => setField('mobileSerialNumber', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Total Capacity"><UnitInput value={value.totalCapacity} unit={value.totalCapacityUnit} onValue={(next) => setField('totalCapacity', next)} onUnit={(next) => setField('totalCapacityUnit', next)} /></Field>
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Mobile OS">
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="OS Type">
+                  <select value={value.osType} onChange={(e) => setField('osType', e.target.value)} className={inputClass()}>
+                    <option value="">--Select--</option>
+                    {['Android', 'iOS', 'Windows', 'Other'].map((item) => <option key={item} value={item}>{item}</option>)}
+                  </select>
+                </Field>
+                <Field label="OS Version"><input value={value.mobileOsVersion} onChange={(e) => setField('mobileOsVersion', e.target.value)} className={inputClass()} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="Build Version"><input value={value.mobileBuildVersion} onChange={(e) => setField('mobileBuildVersion', e.target.value)} className={inputClass()} /></Field>
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Security Restrictions">
+            <CheckGrid
+              items={[
+                ['Hardware Encryption', 'hardwareEncryption'],
+                ['Passcode Compliant', 'passcodeCompliant'],
+                ['Passcode Compliant Profile', 'passcodeCompliantProfile'],
+                ['Passcode Present', 'passcodePresent'],
+              ]}
+              value={value}
+              setField={setField}
+            />
+          </Section>
+
+          <Section title="Device Restrictions">
+            <CheckGrid
+              items={[
+                ['Allow Adding Game Center Friends', 'allowAddingGameCenterFriends'],
+                ['Allow Installing Applications', 'allowInstallingApplications'],
+                ['Allow In Application Purchase', 'allowInApplicationPurchase'],
+                ['Allow Use of Camera', 'allowUseOfCamera'],
+                ['Allow FaceTime', 'allowFaceTime'],
+                ['Allow Multi-Player Gaming', 'allowMultiPlayerGaming'],
+                ['Allow Screen Capture', 'allowScreenCapture'],
+                ['Allow Automatic Sync With Roaming', 'allowAutomaticSyncWhenRoaming'],
+                ['Allow Voice Dialing', 'allowVoiceDialing'],
+                ['Force Encrypted Backups', 'forceEncryptedBackups'],
+              ]}
+              value={value}
+              setField={setField}
+            />
+          </Section>
+
+          <Section title="Application Restrictions">
+            <CheckGrid
+              items={[
+                ['Accept Cookies', 'acceptCookies'],
+                ['Allow use of iTunes Music Store', 'allowUseOfItunesMusicStore'],
+                ['Allow Use of Safari', 'allowUseOfSafari'],
+                ['Enable AutoFill', 'enableAutoFill'],
+                ['Allow pop ups', 'allowPopups'],
+                ['Allow Explicit Music and Podcasts', 'allowExplicitMusicAndPodcasts'],
+                ['Enable JavaScript', 'enableJavaScript'],
+                ['Force Fraud Warning', 'forceFraudWarning'],
+              ]}
+              value={value}
+              setField={setField}
+            />
+          </Section>
+
+          <Section title="Android Restrictions">
+            <CheckGrid
+              items={[
+                ['Activate data network', 'activateDataNetwork'],
+                ['Allow background data', 'allowBackgroundData'],
+                ['Allow bluetooth', 'allowBluetooth'],
+                ['Allow NFC', 'allowNfc'],
+                ['Device admin', 'deviceAdmin'],
+              ]}
+              value={value}
+              setField={setField}
+            />
+          </Section>
+        </>
+      )}
+
+      {showPrinterDetails && (
+        <>
+          <Section title="Printer">
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="sysName"><input value={value.sysName} onChange={(e) => setField('sysName', e.target.value)} className={inputClass()} /></Field>
+                <Field label="sysLocation"><input value={value.sysLocation} onChange={(e) => setField('sysLocation', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Printer Serial Number"><input value={value.printerSerialNumber} onChange={(e) => setField('printerSerialNumber', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Capacity"><UnitInput value={value.printerCapacity} unit={value.printerCapacityUnit} onValue={(next) => setField('printerCapacity', next)} onUnit={(next) => setField('printerCapacityUnit', next)} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="sysDescription"><textarea value={value.sysDescription} onChange={(e) => setField('sysDescription', e.target.value)} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>
+                <Field label="sysUpTime"><input value={value.sysUpTime} onChange={(e) => setField('sysUpTime', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Memory Type"><input value={value.memoryType} onChange={(e) => setField('memoryType', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Manufacturer Serial Number"><input value={value.manufacturerSerialNumber} onChange={(e) => setField('manufacturerSerialNumber', e.target.value)} className={inputClass()} /></Field>
+              </div>
+            </div>
+          </Section>
+
+          <Section title={<>CI Type Additional Fields Section <InfoTooltip text="Additional CI fields for this asset type." /></>}>
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="Manufacturer"><input value={value.firewallManufacturer} onChange={(e) => setField('firewallManufacturer', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Uplink Dependency"><input value={value.uplinkDependency} onChange={(e) => setField('uplinkDependency', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Serial Number"><input value={value.ciSerialNumber} onChange={(e) => setField('ciSerialNumber', e.target.value)} className={inputClass()} /></Field>
+                <Field label="DNS Name"><input value={value.dnsName} onChange={(e) => setField('dnsName', e.target.value)} className={inputClass()} /></Field>
+                <Field label="System Description"><input value={value.systemDescription} onChange={(e) => setField('systemDescription', e.target.value)} className={inputClass()} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="Monitoring Protocol"><input value={value.monitoringProtocol} onChange={(e) => setField('monitoringProtocol', e.target.value)} className={inputClass()} /></Field>
+                <Field label="No. of. Interfaces"><input value={value.noOfInterfaces} onChange={(e) => setField('noOfInterfaces', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Service Tag"><input value={value.serviceTag} onChange={(e) => setField('serviceTag', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Vendor"><input value={value.firewallVendor} onChange={(e) => setField('firewallVendor', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Type"><input value={value.firewallType} onChange={(e) => setField('firewallType', e.target.value)} className={inputClass()} /></Field>
+              </div>
+            </div>
+          </Section>
+        </>
+      )}
+
+      {showSwitchDetails && (
+        <>
+          <Section title="Switch">
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="sysName"><input value={value.sysName} onChange={(e) => setField('sysName', e.target.value)} className={inputClass()} /></Field>
+                <Field label="sysDescription"><textarea value={value.sysDescription} onChange={(e) => setField('sysDescription', e.target.value)} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>
+                <Field label="Config Register"><input value={value.configRegister} onChange={(e) => setField('configRegister', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Estimated bandwidth"><input value={value.estimatedBandwidth} onChange={(e) => setField('estimatedBandwidth', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Flash Size"><UnitInput value={value.flashSize} unit={value.flashSizeUnit} onValue={(next) => setField('flashSize', next)} onUnit={(next) => setField('flashSizeUnit', next)} /></Field>
+                <Field label="Firmware Revision"><input value={value.firmwareRevision} onChange={(e) => setField('firmwareRevision', e.target.value)} className={inputClass()} /></Field>
+                <Field label="OSVersion"><input value={value.switchOsVersion} onChange={(e) => setField('switchOsVersion', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Manufacturer Serial Number"><input value={value.manufacturerSerialNumber} onChange={(e) => setField('manufacturerSerialNumber', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Processor BoardID"><input value={value.processorBoardId} onChange={(e) => setField('processorBoardId', e.target.value)} className={inputClass()} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="sysLocation"><input value={value.sysLocation} onChange={(e) => setField('sysLocation', e.target.value)} className={inputClass()} /></Field>
+                <Field label="sysUpTime"><input value={value.sysUpTime} onChange={(e) => setField('sysUpTime', e.target.value)} className={inputClass()} /></Field>
+                <Field label="CPU (in MB)"><input value={value.cpuInMb} onChange={(e) => setField('cpuInMb', e.target.value)} className={inputClass()} /></Field>
+                <Field label="CPU Type"><input value={value.cpuType} onChange={(e) => setField('cpuType', e.target.value)} className={inputClass()} /></Field>
+                <Field label="DRAM Size"><UnitInput value={value.dramSize} unit={value.dramSizeUnit} onValue={(next) => setField('dramSize', next)} onUnit={(next) => setField('dramSizeUnit', next)} /></Field>
+                <Field label="NVRAM Size"><UnitInput value={value.nvramSize} unit={value.nvramSizeUnit} onValue={(next) => setField('nvramSize', next)} onUnit={(next) => setField('nvramSizeUnit', next)} /></Field>
+                <Field label="Number of ports"><input value={value.numberOfPorts} onChange={(e) => setField('numberOfPorts', e.target.value)} className={inputClass()} /></Field>
+                <Field label="IOS"><input value={value.ios} onChange={(e) => setField('ios', e.target.value)} className={inputClass()} /></Field>
+              </div>
+            </div>
+          </Section>
+
+          <Section title={<>CI Type Additional Fields Section <InfoTooltip text="Additional CI fields for this asset type." /></>}>
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="Manufacturer"><input value={value.firewallManufacturer} onChange={(e) => setField('firewallManufacturer', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Monitoring Protocol"><input value={value.monitoringProtocol} onChange={(e) => setField('monitoringProtocol', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Serial Number"><input value={value.ciSerialNumber} onChange={(e) => setField('ciSerialNumber', e.target.value)} className={inputClass()} /></Field>
+                <Field label="System Location"><input value={value.systemLocation} onChange={(e) => setField('systemLocation', e.target.value)} className={inputClass()} /></Field>
+                <Field label="End of support date"><input type="date" value={value.endOfSupportDate} onChange={(e) => setField('endOfSupportDate', e.target.value)} className={inputClass()} /></Field>
+                <Field label="System Description"><input value={value.systemDescription} onChange={(e) => setField('systemDescription', e.target.value)} className={inputClass()} /></Field>
+                <Field label="DNS Name"><input value={value.dnsName} onChange={(e) => setField('dnsName', e.target.value)} className={inputClass()} /></Field>
+                <Field label="CI Type"><input value={value.ciType} onChange={(e) => setField('ciType', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Vendor"><input value={value.firewallVendor} onChange={(e) => setField('firewallVendor', e.target.value)} className={inputClass()} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="Uplink Dependency"><input value={value.uplinkDependency} onChange={(e) => setField('uplinkDependency', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Service Tag"><input value={value.serviceTag} onChange={(e) => setField('serviceTag', e.target.value)} className={inputClass()} /></Field>
+                <Field label="No. of VLANs"><input value={value.noOfVlans} onChange={(e) => setField('noOfVlans', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Contact Person"><input value={value.contactPerson} onChange={(e) => setField('contactPerson', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Login Details"><input value={value.loginDetails} onChange={(e) => setField('loginDetails', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Type"><input value={value.firewallType} onChange={(e) => setField('firewallType', e.target.value)} className={inputClass()} /></Field>
+                <Field label="SerialNumber"><input value={value.firewallSerialNumber} onChange={(e) => setField('firewallSerialNumber', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Product Name"><input value={value.firewallProductName} onChange={(e) => setField('firewallProductName', e.target.value)} className={inputClass()} /></Field>
+                <Field label="No. of. Interfaces"><input value={value.noOfInterfaces} onChange={(e) => setField('noOfInterfaces', e.target.value)} className={inputClass()} /></Field>
+              </div>
+            </div>
+          </Section>
+        </>
+      )}
+
+      {showRouterDetails && (
+        <>
+          <Section title="Router">
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="Firmware Revision"><input value={value.firmwareRevision} onChange={(e) => setField('firmwareRevision', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Estimated bandwidth"><input value={value.estimatedBandwidth} onChange={(e) => setField('estimatedBandwidth', e.target.value)} className={inputClass()} /></Field>
+                <Field label="OS Type"><input value={value.osType} onChange={(e) => setField('osType', e.target.value)} className={inputClass()} /></Field>
+                <Field label="DRAM Size"><UnitInput value={value.dramSize} unit={value.dramSizeUnit} onValue={(next) => setField('dramSize', next)} onUnit={(next) => setField('dramSizeUnit', next)} /></Field>
+                <Field label="Config Register"><input value={value.configRegister} onChange={(e) => setField('configRegister', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Model"><input value={value.routerModel} onChange={(e) => setField('routerModel', e.target.value)} className={inputClass()} /></Field>
+                <Field label="sysLocation"><input value={value.sysLocation} onChange={(e) => setField('sysLocation', e.target.value)} className={inputClass()} /></Field>
+                <Field label="sysName"><input value={value.sysName} onChange={(e) => setField('sysName', e.target.value)} className={inputClass()} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="OSVersion"><input value={value.switchOsVersion} onChange={(e) => setField('switchOsVersion', e.target.value)} className={inputClass()} /></Field>
+                <Field label="CPU (in MB)"><input value={value.cpuInMb} onChange={(e) => setField('cpuInMb', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Flash Size"><UnitInput value={value.flashSize} unit={value.flashSizeUnit} onValue={(next) => setField('flashSize', next)} onUnit={(next) => setField('flashSizeUnit', next)} /></Field>
+                <Field label="NVRAM Size"><UnitInput value={value.nvramSize} unit={value.nvramSizeUnit} onValue={(next) => setField('nvramSize', next)} onUnit={(next) => setField('nvramSizeUnit', next)} /></Field>
+                <Field label="CPU Revision"><input value={value.cpuRevision} onChange={(e) => setField('cpuRevision', e.target.value)} className={inputClass()} /></Field>
+                <Field label="sysUpTime"><input value={value.sysUpTime} onChange={(e) => setField('sysUpTime', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Manufacturer Serial Number"><input value={value.manufacturerSerialNumber} onChange={(e) => setField('manufacturerSerialNumber', e.target.value)} className={inputClass()} /></Field>
+                <Field label="sysDescription"><textarea value={value.sysDescription} onChange={(e) => setField('sysDescription', e.target.value)} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>
+              </div>
+            </div>
+          </Section>
+
+          <Section title={<>CI Type Additional Fields Section <InfoTooltip text="Additional CI fields for this asset type." /></>}>
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="CI Type"><input value={value.ciType} onChange={(e) => setField('ciType', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Type"><input value={value.firewallType} onChange={(e) => setField('firewallType', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Vendor"><input value={value.firewallVendor} onChange={(e) => setField('firewallVendor', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Manufacturer"><input value={value.firewallManufacturer} onChange={(e) => setField('firewallManufacturer', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Monitoring Protocol"><input value={value.monitoringProtocol} onChange={(e) => setField('monitoringProtocol', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Serial Number"><input value={value.ciSerialNumber} onChange={(e) => setField('ciSerialNumber', e.target.value)} className={inputClass()} /></Field>
+                <Field label="System Location"><input value={value.systemLocation} onChange={(e) => setField('systemLocation', e.target.value)} className={inputClass()} /></Field>
+                <Field label="End of support date"><input type="date" value={value.endOfSupportDate} onChange={(e) => setField('endOfSupportDate', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Building"><input value={value.building} onChange={(e) => setField('building', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Department"><input value={value.department} onChange={(e) => setField('department', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Cabinet"><input value={value.cabinet} onChange={(e) => setField('cabinet', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Contact Name"><input value={value.contactName} onChange={(e) => setField('contactName', e.target.value)} className={inputClass()} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="DNS Name"><input value={value.dnsName} onChange={(e) => setField('dnsName', e.target.value)} className={inputClass()} /></Field>
+                <Field label="System Description"><input value={value.systemDescription} onChange={(e) => setField('systemDescription', e.target.value)} className={inputClass()} /></Field>
+                <Field label="No. of. Interfaces"><input value={value.noOfInterfaces} onChange={(e) => setField('noOfInterfaces', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Uplink Dependency"><input value={value.uplinkDependency} onChange={(e) => setField('uplinkDependency', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Service Tag"><input value={value.serviceTag} onChange={(e) => setField('serviceTag', e.target.value)} className={inputClass()} /></Field>
+                <Field label="No. of VLANs"><input value={value.noOfVlans} onChange={(e) => setField('noOfVlans', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Contact Person"><input value={value.contactPerson} onChange={(e) => setField('contactPerson', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Login Details"><input value={value.loginDetails} onChange={(e) => setField('loginDetails', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Floor"><input value={value.floor} onChange={(e) => setField('floor', e.target.value)} className={inputClass()} /></Field>
+                <Field label="SerialNumber"><input value={value.firewallSerialNumber} onChange={(e) => setField('firewallSerialNumber', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Comments"><input value={value.ciComments} onChange={(e) => setField('ciComments', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Product Name"><input value={value.firewallProductName} onChange={(e) => setField('firewallProductName', e.target.value)} className={inputClass()} /></Field>
+              </div>
+            </div>
+          </Section>
+        </>
+      )}
+
+      {showNtpDetails && (
+        <Section title="NTP">
+          <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+            <div className="space-y-3">
+              <Field label="OS Version"><input value={value.osVersion} onChange={(e) => setField('osVersion', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysUpTime"><input value={value.sysUpTime} onChange={(e) => setField('sysUpTime', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Manufacturer Serial Number"><input value={value.manufacturerSerialNumber} onChange={(e) => setField('manufacturerSerialNumber', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysDescription"><textarea value={value.sysDescription} onChange={(e) => setField('sysDescription', e.target.value)} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>
+            </div>
+            <div className="space-y-3">
+              <Field label="System Type"><input value={value.systemType} onChange={(e) => setField('systemType', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysLocation"><input value={value.sysLocation} onChange={(e) => setField('sysLocation', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysName"><input value={value.sysName} onChange={(e) => setField('sysName', e.target.value)} className={inputClass()} /></Field>
+            </div>
+          </div>
+        </Section>
+      )}
+
+      {showRackDetails && (
+        <Section title="Rack">
+          <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+            <div className="space-y-3">
+              <Field label="Rack units in use"><input value={value.rackUnitsInUse} onChange={(e) => setField('rackUnitsInUse', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Rack units"><input value={value.rackUnits} onChange={(e) => setField('rackUnits', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Power consumption"><input value={value.powerConsumption} onChange={(e) => setField('powerConsumption', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysLocation"><input value={value.sysLocation} onChange={(e) => setField('sysLocation', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysName"><input value={value.sysName} onChange={(e) => setField('sysName', e.target.value)} className={inputClass()} /></Field>
+            </div>
+            <div className="space-y-3">
+              <Field label="Assigned To"><input value={value.assignedTo} onChange={(e) => setField('assignedTo', e.target.value)} className={inputClass()} placeholder="--Select--" /></Field>
+              <Field label="Footprint"><input value={value.footprint} onChange={(e) => setField('footprint', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysUpTime"><input value={value.sysUpTime} onChange={(e) => setField('sysUpTime', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Manufacturer Serial Number"><input value={value.manufacturerSerialNumber} onChange={(e) => setField('manufacturerSerialNumber', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysDescription"><textarea value={value.sysDescription} onChange={(e) => setField('sysDescription', e.target.value)} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>
+            </div>
+          </div>
+        </Section>
+      )}
+
+      {showStorageDeviceDetails && (
+        <Section title="Storage Device">
+          <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+            <div className="space-y-3">
+              <Field label="Device Type"><input value={value.storageDeviceType} onChange={(e) => setField('storageDeviceType', e.target.value)} className={inputClass()} placeholder="--Select--" /></Field>
+              <Field label="Model Number"><input value={value.modelNumber} onChange={(e) => setField('modelNumber', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Total Disks"><input value={value.totalDisks} onChange={(e) => setField('totalDisks', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Failed Disks"><input value={value.failedDisks} onChange={(e) => setField('failedDisks', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Volumes"><input value={value.volumes} onChange={(e) => setField('volumes', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Total Aggregates"><input value={value.totalAggregates} onChange={(e) => setField('totalAggregates', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Firmware"><input value={value.firmwareRevision} onChange={(e) => setField('firmwareRevision', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysLocation"><input value={value.sysLocation} onChange={(e) => setField('sysLocation', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysName"><input value={value.sysName} onChange={(e) => setField('sysName', e.target.value)} className={inputClass()} /></Field>
+            </div>
+            <div className="space-y-3">
+              <Field label="OS Version"><input value={value.osVersion} onChange={(e) => setField('osVersion', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Allocated Disks"><input value={value.allocatedDisks} onChange={(e) => setField('allocatedDisks', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Spare Disks"><input value={value.spareDisks} onChange={(e) => setField('spareDisks', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Number of drives"><input value={value.numberOfDrives} onChange={(e) => setField('numberOfDrives', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Total Capacity"><UnitInput value={value.storageTotalCapacity} unit={value.storageTotalCapacityUnit} onValue={(next) => setField('storageTotalCapacity', next)} onUnit={(next) => setField('storageTotalCapacityUnit', next)} /></Field>
+              <Field label="sysUpTime"><input value={value.sysUpTime} onChange={(e) => setField('sysUpTime', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Manufacturer Serial Number"><input value={value.manufacturerSerialNumber} onChange={(e) => setField('manufacturerSerialNumber', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysDescription"><textarea value={value.sysDescription} onChange={(e) => setField('sysDescription', e.target.value)} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>
+            </div>
+          </div>
+        </Section>
+      )}
+
+      {showRoomSensorDetails && (
+        <Section title="Room Sensor">
+          <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+            <div className="space-y-3">
+              <Field label="sysUpTime"><input value={value.sysUpTime} onChange={(e) => setField('sysUpTime', e.target.value)} className={inputClass()} /></Field>
+              <Field label="Manufacturer Serial Number"><input value={value.manufacturerSerialNumber} onChange={(e) => setField('manufacturerSerialNumber', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysDescription"><textarea value={value.sysDescription} onChange={(e) => setField('sysDescription', e.target.value)} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>
+            </div>
+            <div className="space-y-3">
+              <Field label="sysLocation"><input value={value.sysLocation} onChange={(e) => setField('sysLocation', e.target.value)} className={inputClass()} /></Field>
+              <Field label="sysName"><input value={value.sysName} onChange={(e) => setField('sysName', e.target.value)} className={inputClass()} /></Field>
+            </div>
+          </div>
+        </Section>
+      )}
+
+      {showUpsDetails && (
+        <>
+          <Section title="UPS">
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="sysName"><input value={value.sysName} onChange={(e) => setField('sysName', e.target.value)} className={inputClass()} /></Field>
+                <Field label="sysDescription"><textarea value={value.sysDescription} onChange={(e) => setField('sysDescription', e.target.value)} rows={2} className={`${inputClass()} h-12 py-1.5 resize-y`} /></Field>
+                <Field label="Battery Remaining time (in hrs)"><input value={value.batteryRemainingTimeHours} onChange={(e) => setField('batteryRemainingTimeHours', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Battery Current"><input value={value.batteryCurrent} onChange={(e) => setField('batteryCurrent', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Firmware"><input value={value.firmwareRevision} onChange={(e) => setField('firmwareRevision', e.target.value)} className={inputClass()} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="sysUpTime"><input value={value.sysUpTime} onChange={(e) => setField('sysUpTime', e.target.value)} className={inputClass()} /></Field>
+                <Field label="sysLocation"><input value={value.sysLocation} onChange={(e) => setField('sysLocation', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Battery Capacity (%)"><input value={value.batteryCapacityPercent} onChange={(e) => setField('batteryCapacityPercent', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Battery Voltage (in volts)"><input value={value.batteryVoltage} onChange={(e) => setField('batteryVoltage', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Manufacturer Serial Number"><input value={value.manufacturerSerialNumber} onChange={(e) => setField('manufacturerSerialNumber', e.target.value)} className={inputClass()} /></Field>
+              </div>
+            </div>
+          </Section>
+
+          <Section title={<>CI Type Additional Fields Section <InfoTooltip text="Additional CI fields for this asset type." /></>}>
+            <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+              <div className="space-y-3">
+                <Field label="Serial Number"><input value={value.ciSerialNumber} onChange={(e) => setField('ciSerialNumber', e.target.value)} className={inputClass()} /></Field>
+                <Field label="System Description"><input value={value.systemDescription} onChange={(e) => setField('systemDescription', e.target.value)} className={inputClass()} /></Field>
+                <Field label="No. of. Interfaces"><input value={value.noOfInterfaces} onChange={(e) => setField('noOfInterfaces', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Monitoring Protocol"><input value={value.monitoringProtocol} onChange={(e) => setField('monitoringProtocol', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Service Tag"><input value={value.serviceTag} onChange={(e) => setField('serviceTag', e.target.value)} className={inputClass()} /></Field>
+              </div>
+              <div className="space-y-3">
+                <Field label="DNS Name"><input value={value.dnsName} onChange={(e) => setField('dnsName', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Vendor"><input value={value.firewallVendor} onChange={(e) => setField('firewallVendor', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Uplink Dependency"><input value={value.uplinkDependency} onChange={(e) => setField('uplinkDependency', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Manufacturer"><input value={value.firewallManufacturer} onChange={(e) => setField('firewallManufacturer', e.target.value)} className={inputClass()} /></Field>
+                <Field label="Type"><input value={value.firewallType} onChange={(e) => setField('firewallType', e.target.value)} className={inputClass()} /></Field>
+              </div>
+            </div>
+          </Section>
+        </>
+      )}
+
+      {visibleTables.map((table) => (
         <RepeatableTable
           key={table.key}
           config={table}
@@ -183,6 +753,37 @@ function UnitInput({ value, unit, onValue, onUnit }: { value: string; unit: 'MB'
       <select value={unit} onChange={(event) => onUnit(event.target.value as 'MB' | 'GB' | 'TB')} className={`${inputClass()} w-16 rounded-l-none border-l-0`}>
         {MEMORY_UNITS.map((item) => <option key={item} value={item}>{item}</option>)}
       </select>
+    </div>
+  );
+}
+
+function CheckInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <input
+      type="checkbox"
+      checked={value === 'Yes'}
+      onChange={(event) => onChange(event.target.checked ? 'Yes' : '')}
+      className="mt-2 h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500"
+    />
+  );
+}
+
+function CheckGrid({
+  items,
+  value,
+  setField,
+}: {
+  items: Array<[string, keyof WorkstationDetailsFormData]>;
+  value: WorkstationDetailsFormData;
+  setField: <K extends keyof WorkstationDetailsFormData>(key: K, nextValue: WorkstationDetailsFormData[K]) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-x-28 gap-y-3 xl:grid-cols-2">
+      {items.map(([label, key]) => (
+        <Field key={String(key)} label={label}>
+          <CheckInput value={String(value[key] || '')} onChange={(next) => setField(key, next as WorkstationDetailsFormData[typeof key])} />
+        </Field>
+      ))}
     </div>
   );
 }
@@ -285,7 +886,7 @@ function RepeatableTable({ config, rows, onRowsChange }: { config: TableConfig<R
                 <td className="px-2 py-1" />
                 {config.columns.map((column) => (
                   <td key={column.key} className="border-l border-gray-100 px-1 py-1 dark:border-gray-800">
-                    {column.key === 'isDhcp' ? (
+                    {column.key === 'isDhcp' || (config.key === 'mobileNetworks' && ['dataRoamingEnabled', 'roamingEnabled', 'voiceRoamingEnabled'].includes(column.key)) ? (
                       <div className="flex h-7 items-center justify-center">
                         <input
                           type="checkbox"

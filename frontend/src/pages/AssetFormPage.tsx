@@ -95,6 +95,125 @@ function isComputerProductType(productTypeId: string, productTypes: ProductTypeO
   return path.split('>').map((part) => part.trim()).some((part) => ['computer', 'computers', 'workstation', 'desktop', 'laptop', 'server'].includes(part));
 }
 
+function isAccessPointProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['access point', 'access points'].includes(part));
+}
+
+function isFaxProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['fax', 'faxes'].includes(part));
+}
+
+function isFirewallProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['firewall', 'firewalls', 'fire wall', 'fire walls'].includes(part));
+}
+
+function isIpPhoneProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['ip phone', 'ip phones'].includes(part));
+}
+
+function isCiscoIpPhoneProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  return ['cisco ip phone', 'cisco ip phones'].includes(selected.displayName.trim().toLowerCase());
+}
+
+function isIpsProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['ips', 'ipses'].includes(part));
+}
+
+function isMobileDeviceProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['mobile device', 'mobile devices'].includes(part));
+}
+
+function isPrinterProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['printer', 'printers'].includes(part));
+}
+
+function isSwitchProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['switch', 'switches'].includes(part));
+}
+
+function isRouterProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['router', 'routers'].includes(part));
+}
+
+function isNtpProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['ntp', 'ntps'].includes(part));
+}
+
+function isRackProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['rack', 'racks'].includes(part));
+}
+
+function isStorageDeviceProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['storage device', 'storage devices'].includes(part));
+}
+
+function isRoomSensorProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['room sensor', 'room sensors'].includes(part));
+}
+
+function isUpsProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === productTypeId);
+  if (!selected) return false;
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => ['ups', 'upses'].includes(part));
+}
+
 function workstationDetailsDirty(details: WorkstationDetailsFormData) {
   const scalarDirty = Object.entries(details).some(([key, value]) => {
     if (Array.isArray(value)) return value.length > 0;
@@ -121,6 +240,18 @@ const WORKSTATION_COLLECTION_KEYS: Array<keyof WorkstationDetailsFormData> = [
   'usbControllers',
   'ports',
   'soundCards',
+  'mobileNetworks',
+  'mobileCertificates',
+  'printerInputUnits',
+  'printerMarkerSubUnits',
+  'printerOutputUnits',
+  'printerMarkerSupplyUnits',
+  'switchPorts',
+  'deviceInterfaces',
+  'netAppPhysicalDisks',
+  'netAppVolumes',
+  'netAppAggregators',
+  'sensors',
 ];
 
 function sanitizeWorkstationDetails(details: WorkstationDetailsFormData): WorkstationDetailsFormData {
@@ -153,6 +284,12 @@ function validateWorkstationDetails(details: WorkstationDetailsFormData) {
     const value = details[key];
     if (typeof value === 'string' && value.trim() && Number(value) < 0) errors.workstationDetails = `${label} must not be negative.`;
   });
+  Object.assign(errors, validateNetworkAdapters(details));
+  return errors;
+}
+
+function validateNetworkAdapters(details: WorkstationDetailsFormData) {
+  const errors: Record<string, string> = {};
   const ipv4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
   const mac = /^([0-9a-f]{2}[:-]){5}[0-9a-f]{2}$/i;
   for (const row of details.networkAdapters) {
@@ -205,6 +342,18 @@ function workstationFromAsset(rec: Asset): WorkstationDetailsFormData {
     usbControllers: (relationRows('usbControllers') as WorkstationDetailsFormData['usbControllers']) ?? stored?.usbControllers ?? [],
     ports: (relationRows('ports') as WorkstationDetailsFormData['ports']) ?? stored?.ports ?? [],
     soundCards: (relationRows('soundCards') as WorkstationDetailsFormData['soundCards']) ?? stored?.soundCards ?? [],
+    mobileNetworks: (relationRows('mobileNetworks') as WorkstationDetailsFormData['mobileNetworks']) ?? stored?.mobileNetworks ?? [],
+    mobileCertificates: (relationRows('mobileCertificates') as WorkstationDetailsFormData['mobileCertificates']) ?? stored?.mobileCertificates ?? [],
+    printerInputUnits: (relationRows('printerInputUnits') as WorkstationDetailsFormData['printerInputUnits']) ?? stored?.printerInputUnits ?? [],
+    printerMarkerSubUnits: (relationRows('printerMarkerSubUnits') as WorkstationDetailsFormData['printerMarkerSubUnits']) ?? stored?.printerMarkerSubUnits ?? [],
+    printerOutputUnits: (relationRows('printerOutputUnits') as WorkstationDetailsFormData['printerOutputUnits']) ?? stored?.printerOutputUnits ?? [],
+    printerMarkerSupplyUnits: (relationRows('printerMarkerSupplyUnits') as WorkstationDetailsFormData['printerMarkerSupplyUnits']) ?? stored?.printerMarkerSupplyUnits ?? [],
+    switchPorts: (relationRows('switchPorts') as WorkstationDetailsFormData['switchPorts']) ?? stored?.switchPorts ?? [],
+    deviceInterfaces: (relationRows('deviceInterfaces') as WorkstationDetailsFormData['deviceInterfaces']) ?? stored?.deviceInterfaces ?? [],
+    netAppPhysicalDisks: (relationRows('netAppPhysicalDisks') as WorkstationDetailsFormData['netAppPhysicalDisks']) ?? stored?.netAppPhysicalDisks ?? [],
+    netAppVolumes: (relationRows('netAppVolumes') as WorkstationDetailsFormData['netAppVolumes']) ?? stored?.netAppVolumes ?? [],
+    netAppAggregators: (relationRows('netAppAggregators') as WorkstationDetailsFormData['netAppAggregators']) ?? stored?.netAppAggregators ?? [],
+    sensors: (relationRows('sensors') as WorkstationDetailsFormData['sensors']) ?? stored?.sensors ?? [],
   };
 }
 
@@ -469,6 +618,7 @@ export default function AssetFormPage() {
       if (Number.isNaN(purchaseCost) || purchaseCost < 0) e.purchaseCost = 'Purchase Cost must be zero or greater.';
     }
     if (isComputerProductType(form.productTypeId, productTypeList)) Object.assign(e, validateWorkstationDetails(form.workstationDetails));
+    else if (isAccessPointProductType(form.productTypeId, productTypeList) || isFaxProductType(form.productTypeId, productTypeList) || isFirewallProductType(form.productTypeId, productTypeList) || isIpPhoneProductType(form.productTypeId, productTypeList) || isIpsProductType(form.productTypeId, productTypeList) || isPrinterProductType(form.productTypeId, productTypeList) || isSwitchProductType(form.productTypeId, productTypeList) || isRouterProductType(form.productTypeId, productTypeList) || isNtpProductType(form.productTypeId, productTypeList) || isRackProductType(form.productTypeId, productTypeList) || isStorageDeviceProductType(form.productTypeId, productTypeList) || isRoomSensorProductType(form.productTypeId, productTypeList) || isUpsProductType(form.productTypeId, productTypeList)) Object.assign(e, validateNetworkAdapters(form.workstationDetails));
     return e;
   }
 
@@ -491,6 +641,7 @@ export default function AssetFormPage() {
   function buildPayload() {
     const sanitizedWorkstationDetails = sanitizeWorkstationDetails(form.workstationDetails);
     const shouldSaveWorkstationDetails = isComputerProductType(form.productTypeId, productTypeList) || workstationDetailsDirty(sanitizedWorkstationDetails);
+    const shouldSaveDynamicFields = !isAccessPointProductType(form.productTypeId, productTypeList) && !isFaxProductType(form.productTypeId, productTypeList) && !isFirewallProductType(form.productTypeId, productTypeList) && !isIpPhoneProductType(form.productTypeId, productTypeList) && !isIpsProductType(form.productTypeId, productTypeList) && !isMobileDeviceProductType(form.productTypeId, productTypeList) && !isPrinterProductType(form.productTypeId, productTypeList) && !isSwitchProductType(form.productTypeId, productTypeList) && !isRouterProductType(form.productTypeId, productTypeList) && !isNtpProductType(form.productTypeId, productTypeList) && !isRackProductType(form.productTypeId, productTypeList) && !isStorageDeviceProductType(form.productTypeId, productTypeList) && !isRoomSensorProductType(form.productTypeId, productTypeList) && !isUpsProductType(form.productTypeId, productTypeList);
     return {
       ...form,
       productTypeId: form.productTypeId ? parseInt(form.productTypeId, 10) : undefined,
@@ -526,10 +677,10 @@ export default function AssetFormPage() {
       osProductId: form.workstationDetails.productId,
       osBuildNumber: form.workstationDetails.buildNumber,
       workstationDetails: shouldSaveWorkstationDetails ? sanitizedWorkstationDetails : null,
-      dynamicFieldValues: Object.entries(form.dynamicFieldValues).map(([productTypeFieldId, value]) => ({
+      dynamicFieldValues: shouldSaveDynamicFields ? Object.entries(form.dynamicFieldValues).map(([productTypeFieldId, value]) => ({
         productTypeFieldId: parseInt(productTypeFieldId, 10),
         value,
-      })),
+      })) : [],
     };
   }
 
@@ -576,6 +727,21 @@ export default function AssetFormPage() {
     : productList;
   const productTypeName = productTypeList.find((productType) => String(productType.id) === form.productTypeId)?.displayName;
   const showWorkstationDetails = isComputerProductType(form.productTypeId, productTypeList);
+  const showNetworkAdaptersOnly = !showWorkstationDetails && isAccessPointProductType(form.productTypeId, productTypeList);
+  const showFaxDetails = !showWorkstationDetails && isFaxProductType(form.productTypeId, productTypeList);
+  const showFirewallDetails = !showWorkstationDetails && isFirewallProductType(form.productTypeId, productTypeList);
+  const showIpPhoneDetails = !showWorkstationDetails && isIpPhoneProductType(form.productTypeId, productTypeList);
+  const showCiscoIpPhoneDetails = showIpPhoneDetails && isCiscoIpPhoneProductType(form.productTypeId, productTypeList);
+  const showIpsDetails = !showWorkstationDetails && isIpsProductType(form.productTypeId, productTypeList);
+  const showMobileDeviceDetails = !showWorkstationDetails && isMobileDeviceProductType(form.productTypeId, productTypeList);
+  const showPrinterDetails = !showWorkstationDetails && isPrinterProductType(form.productTypeId, productTypeList);
+  const showSwitchDetails = !showWorkstationDetails && isSwitchProductType(form.productTypeId, productTypeList);
+  const showRouterDetails = !showWorkstationDetails && isRouterProductType(form.productTypeId, productTypeList);
+  const showNtpDetails = !showWorkstationDetails && isNtpProductType(form.productTypeId, productTypeList);
+  const showRackDetails = !showWorkstationDetails && isRackProductType(form.productTypeId, productTypeList);
+  const showStorageDeviceDetails = !showWorkstationDetails && isStorageDeviceProductType(form.productTypeId, productTypeList);
+  const showRoomSensorDetails = !showWorkstationDetails && isRoomSensorProductType(form.productTypeId, productTypeList);
+  const showUpsDetails = !showWorkstationDetails && isUpsProductType(form.productTypeId, productTypeList);
   const pageTitle = isEdit ? `Edit ${form.name || productTypeName || 'Asset'}` : `Add New ${productTypeName || 'Asset'}`;
   const loanDateDisabled = !form.isLoanable;
 
@@ -623,11 +789,139 @@ export default function AssetFormPage() {
           />
         )}
 
-        <AssetDynamicFormRenderer
-          productTypeId={form.productTypeId}
-          form={form}
-          onDynamicFieldChange={handleDynamicFieldChange}
-        />
+        {showNetworkAdaptersOnly && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['networkAdapters']}
+          />
+        )}
+
+        {showFaxDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['networkAdapters']}
+            showFaxDetails
+          />
+        )}
+
+        {showFirewallDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['networkAdapters']}
+            showFirewallDetails
+          />
+        )}
+
+        {showIpPhoneDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['networkAdapters']}
+            showIpPhoneDetails
+            showCiscoIpPhoneDetails={showCiscoIpPhoneDetails}
+          />
+        )}
+
+        {showIpsDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['networkAdapters']}
+            showIpsDetails
+          />
+        )}
+
+        {showMobileDeviceDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['mobileNetworks', 'mobileCertificates']}
+            showMobileDeviceDetails
+          />
+        )}
+
+        {showPrinterDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['networkAdapters', 'printerInputUnits', 'printerMarkerSubUnits', 'printerOutputUnits', 'printerMarkerSupplyUnits']}
+            showPrinterDetails
+          />
+        )}
+
+        {showSwitchDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['networkAdapters', 'switchPorts']}
+            showSwitchDetails
+          />
+        )}
+
+        {showRouterDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['networkAdapters', 'deviceInterfaces']}
+            showRouterDetails
+          />
+        )}
+
+        {showNtpDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['networkAdapters']}
+            showNtpDetails
+          />
+        )}
+
+        {showRackDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['networkAdapters']}
+            showRackDetails
+          />
+        )}
+
+        {showStorageDeviceDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['networkAdapters', 'netAppPhysicalDisks', 'netAppVolumes', 'netAppAggregators']}
+            showStorageDeviceDetails
+          />
+        )}
+
+        {showRoomSensorDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['networkAdapters', 'sensors']}
+            showRoomSensorDetails
+          />
+        )}
+
+        {showUpsDetails && (
+          <WorkstationDetailsForm
+            value={form.workstationDetails}
+            onChange={handleWorkstationDetailsChange}
+            visibleCollections={['networkAdapters']}
+            showUpsDetails
+          />
+        )}
+
+        {!showNetworkAdaptersOnly && !showFaxDetails && !showFirewallDetails && !showIpPhoneDetails && !showIpsDetails && !showMobileDeviceDetails && !showPrinterDetails && !showSwitchDetails && !showRouterDetails && !showNtpDetails && !showRackDetails && !showStorageDeviceDetails && !showRoomSensorDetails && !showUpsDetails && (
+          <AssetDynamicFormRenderer
+            productTypeId={form.productTypeId}
+            form={form}
+            onDynamicFieldChange={handleDynamicFieldChange}
+          />
+        )}
         </div>
       </div>
 

@@ -57,18 +57,6 @@ INSERT INTO "product_type_fields" ("product_type_id", "field_name", "field_key",
 SELECT pt."id", field_name, field_key, field_type, false, display_order, section_name, true
 FROM "product_types" pt
 CROSS JOIN (VALUES
-  ('SSID', 'ssid', 'text', 10, 'Access Point Details'),
-  ('IP Address', 'ipAddress', 'text', 20, 'Access Point Details'),
-  ('MAC Address', 'macAddress', 'text', 30, 'Access Point Details'),
-  ('Firmware Version', 'firmwareVersion', 'text', 40, 'Access Point Details')
-) AS f(field_name, field_key, field_type, display_order, section_name)
-WHERE lower(pt."display_name") LIKE '%access point%'
-ON CONFLICT ("product_type_id", "field_key") DO NOTHING;
-
-INSERT INTO "product_type_fields" ("product_type_id", "field_name", "field_key", "field_type", "required", "display_order", "section_name", "is_inherited_to_children")
-SELECT pt."id", field_name, field_key, field_type, false, display_order, section_name, true
-FROM "product_types" pt
-CROSS JOIN (VALUES
   ('Printer IP', 'printerIp', 'text', 10, 'Printer Details'),
   ('Toner Model', 'tonerModel', 'text', 20, 'Printer Details'),
   ('Network Name', 'networkName', 'text', 30, 'Printer Details')

@@ -13,7 +13,7 @@ const ASSET_ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024;
 const ASSET_ATTACHMENT_EXTENSIONS = new Set(['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt', '.html', '.png', '.jpg', '.jpeg', '.zip']);
 const ASSET_IMPORT_EXTENSIONS = new Set(['.xls', '.xlsx', '.csv']);
 const ASSET_IMPORT_MAX_SIZE = 20 * 1024 * 1024;
-const ASSET_TRANSACTION_OPTIONS = { maxWait: 10000, timeout: 30000 };
+const ASSET_TRANSACTION_OPTIONS = { maxWait: 10000, timeout: 60000 };
 fs.mkdirSync(ASSET_ATTACHMENT_DIR, { recursive: true });
 
 const assetAttachmentStorage = multer.diskStorage({
@@ -341,6 +341,18 @@ const workstationInclude = {
   usbControllers: { orderBy: { id: 'asc' as const } },
   ports: { orderBy: { id: 'asc' as const } },
   soundCards: { orderBy: { id: 'asc' as const } },
+  mobileNetworks: { orderBy: { id: 'asc' as const } },
+  mobileCertificates: { orderBy: { id: 'asc' as const } },
+  printerInputUnits: { orderBy: { id: 'asc' as const } },
+  printerMarkerSubUnits: { orderBy: { id: 'asc' as const } },
+  printerOutputUnits: { orderBy: { id: 'asc' as const } },
+  printerMarkerSupplyUnits: { orderBy: { id: 'asc' as const } },
+  switchPorts: { orderBy: { id: 'asc' as const } },
+  deviceInterfaces: { orderBy: { id: 'asc' as const } },
+  netAppPhysicalDisks: { orderBy: { id: 'asc' as const } },
+  netAppVolumes: { orderBy: { id: 'asc' as const } },
+  netAppAggregators: { orderBy: { id: 'asc' as const } },
+  sensors: { orderBy: { id: 'asc' as const } },
 };
 
 const COMPUTER_DETAIL_FIELDS = [
@@ -348,6 +360,36 @@ const COMPUTER_DETAIL_FIELDS = [
   'logicalProcessors', 'biosName', 'biosVersion', 'biosManufacturer', 'totalMemory', 'totalMemoryUnit',
   'domain', 'totalSlots', 'operatingSystem', 'osVersion', 'servicePack', 'productId', 'buildNumber',
   'systemType', 'licenseType', 'licenseStatus', 'systemDrive', 'vmPlatform', 'installedVms', 'allowedVms',
+  'sysUpTime', 'sysLocation', 'manufacturerSerialNumber', 'sysName', 'sysDescription',
+  'firmwareRevision', 'monitoringProtocol', 'uplinkDependency', 'ciSerialNumber', 'noOfInterfaces',
+  'firewallVendor', 'firewallSerialNumber', 'ciType', 'firewallProductName', 'systemDescription',
+  'firewallType', 'firewallManufacturer', 'dnsName',
+  'phoneDn', 'fipsModeEnabled', 'bootLoadId', 'hardwareRevision', 'appLoadId', 'uniqueDeviceIdentifier',
+  'ciscoIpPhoneVersion', 'messageWaiting', 'javaPoolFreeMemory', 'javaPoolFreeMemoryUnit',
+  'systemFreeMemory', 'systemFreeMemoryUnit', 'javaHeapFreeMemory', 'javaHeapFreeMemoryUnit', 'timeZone',
+  'hardwareVersion', 'softwareVersion',
+  'mobileModel', 'imei', 'modemFirmwareVersion', 'udid', 'isPersonalAsset', 'mobileSerialNumber',
+  'availableCapacity', 'availableCapacityUnit', 'totalCapacity', 'totalCapacityUnit',
+  'osType', 'mobileBuildVersion', 'mobileOsVersion', 'hardwareEncryption', 'passcodeCompliant',
+  'passcodeCompliantProfile', 'passcodePresent', 'allowAddingGameCenterFriends',
+  'allowInstallingApplications', 'allowInApplicationPurchase', 'allowUseOfCamera', 'allowFaceTime',
+  'allowMultiPlayerGaming', 'allowScreenCapture', 'allowAutomaticSyncWhenRoaming', 'allowVoiceDialing',
+  'forceEncryptedBackups', 'acceptCookies', 'allowUseOfItunesMusicStore', 'allowUseOfSafari',
+  'allowUseOfYouTube', 'allowPopups', 'enableAutoFill', 'enableJavaScript',
+  'allowExplicitMusicAndPodcasts', 'forceFraudWarning', 'activateDataNetwork', 'allowBackgroundData',
+  'allowBluetooth', 'allowNfc', 'deviceAdmin',
+  'printerSerialNumber', 'printerCapacity', 'printerCapacityUnit', 'memoryType',
+  'configRegister', 'estimatedBandwidth', 'flashSize', 'flashSizeUnit', 'switchOsVersion',
+  'processorBoardId', 'cpuInMb', 'cpuType', 'dramSize', 'dramSizeUnit', 'nvramSize',
+  'nvramSizeUnit', 'numberOfPorts', 'ios', 'systemLocation', 'endOfSupportDate',
+  'contactPerson', 'loginDetails', 'noOfVlans',
+  'osType', 'routerModel', 'cpuRevision', 'building', 'department', 'cabinet',
+  'contactName', 'floor', 'ciComments',
+  'rackUnitsInUse', 'rackUnits', 'powerConsumption', 'assignedTo', 'footprint',
+  'storageDeviceType', 'modelNumber', 'totalDisks', 'failedDisks', 'volumes',
+  'totalAggregates', 'allocatedDisks', 'spareDisks', 'numberOfDrives',
+  'storageTotalCapacity', 'storageTotalCapacityUnit',
+  'batteryRemainingTimeHours', 'batteryCapacityPercent', 'batteryCurrent', 'batteryVoltage',
 ] as const;
 
 const WORKSTATION_CHILD_CONFIGS = [
@@ -367,6 +409,18 @@ const WORKSTATION_CHILD_CONFIGS = [
   { key: 'usbControllers', relation: 'usbControllers', label: 'USB Controllers', delegate: 'assetUsbController', fields: ['usb'] },
   { key: 'ports', relation: 'ports', label: 'Ports', delegate: 'assetPort', fields: ['portName', 'status'] },
   { key: 'soundCards', relation: 'soundCards', label: 'Sound Cards', delegate: 'assetSoundCard', fields: ['soundCardName', 'manufacturer'] },
+  { key: 'mobileNetworks', relation: 'mobileNetworks', label: 'Mobile Networks', delegate: 'assetMobileNetwork', fields: ['bluetoothMac', 'carrierSettingsVersion', 'cellularTechnology', 'currentCarrierNetwork', 'currentMcc', 'currentMnc', 'iccid', 'dataRoamingEnabled', 'roamingEnabled', 'voiceRoamingEnabled', 'phoneNumber', 'simCarrierNetwork', 'subscriberMcc', 'subscriberMnc', 'wifiMac'] },
+  { key: 'mobileCertificates', relation: 'mobileCertificates', label: 'Certificates', delegate: 'assetMobileCertificate', fields: ['name', 'identity'] },
+  { key: 'printerInputUnits', relation: 'printerInputUnits', label: 'Printer Input Units', delegate: 'assetPrinterInputUnit', fields: ['index', 'inputUnitName', 'inputType', 'vendor', 'capacity', 'currentLevel'] },
+  { key: 'printerMarkerSubUnits', relation: 'printerMarkerSubUnits', label: 'Printer Marker Sub Units', delegate: 'assetPrinterMarkerSubUnit', fields: ['index', 'printingTechnique', 'markerLifeCount'] },
+  { key: 'printerOutputUnits', relation: 'printerOutputUnits', label: 'Printer Output Units', delegate: 'assetPrinterOutputUnit', fields: ['index', 'outputUnitName', 'outputType', 'vendor', 'capacity', 'currentLevel'] },
+  { key: 'printerMarkerSupplyUnits', relation: 'printerMarkerSupplyUnits', label: 'Printer Marker Supply Units', delegate: 'assetPrinterMarkerSupplyUnit', fields: ['index', 'markerSupplyType', 'markerSupplyDescription', 'markerSupplyMaxCapacity', 'markerSupplyLevel', 'printerMarkerSupplyUnits'] },
+  { key: 'switchPorts', relation: 'switchPorts', label: 'Switch Ports', delegate: 'assetSwitchPort', fields: ['portIndex', 'adminState', 'description', 'operationalState', 'speedMbps', 'type'] },
+  { key: 'deviceInterfaces', relation: 'deviceInterfaces', label: 'Device Interfaces', delegate: 'assetDeviceInterface', fields: ['index', 'interfaceName', 'interfaceType', 'speedMbps', 'physicalAddress', 'ipAddress', 'netmask'] },
+  { key: 'netAppPhysicalDisks', relation: 'netAppPhysicalDisks', label: 'NetApp Physical Disks', delegate: 'assetNetAppPhysicalDisk', fields: ['raidIndex', 'raidVolumeId', 'raidGroupId', 'diskName', 'shelf', 'bay', 'model', 'type', 'status', 'totalSize', 'usedSize', 'serialNumber', 'firmwareRevision'] },
+  { key: 'netAppVolumes', relation: 'netAppVolumes', label: 'NetApp Volumes', delegate: 'assetNetAppVolume', fields: ['volumeIndex', 'volumeName', 'status', 'aggregationName'] },
+  { key: 'netAppAggregators', relation: 'netAppAggregators', label: 'NetApp Aggregators', delegate: 'assetNetAppAggregator', fields: ['aggregationIndex', 'aggregationName', 'status'] },
+  { key: 'sensors', relation: 'sensors', label: 'Sensors', delegate: 'assetSensor', fields: ['name', 'sensorType'] },
 ] as const;
 
 const historyComparisonInclude = {
@@ -1309,12 +1363,12 @@ async function createAsset(req: Request, res: Response, next: NextFunction): Pro
   if (!errors.isEmpty()) { res.status(422).json({ errors: errors.array() }); return; }
   try {
     const actor = changedBy(req, req.body);
-    const item = await prisma.$transaction(async (tx) => {
+    const createdId = await prisma.$transaction(async (tx) => {
       const changedOn = new Date();
       const payload = buildPayload(req.body);
       const created = await tx.asset.create({ data: payload });
       await syncPurchaseCostRow(tx, created.id, payload.purchaseCost, actor);
-      await syncWorkstationDetails(tx, created.id, req.body.workstationDetails);
+      await syncWorkstationDetails(tx, created.id, req.body.workstationDetails, true);
       await saveDynamicFieldValues(tx, created.id, req.body);
       const createdWithFields = await tx.asset.findUnique({ where: { id: created.id }, include: historyComparisonInclude });
       if (createdWithFields) {
@@ -1324,8 +1378,12 @@ async function createAsset(req: Request, res: Response, next: NextFunction): Pro
         ];
         if (changes.length) await tx.assetHistory.createMany({ data: changes });
       }
-      return tx.asset.findUnique({ where: { id: created.id }, include: workstationInclude as any });
+      return created.id;
     }, ASSET_TRANSACTION_OPTIONS);
+    const item = await prisma.asset.findUnique({
+      where: { id: createdId },
+      include: { productType: { select: { displayName: true, id: true } }, ...workstationInclude },
+    });
     res.status(201).json(item);
   } catch (err) { next(err); }
 }
@@ -2271,9 +2329,10 @@ async function clearWorkstationDetails(tx: TransactionClient, assetId: number) {
   }
 }
 
-async function syncWorkstationDetails(tx: TransactionClient, assetId: number, rawDetails: unknown) {
+async function syncWorkstationDetails(tx: TransactionClient, assetId: number, rawDetails: unknown, isNewAsset = false) {
   if (rawDetails === undefined) return;
   if (rawDetails === null) {
+    if (isNewAsset) return;
     await clearWorkstationDetails(tx, assetId);
     return;
   }
@@ -2302,6 +2361,7 @@ async function syncWorkstationDetails(tx: TransactionClient, assetId: number, ra
         id: Number(row.id) || null,
         data: pickStringFields(row, config.fields),
       }));
+    if (isNewAsset && !cleanRows.length) continue;
     const keepIds = cleanRows.map((row) => row.id).filter((id): id is number => Boolean(id));
     const delegate = client[config.delegate];
 
