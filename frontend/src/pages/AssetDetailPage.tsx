@@ -142,6 +142,14 @@ function isOperationalCostFactor(factor: string) {
   return ['Move/Change Cost', 'Service Cost', 'Others', 'Operational Cost', 'Maintenance Cost', 'Repair Cost', 'Upgrade Cost', 'Other'].includes(factor);
 }
 function boolText(value: boolean | null | undefined) { return value == null ? null : value ? 'Yes' : 'No'; }
+function isProductTypeInPath(productTypeId: number | string | null | undefined, productTypes: ProductTypeOption[], names: string[]) {
+  if (!productTypeId) return false;
+  const selected = productTypes.find((item) => String(item.id) === String(productTypeId));
+  if (!selected) return false;
+  const targetNames = new Set(names.map((name) => name.trim().toLowerCase()));
+  const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
+  return path.split('>').map((part) => part.trim()).some((part) => targetNames.has(part));
+}
 function inputDateValue(value: string | null | undefined) {
   if (!value) return new Date().toISOString().slice(0, 10);
   const date = new Date(value);
@@ -914,6 +922,7 @@ function SideRow({ label, value, highlight, onClick }: { label: string; value: s
 function AssetDetailContent({
   asset,
   attachments,
+  productTypes,
   uploading,
   onAssetStateClick,
   onBrowseFiles,
@@ -925,6 +934,7 @@ function AssetDetailContent({
 }: {
   asset: Asset;
   attachments: AssetAttachment[];
+  productTypes: ProductTypeOption[];
   uploading: boolean;
   onAssetStateClick: () => void;
   onBrowseFiles: () => void;
@@ -941,7 +951,10 @@ function AssetDetailContent({
   const isIpPhoneAsset = productTypeName.toLowerCase().match(/ip phones?/);
   const isCiscoIpPhoneAsset = ['cisco ip phone', 'cisco ip phones'].includes(productTypeName.trim().toLowerCase());
   const isIpsAsset = ['ips', 'ipses'].includes(productTypeName.trim().toLowerCase());
-  const isMobileDeviceAsset = productTypeName.toLowerCase().match(/mobile devices?/);
+  const isMobileDeviceAsset = Boolean(
+    productTypeName.toLowerCase().match(/mobile devices?/) ||
+    isProductTypeInPath(asset.productTypeId, productTypes, ['mobile', 'mobile device', 'mobile devices'])
+  );
   const isPrinterAsset = productTypeName.toLowerCase().match(/^printers?$/);
   const isSwitchAsset = productTypeName.toLowerCase().match(/^switch(?:es)?$/);
   const isRouterAsset = productTypeName.toLowerCase().match(/^routers?$/);
@@ -952,6 +965,7 @@ function AssetDetailContent({
   const isUpsAsset = ['ups', 'upses'].includes(productTypeName.trim().toLowerCase());
   const isComputerAsset = Boolean(
     productTypeName.toLowerCase().match(/computer|workstation|desktop|laptop|server/) ||
+    isMobileDeviceAsset ||
     isPrinterAsset ||
     isSwitchAsset ||
     isRouterAsset ||
@@ -3363,6 +3377,7 @@ export default function AssetDetailPage() {
               <AssetDetailContent
                 asset={asset}
                 attachments={attachments}
+                productTypes={productTypes}
                 uploading={documentsUploading}
                 onAssetStateClick={() => { setAssignMode('state'); setAssignOpen(true); }}
                 onBrowseFiles={openDocumentPicker}

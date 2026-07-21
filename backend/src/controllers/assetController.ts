@@ -101,6 +101,29 @@ type AssetListQuery = {
   orderBy: Prisma.AssetOrderByWithRelationInput;
 };
 
+async function getActiveProductTypeDescendantIds(productTypeId: number): Promise<number[]> {
+  if (!productTypeId || Number.isNaN(productTypeId)) return [];
+  const productTypes = await prisma.productType.findMany({
+    where: { isActive: true },
+    select: { id: true, parentId: true },
+  });
+  const childrenByParent = new Map<number, number[]>();
+  productTypes.forEach((item) => {
+    if (item.parentId == null) return;
+    childrenByParent.set(item.parentId, [...(childrenByParent.get(item.parentId) || []), item.id]);
+  });
+
+  const ids = new Set<number>([productTypeId]);
+  const stack = [...(childrenByParent.get(productTypeId) || [])];
+  while (stack.length) {
+    const id = stack.pop()!;
+    if (ids.has(id)) continue;
+    ids.add(id);
+    stack.push(...(childrenByParent.get(id) || []));
+  }
+  return Array.from(ids);
+}
+
 const EXPORT_COLUMNS = [
   { key: 'name', label: 'Asset Name' },
   { key: 'productType', label: 'Product Type' },
@@ -496,7 +519,7 @@ function buildWorkstationHistoryChanges(before: unknown, after: unknown, actor: 
   return rows;
 }
 
-function buildAssetListQuery(query: Record<string, string>): AssetListQuery {
+async function buildAssetListQuery(query: Record<string, string>): Promise<AssetListQuery> {
   const {
     search = '', sortBy = 'id', sortOrder = 'asc', sortDirection,
     productTypeId, productId, assetStateId, assetState, isActive = 'true', assetCategory, product, assetView, filterType,
@@ -521,10 +544,13 @@ function buildAssetListQuery(query: Record<string, string>): AssetListQuery {
     loanEnd: { loanEnd: safeSortOrder },
     createdAt: { createdAt: safeSortOrder },
   };
+  const productTypeIds = productTypeId
+    ? await getActiveProductTypeDescendantIds(parseInt(productTypeId, 10))
+    : [];
 
   const where: Prisma.AssetWhereInput = {
     ...(isActive !== 'all' ? { isActive: isActive === 'true' } : {}),
-    ...(productTypeId ? { productTypeId: parseInt(productTypeId, 10) } : {}),
+    ...(productTypeIds.length ? { productTypeId: { in: productTypeIds } } : {}),
     ...(productId ? { productId: parseInt(productId, 10) } : {}),
     ...(assetStateId ? { assetStateId: parseInt(assetStateId, 10) } : {}),
     ...(assetState ? { assetState } : {}),
@@ -912,7 +938,7 @@ async function getAssets(req: Request, res: Response, next: NextFunction): Promi
 
     const pageNum     = Math.max(1, parseInt(page, 10));
     const pageSizeNum = Math.min(100, Math.max(1, parseInt(pageSize, 10)));
-    const { where, orderBy } = buildAssetListQuery(req.query as Record<string, string>);
+    const { where, orderBy } = await buildAssetListQuery(req.query as Record<string, string>);
 
     const [total, items] = await Promise.all([
       prisma.asset.count({ where }),
@@ -941,7 +967,7 @@ async function exportAssets(req: Request, res: Response, next: NextFunction): Pr
       return;
     }
 
-    const { where, orderBy } = buildAssetListQuery(req.query as Record<string, string>);
+    const { where, orderBy } = await buildAssetListQuery(req.query as Record<string, string>);
     const columns = resolveExportColumns(String(req.query.columns || ''));
     const title = String(req.query.title || 'Export Assets');
     const fileScope = slug(String(req.query.fileScope || 'assets'));

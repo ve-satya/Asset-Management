@@ -188,9 +188,9 @@ export default function WorkstationDetailsView({ asset, showFaxDetails = false, 
   const showIpPhone = showIpPhoneDetails && hasAnyDetail(details, ['sysName', 'sysDescription', 'sysLocation', 'sysUpTime', 'manufacturerSerialNumber']);
   const showCiscoIpPhone = showCiscoIpPhoneDetails && hasAnyDetail(details, ['phoneDn', 'fipsModeEnabled', 'bootLoadId', 'hardwareRevision', 'appLoadId', 'uniqueDeviceIdentifier', 'ciscoIpPhoneVersion', 'messageWaiting', 'javaPoolFreeMemory', 'systemFreeMemory', 'javaHeapFreeMemory', 'timeZone']);
   const showIps = showIpsDetails && hasAnyDetail(details, ['hardwareVersion', 'softwareVersion', 'sysUpTime', 'sysLocation', 'manufacturerSerialNumber', 'sysName', 'sysDescription']);
-  const showMobileDevice = showMobileDeviceDetails && hasAnyDetail(details, ['mobileModel', 'imei', 'modemFirmwareVersion', 'udid', 'isPersonalAsset', 'mobileSerialNumber', 'availableCapacity', 'totalCapacity']);
-  const showMobileOs = showMobileDeviceDetails && hasAnyDetail(details, ['osType', 'mobileBuildVersion', 'mobileOsVersion']);
-  const showMobileSecurity = showMobileDeviceDetails && hasAnyDetail(details, ['hardwareEncryption', 'passcodeCompliant', 'passcodeCompliantProfile', 'passcodePresent']);
+  const showMobileDevice = showMobileDeviceDetails;
+  const showMobileOs = showMobileDeviceDetails;
+  const showMobileSecurity = showMobileDeviceDetails;
   const showPrinter = showPrinterDetails && hasAnyDetail(details, ['sysName', 'sysDescription', 'sysLocation', 'sysUpTime', 'printerSerialNumber', 'printerCapacity', 'memoryType', 'manufacturerSerialNumber']);
   const showPrinterCi = showPrinterDetails && hasAnyDetail(details, ['firewallManufacturer', 'uplinkDependency', 'ciSerialNumber', 'dnsName', 'systemDescription', 'monitoringProtocol', 'noOfInterfaces', 'serviceTag', 'firewallVendor', 'firewallType']);
   const showSwitch = showSwitchDetails && hasAnyDetail(details, ['sysName', 'sysLocation', 'sysDescription', 'sysUpTime', 'configRegister', 'cpuInMb', 'estimatedBandwidth', 'cpuType', 'flashSize', 'dramSize', 'firmwareRevision', 'nvramSize', 'switchOsVersion', 'numberOfPorts', 'manufacturerSerialNumber', 'ios', 'processorBoardId']);
@@ -319,7 +319,7 @@ export default function WorkstationDetailsView({ asset, showFaxDetails = false, 
           <Field label="IMEI" value={details.imei} />
           <Field label="Modem Firmware Version" value={details.modemFirmwareVersion} />
           <Field label="UDID" value={details.udid} />
-          <Field label="Is Personal Asset" value={details.isPersonalAsset} />
+          <Field label="Is Personal Asset" value={noDefault(details.isPersonalAsset)} />
           <Field label="Serial Number" value={details.mobileSerialNumber} />
           <Field label="Available Capacity" value={formatWithUnit(details.availableCapacity, details.availableCapacityUnit)} />
           <Field label="Total Capacity" value={formatWithUnit(details.totalCapacity, details.totalCapacityUnit)} />
@@ -335,45 +335,45 @@ export default function WorkstationDetailsView({ asset, showFaxDetails = false, 
       {showMobileSecurity && <Section title="Security Restrictions">
         <Grid2>
           <Field label="Hardware Encryption" value={details.hardwareEncryption} />
-          <Field label="Passcode Compliant" value={details.passcodeCompliant} />
-          <Field label="Passcode Compliant Profile" value={details.passcodeCompliantProfile} />
-          <Field label="Passcode Present" value={details.passcodePresent} />
+          <Field label="Passcode Compliant" value={noDefault(details.passcodeCompliant)} />
+          <Field label="Passcode Compliant Profile" value={noDefault(details.passcodeCompliantProfile)} />
+          <Field label="Passcode Present" value={noDefault(details.passcodePresent)} />
         </Grid2>
       </Section>}
       {showMobileDeviceDetails && <Section title="Device Restrictions">
         <Grid2>
-          <Field label="Allow Adding Game Center Friends" value={details.allowAddingGameCenterFriends} />
-          <Field label="Allow Installing Applications" value={details.allowInstallingApplications} />
-          <Field label="Allow In Application Purchase" value={details.allowInApplicationPurchase} />
-          <Field label="Allow Use of Camera" value={details.allowUseOfCamera} />
-          <Field label="Allow FaceTime" value={details.allowFaceTime} />
-          <Field label="Allow Multi-Player Gaming" value={details.allowMultiPlayerGaming} />
-          <Field label="Allow Screen Capture" value={details.allowScreenCapture} />
-          <Field label="Allow Automatic Sync With Roaming" value={details.allowAutomaticSyncWhenRoaming} />
-          <Field label="Allow Voice Dialing" value={details.allowVoiceDialing} />
-          <Field label="Force Encrypted Backups" value={details.forceEncryptedBackups} />
+          <Field label="Allow Adding Game Center Friends" value={noDefault(details.allowAddingGameCenterFriends)} />
+          <Field label="Allow Installing Applications" value={noDefault(details.allowInstallingApplications)} />
+          <Field label="Allow In Application Purchase" value={noDefault(details.allowInApplicationPurchase)} />
+          <Field label="Allow Use of Camera" value={noDefault(details.allowUseOfCamera)} />
+          <Field label="Allow FaceTime" value={noDefault(details.allowFaceTime)} />
+          <Field label="Allow Multi-Player Gaming" value={noDefault(details.allowMultiPlayerGaming)} />
+          <Field label="Allow Screen Capture" value={noDefault(details.allowScreenCapture)} />
+          <Field label="Allow Automatic Sync With Roaming" value={noDefault(details.allowAutomaticSyncWhenRoaming)} />
+          <Field label="Allow Voice Dialing" value={noDefault(details.allowVoiceDialing)} />
+          <Field label="Force Encrypted Backups" value={noDefault(details.forceEncryptedBackups)} />
         </Grid2>
       </Section>}
       {showMobileDeviceDetails && <Section title="Application Restrictions">
         <Grid2>
-          <Field label="Accept Cookies" value={details.acceptCookies} />
-          <Field label="Allow use of iTunes Music Store" value={details.allowUseOfItunesMusicStore} />
-          <Field label="Allow Use of Safari" value={details.allowUseOfSafari} />
-          <Field label="Allow use of YouTube" value={details.allowUseOfYouTube} />
-          <Field label="Allow pop ups" value={details.allowPopups} />
-          <Field label="Enable AutoFill" value={details.enableAutoFill} />
-          <Field label="Enable JavaScript" value={details.enableJavaScript} />
-          <Field label="Allow Explicit Music and Podcasts" value={details.allowExplicitMusicAndPodcasts} />
-          <Field label="Force Fraud Warning" value={details.forceFraudWarning} />
+          <Field label="Accept Cookies" value={noDefault(details.acceptCookies)} />
+          <Field label="Allow use of iTunes Music Store" value={noDefault(details.allowUseOfItunesMusicStore)} />
+          <Field label="Allow Use of Safari" value={noDefault(details.allowUseOfSafari)} />
+          <Field label="Allow use of YouTube" value={noDefault(details.allowUseOfYouTube)} />
+          <Field label="Allow pop ups" value={noDefault(details.allowPopups)} />
+          <Field label="Enable AutoFill" value={noDefault(details.enableAutoFill)} />
+          <Field label="Enable JavaScript" value={noDefault(details.enableJavaScript)} />
+          <Field label="Allow Explicit Music and Podcasts" value={noDefault(details.allowExplicitMusicAndPodcasts)} />
+          <Field label="Force Fraud Warning" value={noDefault(details.forceFraudWarning)} />
         </Grid2>
       </Section>}
       {showMobileDeviceDetails && <Section title="Android Restrictions">
         <Grid2>
-          <Field label="Activate data network" value={details.activateDataNetwork} />
-          <Field label="Allow background data" value={details.allowBackgroundData} />
-          <Field label="Allow bluetooth" value={details.allowBluetooth} />
-          <Field label="Allow NFC" value={details.allowNfc} />
-          <Field label="Device admin" value={details.deviceAdmin} />
+          <Field label="Activate data network" value={noDefault(details.activateDataNetwork)} />
+          <Field label="Allow background data" value={noDefault(details.allowBackgroundData)} />
+          <Field label="Allow bluetooth" value={noDefault(details.allowBluetooth)} />
+          <Field label="Allow NFC" value={noDefault(details.allowNfc)} />
+          <Field label="Device admin" value={noDefault(details.deviceAdmin)} />
         </Grid2>
       </Section>}
       {showPrinter && <Section title="Printer">
@@ -587,6 +587,10 @@ export default function WorkstationDetailsView({ asset, showFaxDetails = false, 
 
 function formatWithUnit(value: string, unit: string) {
   return value ? `${value} ${unit}` : '';
+}
+
+function noDefault(value: string | number | null | undefined) {
+  return value != null && value !== '' ? value : 'No';
 }
 
 function Field({ label, value }: { label: string; value: string | number | null | undefined }) {
