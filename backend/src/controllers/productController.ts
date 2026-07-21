@@ -172,6 +172,48 @@ export async function deleteProduct(req: Request, res: Response, next: NextFunct
   } catch (err) { next(err); }
 }
 
+export async function updateProductDepreciation(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const productId = parseInt(String(req.params.id), 10);
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) { res.status(404).json({ error: 'Product not found.' }); return; }
+
+    const {
+      method,
+      calculationMode,
+      usefulLifeMonths,
+      usefulLifeYears,
+      depreciationPercent,
+      salvageValue,
+    } = req.body;
+
+    const config = await prisma.productDepreciationConfig.upsert({
+      where: { productId },
+      update: {
+        method: String(method || ''),
+        calculationMode: calculationMode ? String(calculationMode) : null,
+        usefulLifeMonths: usefulLifeMonths != null && usefulLifeMonths !== '' ? parseInt(String(usefulLifeMonths), 10) : null,
+        usefulLifeYears: usefulLifeYears != null && usefulLifeYears !== '' ? parseInt(String(usefulLifeYears), 10) : null,
+        depreciationPercent: depreciationPercent != null && depreciationPercent !== '' ? parseFloat(String(depreciationPercent)) : null,
+        salvageValue: salvageValue != null && salvageValue !== '' ? parseFloat(String(salvageValue)) : null,
+      },
+      create: {
+        productId,
+        purchaseCost: product.cost || 0,
+        acquisitionDate: product.createdAt,
+        method: String(method || ''),
+        calculationMode: calculationMode ? String(calculationMode) : null,
+        usefulLifeMonths: usefulLifeMonths != null && usefulLifeMonths !== '' ? parseInt(String(usefulLifeMonths), 10) : null,
+        usefulLifeYears: usefulLifeYears != null && usefulLifeYears !== '' ? parseInt(String(usefulLifeYears), 10) : null,
+        depreciationPercent: depreciationPercent != null && depreciationPercent !== '' ? parseFloat(String(depreciationPercent)) : null,
+        salvageValue: salvageValue != null && salvageValue !== '' ? parseFloat(String(salvageValue)) : null,
+      },
+    });
+
+    res.json(config);
+  } catch (err) { next(err); }
+}
+
 function buildPayload(body: Record<string, unknown>) {
   return {
     name:           String(body.name || '').trim(),

@@ -1,8 +1,9 @@
 import { Fragment, useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import axios from 'axios';
 import {
   Plus, X, ChevronDown, ChevronLeft, ChevronRight,
-  Pencil, Trash2, AlignJustify, Loader2, Search, Columns3,
+  Pencil, Trash2, AlignJustify, Loader2, Search, Columns3, Settings,
 } from 'lucide-react';
 import {
   createProductVendorAssociation,
@@ -17,7 +18,7 @@ import { getAllVendors } from '../../services/vendorService';
 import useDebounce from '../../hooks/useDebounce';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ProductForm from './ProductForm';
-import type { NamedOption, Product, ProductVendorAssociation, PaginationMeta } from '../../types';
+import type { AssetDepreciationDetails, NamedOption, Product, ProductVendorAssociation, PaginationMeta } from '../../types';
 
 interface ColDef { key: string; label: string; sortable: boolean; }
 const ALL_COLUMNS: ColDef[] = [
@@ -32,7 +33,7 @@ const DEFAULT_VISIBLE = ['name', 'productType', 'manufacturer', 'cost', 'partNo'
 const LS_KEY = 'asset_product_columns';
 const DEFAULT_COL_WIDTHS: Record<string, number> = { id: 70, name: 200, productType: 160, manufacturer: 160, cost: 100, partNo: 120 };
 
-function RowMenu({ row, onEdit, onDelete }: { row: Product; onEdit: (r: Product) => void; onDelete: (r: Product) => void }) {
+function RowMenu({ row, onEdit, onDelete, onConfigureDepreciation }: { row: Product; onEdit: (r: Product) => void; onDelete: (r: Product) => void; onConfigureDepreciation: (r: Product) => void }) {
   const [open, setOpen] = useState(false);
   const [pos,  setPos]  = useState({ top: 0, left: 0 });
   const btnRef  = useRef<HTMLButtonElement>(null);
@@ -46,7 +47,7 @@ function RowMenu({ row, onEdit, onDelete }: { row: Product; onEdit: (r: Product)
   }, [open]);
   function handleClick(e: React.MouseEvent) {
     e.stopPropagation(); if (open) { setOpen(false); return; }
-    const rect = btnRef.current!.getBoundingClientRect(); const menuW = 112;
+    const rect = btnRef.current!.getBoundingClientRect(); const menuW = 168;
     const left = rect.left + menuW > window.innerWidth ? rect.right - menuW : rect.left;
     setPos({ top: rect.bottom + 4, left }); setOpen(true);
   }
@@ -54,8 +55,9 @@ function RowMenu({ row, onEdit, onDelete }: { row: Product; onEdit: (r: Product)
     <>
       <button ref={btnRef} onClick={handleClick} className={`p-0.5 rounded transition-colors ${open ? 'text-brand-600' : 'text-gray-300 dark:text-gray-600 hover:text-gray-500'}`}><AlignJustify size={14} /></button>
       {open && createPortal(
-        <div ref={menuRef} style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }} className="w-28 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-1">
+        <div ref={menuRef} style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }} className="w-42 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-1">
           <button onClick={() => { onEdit(row); setOpen(false); }} className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"><Pencil size={13} className="text-gray-400" /> Edit</button>
+          <button onClick={() => { onConfigureDepreciation(row); setOpen(false); }} className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"><Settings size={13} className="text-gray-400" /> Configure Depreciation</button>
           <button onClick={() => { onDelete(row); setOpen(false); }} className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 size={13} /> Delete</button>
         </div>, document.body
       )}
@@ -529,6 +531,20 @@ export default function ProductTable() {
   const [associationProduct, setAssociationProduct] = useState<Product | null>(null);
   const [editingAssociation, setEditingAssociation] = useState<ProductVendorAssociation | null>(null);
   const [colWidths,    setColWidths]   = useState<Record<string, number>>(() => { try { const s = localStorage.getItem(LS_KEY + '_widths'); if (s) return { ...DEFAULT_COL_WIDTHS, ...JSON.parse(s) }; } catch {} return DEFAULT_COL_WIDTHS; });
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false);
+  const [deletingSelected, setDeletingSelected] = useState(false);
+  const [depreciationOpen, setDepreciationOpen] = useState(false);
+  const [depreciationProduct, setDepreciationProduct] = useState<Product | null>(null);
+  const [depreciationForm, setDepreciationForm] = useState({
+    depreciationMethod: 'Straight Line',
+    depreciationPercent: '',
+    usefulLifeYears: '',
+    usefulLifeMonths: '',
+    salvageValue: '',
+    calculationMode: 'percent',
+  });
+  const [depreciationSaving, setDepreciationSaving] = useState(false);
   const search = useDebounce(rawSearch, 300);
 
   useEffect(() => { localStorage.setItem(LS_KEY, JSON.stringify(visibleCols)); }, [visibleCols]);
@@ -606,6 +622,64 @@ export default function ProductTable() {
     setEditingAssociation(null);
   }
 
+  function openDepreciationPanel(product: Product | null) {
+    if (!product) return;
+    setDepreciationProduct(product);
+    setDepreciationForm({
+      depreciationMethod: 'Straight Line',
+      depreciationPercent: '',
+      usefulLifeYears: '',
+      usefulLifeMonths: '',
+      salvageValue: '',
+      calculationMode: 'percent',
+    });
+    setDepreciationOpen(true);
+  }
+
+  function closeDepreciationPanel() {
+    setDepreciationOpen(false);
+    setDepreciationProduct(null);
+  }
+
+  async function handleSaveDepreciation() {
+    if (!depreciationProduct) return;
+    setDepreciationSaving(true);
+    try {
+      const payload: Record<string, unknown> = {
+        method: depreciationForm.depreciationMethod,
+      };
+      if (depreciationForm.depreciationMethod === 'Sum Of The Years Digit') {
+        payload.calculationMode = 'usefulLife';
+        payload.usefulLifeYears = depreciationForm.usefulLifeYears ? parseInt(depreciationForm.usefulLifeYears, 10) : null;
+        payload.depreciationPercent = null;
+        payload.usefulLifeMonths = null;
+      } else if (depreciationForm.depreciationMethod === 'Double Declining Balance') {
+        payload.calculationMode = 'usefulLife';
+        payload.usefulLifeMonths = depreciationForm.usefulLifeMonths ? parseInt(depreciationForm.usefulLifeMonths, 10) : null;
+        payload.depreciationPercent = null;
+        payload.usefulLifeYears = null;
+      } else if (depreciationForm.calculationMode === 'usefulLife') {
+        payload.calculationMode = 'usefulLife';
+        payload.usefulLifeMonths = depreciationForm.usefulLifeMonths ? parseInt(depreciationForm.usefulLifeMonths, 10) : null;
+        payload.depreciationPercent = null;
+        payload.usefulLifeYears = null;
+      } else {
+        payload.calculationMode = 'percent';
+        payload.depreciationPercent = depreciationForm.depreciationPercent ? parseFloat(depreciationForm.depreciationPercent) : null;
+        payload.usefulLifeMonths = null;
+        payload.usefulLifeYears = null;
+      }
+      payload.salvageValue = depreciationForm.salvageValue ? parseFloat(depreciationForm.salvageValue) : null;
+
+      await axios.put(`/api/products/${depreciationProduct.id}/depreciation`, payload);
+      closeDepreciationPanel();
+    } catch (error) {
+      console.error('Failed to save depreciation:', error);
+    } finally {
+      setDepreciationSaving(false);
+    }
+  }
+
   async function handleAssociationSaved() {
     if (associationProduct) await loadAssociations(associationProduct.id);
   }
@@ -613,6 +687,38 @@ export default function ProductTable() {
   async function deleteSelectedAssociations(productId: number, ids: number[]) {
     await Promise.all(ids.map((id) => deleteProductVendorAssociation(productId, id)));
     await loadAssociations(productId);
+  }
+
+  function toggleRowSelection(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (data.length > 0 && data.every((row) => selectedIds.has(row.id))) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(data.map((row) => row.id)));
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    setDeletingSelected(true);
+    try {
+      await Promise.all(Array.from(selectedIds).map((id) => deleteProduct(id)));
+      setSelectedIds(new Set());
+      setConfirmBulkDeleteOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setDeletingSelected(false);
+    }
   }
 
   const visibleDefs = ALL_COLUMNS.filter((col) => visibleCols.includes(col.key));
@@ -629,11 +735,40 @@ export default function ProductTable() {
             <Plus size={16} />
             <span className="text-sm">New</span>
           </button>
+          <button
+            type="button"
+            disabled={selectedIds.size === 0}
+            onClick={() => {
+              const firstId = Array.from(selectedIds)[0];
+              const product = data.find((row) => row.id === firstId) || null;
+              openDepreciationPanel(product);
+            }}
+            className={`-ml-px inline-flex h-7 items-center justify-center gap-1.5 border border-gray-300 bg-white px-3 text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 ${
+              selectedIds.size > 0 ? '' : 'cursor-not-allowed text-gray-300 dark:text-gray-600'
+            }`}
+            title={selectedIds.size > 0 ? `Configure depreciation for ${selectedIds.size} selected product${selectedIds.size === 1 ? '' : 's'}` : 'Select products to configure depreciation'}
+          >
+            <Settings size={16} />
+            <span className="text-sm">Configure Depreciation</span>
+          </button>
           <div className="flex items-center gap-0">
             <button type="button" onClick={() => setShowFilters((value) => !value)} className={`-ml-px inline-flex h-7 w-10 items-center justify-center border border-gray-300 transition dark:border-gray-600 ${showFilters ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`} title="Show column filters">
               <Search size={16} />
             </button>
             <SelectColsDropdown visible={visibleCols} onApply={setVisibleCols} />
+            <button
+              type="button"
+              disabled={selectedIds.size === 0 || deletingSelected}
+              onClick={() => setConfirmBulkDeleteOpen(true)}
+              className={`-ml-px inline-flex h-7 w-9 items-center justify-center border border-gray-300 transition dark:border-gray-600 ${
+                selectedIds.size > 0 && !deletingSelected
+                  ? 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-gray-700'
+                  : 'cursor-not-allowed text-gray-300 dark:text-gray-600'
+              }`}
+              title={selectedIds.size > 0 ? `Delete ${selectedIds.size} selected` : 'Select products to delete'}
+            >
+              {deletingSelected ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+            </button>
           </div>
           <ToolbarPagination
             pagination={pagination}
@@ -648,10 +783,18 @@ export default function ProductTable() {
 
       <div className="overflow-x-auto scrollbar-thin">
         <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
-          <colgroup><col style={{ width: 64 }} />{visibleDefs.map((col) => <col key={col.key} style={{ width: colWidths[col.key] || DEFAULT_COL_WIDTHS[col.key] || 150 }} />)}</colgroup>
+          <colgroup><col style={{ width: 40 }} /><col style={{ width: 64 }} />{visibleDefs.map((col) => <col key={col.key} style={{ width: colWidths[col.key] || DEFAULT_COL_WIDTHS[col.key] || 150 }} />)}</colgroup>
           <thead className="sticky top-0 z-10">
             <tr className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
-              <th className="h-8 w-16 px-2 py-1" />
+              <th className="h-8 w-10 px-2 py-1">
+                <input
+                  type="checkbox"
+                  checked={data.length > 0 && data.every((row) => selectedIds.has(row.id))}
+                  onChange={toggleSelectAll}
+                  className="rounded border-gray-300 text-blue-600"
+                />
+              </th>
+              <th className="w-16 px-2 py-1.5" />
               {visibleDefs.map((col) => (
                 <th key={col.key}
                   className="relative h-8 px-3 py-1.5 text-left text-xs font-semibold uppercase overflow-hidden select-none text-gray-500 dark:text-gray-400"
@@ -664,6 +807,7 @@ export default function ProductTable() {
               ))}
             </tr>
             {showFilters && <tr className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
+              <th className="w-10 px-2 py-1" />
               <th className="w-16 px-2 py-1" />
               {visibleDefs.map((col) => (
                 <th key={`${col.key}-filter`} className="px-1 py-1 text-left font-normal border-r border-gray-200 dark:border-gray-700 last:border-r-0">
@@ -681,14 +825,22 @@ export default function ProductTable() {
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
-              <tr><td colSpan={visibleDefs.length + 1} className="py-16 text-center"><Loader2 size={28} className="animate-spin text-brand-500 mx-auto" /></td></tr>
+              <tr><td colSpan={visibleDefs.length + 2} className="py-16 text-center"><Loader2 size={28} className="animate-spin text-brand-500 mx-auto" /></td></tr>
             ) : data.length === 0 ? (
-              <tr><td colSpan={visibleDefs.length + 1} className="py-16 text-center text-gray-400 dark:text-gray-500">No products found.</td></tr>
+              <tr><td colSpan={visibleDefs.length + 2} className="py-16 text-center text-gray-400 dark:text-gray-500">No products found.</td></tr>
             ) : data.map((row) => (
               <Fragment key={row.id}>
               <tr className={`group transition-colors ${expandedProductId === row.id ? 'bg-yellow-50 dark:bg-yellow-950/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
-                <td className="w-16 px-2 py-2.5">
-                  <RowMenu row={row} onEdit={handleEdit} onDelete={(r) => setDeleteTarget(r)} />
+                <td className="w-10 px-2 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(row.id)}
+                    onChange={() => toggleRowSelection(row.id)}
+                    className="rounded border-gray-300 text-blue-600"
+                  />
+                </td>
+                 <td className="w-16 px-2 py-2.5">
+                  <RowMenu row={row} onEdit={handleEdit} onDelete={(r) => setDeleteTarget(r)} onConfigureDepreciation={(r) => { setDepreciationProduct(r); setDepreciationOpen(true); }} />
                 </td>
                 {visibleDefs.map((col) => (
                   <td key={col.key} className="px-3 py-2.5 text-gray-700 dark:text-gray-300">
@@ -716,7 +868,7 @@ export default function ProductTable() {
               </tr>
               {expandedProductId === row.id && (
                 <tr>
-                  <td colSpan={visibleDefs.length + 1} className="p-0">
+                  <td colSpan={visibleDefs.length + 2} className="p-0">
                     <ProductVendorPanel
                       product={row}
                       rows={associations[row.id] ?? []}
@@ -776,6 +928,113 @@ export default function ProductTable() {
       )}
 
       <ConfirmDialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} onConfirm={handleConfirmDelete} loading={deleting} title="Delete Product" message={`Are you sure you want to deactivate "${deleteTarget?.name}"?`} />
+      <ConfirmDialog
+        open={confirmBulkDeleteOpen}
+        onClose={() => setConfirmBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        loading={deletingSelected}
+        title="Delete Products"
+        message={`Are you sure you want to deactivate ${selectedIds.size} selected product${selectedIds.size === 1 ? '' : 's'}?`}
+      />
+
+      {depreciationOpen && depreciationProduct && createPortal(
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={closeDepreciationPanel} aria-hidden="true" />
+          <div className="relative z-10 flex h-full w-full max-w-3xl flex-col border-l border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+              <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">Configure Depreciation</h2>
+              <button type="button" onClick={closeDepreciationPanel} className="p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto scrollbar-thin px-6 py-6 space-y-5">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Depreciation Details</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depreciation Method <span className="text-red-500">*</span></label>
+                <select value={depreciationForm.depreciationMethod} onChange={(e) => setDepreciationForm((p) => ({ ...p, depreciationMethod: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+                  <option value="Declining Balance">Declining Balance</option>
+                  <option value="Double Declining Balance">Double Declining Balance</option>
+                  <option value="Straight Line">Straight Line</option>
+                  <option value="Sum Of The Years Digit">Sum Of The Years Digit</option>
+                </select>
+              </div>
+
+              {depreciationForm.depreciationMethod === 'Declining Balance' ? (
+                <>
+                  <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <input type="radio" name="calcMode" checked={depreciationForm.calculationMode === 'usefulLife'} onChange={() => setDepreciationForm((p) => ({ ...p, calculationMode: 'usefulLife' }))} className="text-blue-600 focus:ring-blue-500" />
+                      Useful Life
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <input type="radio" name="calcMode" checked={depreciationForm.calculationMode === 'percent'} onChange={() => setDepreciationForm((p) => ({ ...p, calculationMode: 'percent' }))} className="text-blue-600 focus:ring-blue-500" />
+                      Decline Percent
+                    </label>
+                  </div>
+                  {depreciationForm.calculationMode === 'usefulLife' ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Useful Life(in months) <span className="text-red-500">*</span></label>
+                      <input type="number" value={depreciationForm.usefulLifeMonths} onChange={(e) => setDepreciationForm((p) => ({ ...p, usefulLifeMonths: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 60" />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Decline Percent/Year(%) <span className="text-red-500">*</span></label>
+                      <input type="number" value={depreciationForm.depreciationPercent} onChange={(e) => setDepreciationForm((p) => ({ ...p, depreciationPercent: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 10" />
+                    </div>
+                  )}
+                </>
+              ) : depreciationForm.depreciationMethod === 'Double Declining Balance' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Useful Life(in months) <span className="text-red-500">*</span></label>
+                  <input type="number" value={depreciationForm.usefulLifeMonths} onChange={(e) => setDepreciationForm((p) => ({ ...p, usefulLifeMonths: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 60" />
+                </div>
+              ) : depreciationForm.depreciationMethod === 'Straight Line' ? (
+                <>
+                  <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <input type="radio" name="calcMode" checked={depreciationForm.calculationMode === 'usefulLife'} onChange={() => setDepreciationForm((p) => ({ ...p, calculationMode: 'usefulLife' }))} className="text-blue-600 focus:ring-blue-500" />
+                      Useful Life
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <input type="radio" name="calcMode" checked={depreciationForm.calculationMode === 'percent'} onChange={() => setDepreciationForm((p) => ({ ...p, calculationMode: 'percent' }))} className="text-blue-600 focus:ring-blue-500" />
+                      Depreciation Percent
+                    </label>
+                  </div>
+                  {depreciationForm.calculationMode === 'usefulLife' ? (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Useful Life(in months) <span className="text-red-500">*</span></label>
+                      <input type="number" value={depreciationForm.usefulLifeMonths} onChange={(e) => setDepreciationForm((p) => ({ ...p, usefulLifeMonths: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 60" />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depreciation Percent/Year(%) <span className="text-red-500">*</span></label>
+                      <input type="number" value={depreciationForm.depreciationPercent} onChange={(e) => setDepreciationForm((p) => ({ ...p, depreciationPercent: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 10" />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Useful Life(in years) <span className="text-red-500">*</span></label>
+                  <input type="number" value={depreciationForm.usefulLifeYears} onChange={(e) => setDepreciationForm((p) => ({ ...p, usefulLifeYears: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 5" />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Salvage Value</label>
+                <input type="number" value={depreciationForm.salvageValue} onChange={(e) => setDepreciationForm((p) => ({ ...p, salvageValue: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 5000" />
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-700">
+              <button type="button" disabled={depreciationSaving} onClick={handleSaveDepreciation} className="inline-flex h-9 items-center gap-2 rounded-full bg-blue-600 px-6 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+                {depreciationSaving && <Loader2 size={15} className="animate-spin" />}
+                {depreciationSaving ? 'Updating...' : 'Update'}
+              </button>
+              <button type="button" onClick={closeDepreciationPanel} className="h-9 rounded-full border border-gray-300 bg-white px-6 text-sm text-gray-800 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">Cancel</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
