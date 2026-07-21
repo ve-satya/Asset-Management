@@ -175,6 +175,26 @@ function getOpenNodeIds(tree: TreeNode[], targetId: number): Set<number> {
   return open;
 }
 
+function getProductTypeAndDescendantIds(items: ProductTypeOption[], productTypeId: number | null): Set<number> {
+  const ids = new Set<number>();
+  if (!productTypeId) return ids;
+  const childrenByParentId = items.reduce<Record<number, ProductTypeOption[]>>((acc, item) => {
+    if (item.parentId !== null && item.parentId !== undefined) {
+      acc[item.parentId] = acc[item.parentId] || [];
+      acc[item.parentId].push(item);
+    }
+    return acc;
+  }, {});
+  const stack = [productTypeId];
+  while (stack.length) {
+    const id = stack.pop()!;
+    if (ids.has(id)) continue;
+    ids.add(id);
+    (childrenByParentId[id] || []).forEach((child) => stack.push(child.id));
+  }
+  return ids;
+}
+
 function AssetTypeIcon({ name }: { name: string }) {
   const lower = name.toLowerCase();
   const Icon =
@@ -752,16 +772,17 @@ export default function AssetList() {
   }, [tree, selectedNodeId]);
   const canCreateAsset = Boolean(selectedTreeNode?.isCreatable && selectedTreeNode.productTypeId && selectedPtId === selectedTreeNode.productTypeId);
   const productFilterLabel = selectedPtId && pageTitle !== 'All Assets' ? `--All ${pageTitle}--` : '--All Product--';
+  const selectedProductTypeIds = useMemo(() => getProductTypeAndDescendantIds(productTypes, selectedPtId), [productTypes, selectedPtId]);
   const productFilterOptions = useMemo<DropdownOption[]>(() => {
     const products = selectedPtId
-      ? productList.filter((product) => product.productTypeId === selectedPtId)
+      ? productList.filter((product) => selectedProductTypeIds.has(product.productTypeId))
       : productList;
     const uniqueNames = Array.from(new Set(products.map((product) => product.name).filter(Boolean))).sort();
     return [
       { value: '', label: productFilterLabel },
       ...uniqueNames.map((name) => ({ value: name, label: name })),
     ];
-  }, [productList, productFilterLabel, selectedPtId]);
+  }, [productList, productFilterLabel, selectedPtId, selectedProductTypeIds]);
 
   const openNodeIds = useMemo(() => {
     const set = new Set<number>([0, -3]);

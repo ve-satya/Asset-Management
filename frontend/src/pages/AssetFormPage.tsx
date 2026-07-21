@@ -147,7 +147,7 @@ function isMobileDeviceProductType(productTypeId: string, productTypes: ProductT
   const selected = productTypes.find((item) => String(item.id) === productTypeId);
   if (!selected) return false;
   const path = `${selected.fullPath || ''} > ${selected.displayName}`.toLowerCase();
-  return path.split('>').map((part) => part.trim()).some((part) => ['mobile device', 'mobile devices'].includes(part));
+  return path.split('>').map((part) => part.trim()).some((part) => ['mobile', 'mobile device', 'mobile devices'].includes(part));
 }
 
 function isPrinterProductType(productTypeId: string, productTypes: ProductTypeOption[]) {
