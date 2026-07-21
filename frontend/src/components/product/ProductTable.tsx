@@ -13,6 +13,7 @@ import {
   getProducts,
   getProductVendorAssociations,
   updateProductVendorAssociation,
+  getProductDepreciation,
 } from '../../services/productService';
 import { getAllVendors } from '../../services/vendorService';
 import useDebounce from '../../hooks/useDebounce';
@@ -537,7 +538,7 @@ export default function ProductTable() {
   const [depreciationOpen, setDepreciationOpen] = useState(false);
   const [depreciationProduct, setDepreciationProduct] = useState<Product | null>(null);
   const [depreciationForm, setDepreciationForm] = useState({
-    depreciationMethod: 'Straight Line',
+    depreciationMethod: '',
     depreciationPercent: '',
     usefulLifeYears: '',
     usefulLifeMonths: '',
@@ -545,6 +546,7 @@ export default function ProductTable() {
     calculationMode: 'percent',
   });
   const [depreciationSaving, setDepreciationSaving] = useState(false);
+  const [depreciationConfirmOpen, setDepreciationConfirmOpen] = useState(false);
   const search = useDebounce(rawSearch, 300);
 
   useEffect(() => { localStorage.setItem(LS_KEY, JSON.stringify(visibleCols)); }, [visibleCols]);
@@ -622,17 +624,32 @@ export default function ProductTable() {
     setEditingAssociation(null);
   }
 
-  function openDepreciationPanel(product: Product | null) {
+  async function openDepreciationPanel(product: Product | null) {
     if (!product) return;
     setDepreciationProduct(product);
-    setDepreciationForm({
-      depreciationMethod: 'Straight Line',
-      depreciationPercent: '',
-      usefulLifeYears: '',
-      usefulLifeMonths: '',
-      salvageValue: '',
-      calculationMode: 'percent',
-    });
+    const defaults = { depreciationMethod: '', depreciationPercent: '', usefulLifeYears: '', usefulLifeMonths: '', salvageValue: '', calculationMode: 'percent' as const };
+    try {
+      const config = await getProductDepreciation(product.id);
+      if (config && config.method) {
+        const method = String(config.method || '');
+        let calculationMode = String(config.calculationMode || 'percent');
+        if (method === 'Double Declining Balance' || method === 'Sum Of The Years Digit') {
+          calculationMode = 'usefulLife';
+        }
+        setDepreciationForm({
+          depreciationMethod: method,
+          depreciationPercent: config.depreciationPercent != null ? String(config.depreciationPercent) : '',
+          usefulLifeYears: config.usefulLifeYears != null ? String(config.usefulLifeYears) : '',
+          usefulLifeMonths: config.usefulLifeMonths != null ? String(config.usefulLifeMonths) : '',
+          salvageValue: config.salvageValue != null ? String(config.salvageValue) : '',
+          calculationMode,
+        });
+      } else {
+        setDepreciationForm(defaults);
+      }
+    } catch {
+      setDepreciationForm(defaults);
+    }
     setDepreciationOpen(true);
   }
 
@@ -643,7 +660,13 @@ export default function ProductTable() {
 
   async function handleSaveDepreciation() {
     if (!depreciationProduct) return;
+    setDepreciationConfirmOpen(true);
+  }
+
+  async function confirmSaveDepreciation() {
+    if (!depreciationProduct) return;
     setDepreciationSaving(true);
+    setDepreciationConfirmOpen(false);
     try {
       const payload: Record<string, unknown> = {
         method: depreciationForm.depreciationMethod,
@@ -840,7 +863,7 @@ export default function ProductTable() {
                   />
                 </td>
                  <td className="w-16 px-2 py-2.5">
-                  <RowMenu row={row} onEdit={handleEdit} onDelete={(r) => setDeleteTarget(r)} onConfigureDepreciation={(r) => { setDepreciationProduct(r); setDepreciationOpen(true); }} />
+                  <RowMenu row={row} onEdit={handleEdit} onDelete={(r) => setDeleteTarget(r)} onConfigureDepreciation={(r) => { openDepreciationPanel(r); }} />
                 </td>
                 {visibleDefs.map((col) => (
                   <td key={col.key} className="px-3 py-2.5 text-gray-700 dark:text-gray-300">
@@ -952,6 +975,7 @@ export default function ProductTable() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Depreciation Method <span className="text-red-500">*</span></label>
                 <select value={depreciationForm.depreciationMethod} onChange={(e) => setDepreciationForm((p) => ({ ...p, depreciationMethod: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+                  <option value="" disabled>--Select--</option>
                   <option value="Declining Balance">Declining Balance</option>
                   <option value="Double Declining Balance">Double Declining Balance</option>
                   <option value="Straight Line">Straight Line</option>
@@ -959,7 +983,7 @@ export default function ProductTable() {
                 </select>
               </div>
 
-              {depreciationForm.depreciationMethod === 'Declining Balance' ? (
+              {!depreciationForm.depreciationMethod ? null : depreciationForm.depreciationMethod === 'Declining Balance' ? (
                 <>
                   <div className="flex items-center gap-6">
                     <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -982,12 +1006,22 @@ export default function ProductTable() {
                       <input type="number" value={depreciationForm.depreciationPercent} onChange={(e) => setDepreciationForm((p) => ({ ...p, depreciationPercent: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 10" />
                     </div>
                   )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Salvage Value</label>
+                    <input type="number" value={depreciationForm.salvageValue} onChange={(e) => setDepreciationForm((p) => ({ ...p, salvageValue: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 5000" />
+                  </div>
                 </>
               ) : depreciationForm.depreciationMethod === 'Double Declining Balance' ? (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Useful Life(in months) <span className="text-red-500">*</span></label>
-                  <input type="number" value={depreciationForm.usefulLifeMonths} onChange={(e) => setDepreciationForm((p) => ({ ...p, usefulLifeMonths: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 60" />
-                </div>
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Useful Life(in months) <span className="text-red-500">*</span></label>
+                    <input type="number" value={depreciationForm.usefulLifeMonths} onChange={(e) => setDepreciationForm((p) => ({ ...p, usefulLifeMonths: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 60" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Salvage Value</label>
+                    <input type="number" value={depreciationForm.salvageValue} onChange={(e) => setDepreciationForm((p) => ({ ...p, salvageValue: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 5000" />
+                  </div>
+                </>
               ) : depreciationForm.depreciationMethod === 'Straight Line' ? (
                 <>
                   <div className="flex items-center gap-6">
@@ -1011,18 +1045,23 @@ export default function ProductTable() {
                       <input type="number" value={depreciationForm.depreciationPercent} onChange={(e) => setDepreciationForm((p) => ({ ...p, depreciationPercent: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 10" />
                     </div>
                   )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Salvage Value</label>
+                    <input type="number" value={depreciationForm.salvageValue} onChange={(e) => setDepreciationForm((p) => ({ ...p, salvageValue: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 5000" />
+                  </div>
                 </>
               ) : (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Useful Life(in years) <span className="text-red-500">*</span></label>
-                  <input type="number" value={depreciationForm.usefulLifeYears} onChange={(e) => setDepreciationForm((p) => ({ ...p, usefulLifeYears: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 5" />
-                </div>
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Useful Life(in years) <span className="text-red-500">*</span></label>
+                    <input type="number" value={depreciationForm.usefulLifeYears} onChange={(e) => setDepreciationForm((p) => ({ ...p, usefulLifeYears: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 5" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Salvage Value</label>
+                    <input type="number" value={depreciationForm.salvageValue} onChange={(e) => setDepreciationForm((p) => ({ ...p, salvageValue: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 5000" />
+                  </div>
+                </>
               )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Salvage Value</label>
-                <input type="number" value={depreciationForm.salvageValue} onChange={(e) => setDepreciationForm((p) => ({ ...p, salvageValue: e.target.value }))} className="h-9 w-full border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100" placeholder="e.g. 5000" />
-              </div>
             </div>
             <div className="flex items-center justify-center gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-700">
               <button type="button" disabled={depreciationSaving} onClick={handleSaveDepreciation} className="inline-flex h-9 items-center gap-2 rounded-full bg-blue-600 px-6 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
@@ -1030,6 +1069,27 @@ export default function ProductTable() {
                 {depreciationSaving ? 'Updating...' : 'Update'}
               </button>
               <button type="button" onClick={closeDepreciationPanel} className="h-9 rounded-full border border-gray-300 bg-white px-6 text-sm text-gray-800 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">Cancel</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {depreciationConfirmOpen && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" aria-hidden="true" />
+          <div className="relative z-10 w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-900">
+            <h3 className="text-base font-medium text-gray-900 dark:text-gray-100">demo.servicedeskplus.com says</h3>
+            <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+              Saving this depreciation configuration will update all the assets and their child items under this product. Do you want to continue?
+            </p>
+            <div className="mt-5 flex items-center justify-center gap-3">
+              <button type="button" disabled={depreciationSaving} onClick={confirmSaveDepreciation} className="inline-flex h-9 items-center gap-2 rounded-full bg-blue-600 px-6 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+                OK
+              </button>
+              <button type="button" onClick={() => setDepreciationConfirmOpen(false)} className="h-9 rounded-full border border-gray-300 bg-white px-6 text-sm text-gray-800 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+                Cancel
+              </button>
             </div>
           </div>
         </div>,

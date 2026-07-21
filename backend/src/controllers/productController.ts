@@ -214,6 +214,15 @@ export async function updateProductDepreciation(req: Request, res: Response, nex
   } catch (err) { next(err); }
 }
 
+export async function getProductDepreciation(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const productId = parseInt(String(req.params.id), 10);
+    const config = await prisma.productDepreciationConfig.findUnique({ where: { productId } });
+    if (!config) { res.status(404).json({ error: 'Depreciation configuration not found.' }); return; }
+    res.json(config);
+  } catch (err) { next(err); }
+}
+
 function buildPayload(body: Record<string, unknown>) {
   return {
     name:           String(body.name || '').trim(),
