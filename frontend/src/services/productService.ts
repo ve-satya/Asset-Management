@@ -43,3 +43,6 @@ export const uploadProductImage = (id: number | string, file: File): Promise<Pro
 
 export const deleteProductImage = (id: number | string, filename: string): Promise<Product> =>
   axios.delete(`${BASE}/${id}/images/${encodeURIComponent(filename)}`).then((r) => r.data);
+
+export const getProductDepreciation = (id: number | string): Promise<Record<string, unknown>> =>
+  axios.get(`${BASE}/${id}/depreciation`).then((r) => r.data);
