@@ -48,8 +48,29 @@ model Product {
   manufacturer Manufacturer? @relation(fields: [manufacturerId], references: [id])
   assets       Asset[]
   vendorAssociations ProductVendorAssociation[]
+  depreciationConfig ProductDepreciationConfig?
 
   @@map("products")
+}
+
+model ProductDepreciationConfig {
+  id                  Int      @id @default(autoincrement())
+  productId           Int      @unique @map("product_id")
+  purchaseCost        Float    @map("purchase_cost")
+  acquisitionDate     DateTime @map("acquisition_date")
+  method              String
+  calculationMode     String?  @map("calculation_mode")
+  usefulLifeMonths    Int?     @map("useful_life_months")
+  usefulLifeYears     Int?     @map("useful_life_years")
+  depreciationPercent Float?   @map("depreciation_percent")
+  salvageValue        Float?   @map("salvage_value")
+  configuredBy        String?  @map("configured_by")
+  configuredOn        DateTime @default(now()) @map("configured_on")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_depreciation_configs")
 }
 
 model Vendor {

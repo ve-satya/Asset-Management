@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { getProducts, getProduct, getAllProducts, createProduct, updateProduct, deleteProduct, uploadImage, deleteImage, uploadMiddleware } from '../controllers/productController';
+import { getProducts, getProduct, getAllProducts, createProduct, updateProduct, deleteProduct, uploadImage, deleteImage, uploadMiddleware, updateProductDepreciation } from '../controllers/productController';
 import {
   createProductVendorAssociation,
   deleteProductVendorAssociation,
@@ -30,6 +30,7 @@ router.delete('/:productId/vendor-associations/:associationId',     deleteProduc
 router.get('/:id',                     getProduct);
 router.post('/',                       validators, createProduct);
 router.put('/:id',                     validators, updateProduct);
+router.put('/:id/depreciation',        updateProductDepreciation);
 router.delete('/:id',                  deleteProduct);
 router.post('/:id/images',             uploadMiddleware, uploadImage);
 router.delete('/:id/images/:filename', deleteImage);
