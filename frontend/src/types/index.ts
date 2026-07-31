@@ -152,6 +152,7 @@ export interface ProductTypeOption {
   displayName: string;
   parentId: number | null;
   fullPath: string;
+  category?: string | null;
   assetCategory?: string | null;
 }
 
