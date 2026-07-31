@@ -262,7 +262,6 @@ export default function ProductTypeTable() {
   const [statusFilter, setStatusFilter] = useState('true');
   const [statusOpen, setStatusOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
-  const [userTouchedTree, setUserTouchedTree] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editRecord, setEditRecord] = useState<ProductType | null>(null);
   const [initialParent, setInitialParent] = useState<{ id: number; label: string } | null>(null);
@@ -331,13 +330,7 @@ export default function ProductTypeTable() {
   }
   pushVisibleRows(rootRows, 0);
 
-  useEffect(() => {
-    if (userTouchedTree) return;
-    setExpandedIds(new Set(Object.keys(childrenMap).map(Number)));
-  }, [data, userTouchedTree]);
-
   function toggleRow(id: number) {
-    setUserTouchedTree(true);
     setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -347,7 +340,6 @@ export default function ProductTypeTable() {
   }
 
   function toggleExpandAll() {
-    setUserTouchedTree(true);
     setExpandedIds(allExpanded ? new Set() : new Set(expandableIds));
   }
 
@@ -543,10 +535,14 @@ export default function ProductTypeTable() {
                   {visibleDefs.map((column) => (
                     <td key={column.key} className="px-3 py-2.5 text-sm font-normal text-gray-900 dark:text-gray-200">
                       {column.key === 'fullPath' ? (
-                        <div className="flex min-w-0 items-center gap-3" style={{ paddingLeft: depth * 26 }}>
+                        <div
+                          onClick={hasChildren ? () => toggleRow(row.id) : undefined}
+                          className={`flex min-w-0 items-center gap-3 ${hasChildren ? 'cursor-pointer' : ''}`}
+                          style={{ paddingLeft: depth * 26 }}
+                        >
                           {hasChildren ? (
                             <button
-                              onClick={() => toggleRow(row.id)}
+                              onClick={(event) => { event.stopPropagation(); toggleRow(row.id); }}
                               className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-gray-500 text-gray-700 hover:bg-gray-100 dark:border-gray-400 dark:text-gray-100"
                               aria-label={expanded ? 'Collapse row' : 'Expand row'}
                             >
