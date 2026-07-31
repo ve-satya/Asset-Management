@@ -118,8 +118,25 @@ const ASSET_VIEW_OPTIONS: DropdownOption[] = [
 ];
 
 function buildTree(items: ProductTypeOption[]): TreeNode[] {
-  const map: Record<number, TreeNode> = {};
+  const hiddenIds = new Set<number>();
   items.forEach((item) => {
+    const category = String(item.category || '').trim().toLowerCase();
+    const name = item.displayName.trim().toLowerCase();
+    if (category === 'consumable' || name === 'consumable') hiddenIds.add(item.id);
+  });
+  let addedHiddenChild = true;
+  while (addedHiddenChild) {
+    addedHiddenChild = false;
+    items.forEach((item) => {
+      if (item.parentId !== null && item.parentId !== undefined && hiddenIds.has(item.parentId) && !hiddenIds.has(item.id)) {
+        hiddenIds.add(item.id);
+        addedHiddenChild = true;
+      }
+    });
+  }
+  const visibleItems = items.filter((item) => !hiddenIds.has(item.id));
+  const map: Record<number, TreeNode> = {};
+  visibleItems.forEach((item) => {
     map[item.id] = {
       ...item,
       children: [],
@@ -130,7 +147,7 @@ function buildTree(items: ProductTypeOption[]): TreeNode[] {
   });
 
   const skipParentIds = new Set<number>();
-  items.forEach((item) => {
+  visibleItems.forEach((item) => {
     const name = item.displayName.trim().toLowerCase();
     if (name === 'all assets' || name === 'asset') skipParentIds.add(item.id);
   });
@@ -141,7 +158,7 @@ function buildTree(items: ProductTypeOption[]): TreeNode[] {
   const nonItRoot: TreeNode = { id: -2, displayName: 'Non-IT Assets', parentId: -3, fullPath: 'Non-IT Assets', assetCategory: 'Non-IT', children: [], productTypeId: null, isGroupNode: true, isCreatable: false };
 
   const cat = (value?: string | null) => String(value || '').toLowerCase() === 'it' ? 'IT' : 'Non-IT';
-  items.forEach((item) => {
+  visibleItems.forEach((item) => {
     if (skipParentIds.has(item.id)) return;
     const node = map[item.id];
     const nodeCat = cat(node.assetCategory);

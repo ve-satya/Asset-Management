@@ -99,6 +99,7 @@ async function getAllProductTypes(req: Request, res: Response, next: NextFunctio
       id: item.id,
       displayName: item.displayName,
       parentId: item.parentId,
+      category: item.category,
       assetCategory: item.assetCategory,
       fullPath: buildPath(item.id, lookup),
     }));
