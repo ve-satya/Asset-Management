@@ -88,11 +88,51 @@ export interface Asset {
   ram: string | null;
   virtualMemory: string | null;
   physicalMemory: string | null;
-  processors: unknown[];
+  productId: number | null;
+  networks: NetworkRow[];
+  workstationDetail?: AssetWorkstationDetail | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
   productType?: { id: number; displayName: string };
+}
+
+export interface AssetWorkstationDetail {
+  monitoringProtocol: string | null;
+  lastLoggedInUser: string | null;
+  biosName: string | null;
+  serviceTag: string | null;
+  biosVersion: string | null;
+  biosManufacturer: string | null;
+  biosDate: string | null;
+  smbiosVersion: string | null;
+  domain: string | null;
+  totalMemory: string | null;
+  virtualMemory: string | null;
+  logicalProcessors: number | null;
+  totalSlots: number | null;
+  osName: string | null;
+  osVersion: string | null;
+  osServicePack: string | null;
+  osProductId: string | null;
+  osBuildNumber: string | null;
+  systemType: string | null;
+  licenseType: string | null;
+  licenseStatus: string | null;
+  systemDrive: string | null;
+  vmPlatform: string | null;
+  installedVMs: string | null;
+  allowedVMs: string | null;
+  networks: NetworkRow[];
+  mouseType: string | null;
+  mouseManufacturer: string | null;
+  mouseSerialNumber: string | null;
+  mouseButtons: string | null;
+  processors: ProcessorRow[];
+  hardDisks: HardDiskRow[];
+  keyboards: KeyboardRow[];
+  monitors: MonitorRow[];
+  motherboards: MotherboardRow[];
 }
 
 export interface Product {
@@ -107,7 +147,7 @@ export interface Product {
   images: string[];
   createdAt: string;
   updatedAt: string;
-  productType?: { id: number; displayName: string };
+  productType?: { id: number; displayName: string; apiName?: string };
   manufacturer?: { id: number; name: string } | null;
 }
 
@@ -223,6 +263,20 @@ export interface MonitorRow {
   serialNumber: string;
   manufacturer: string;
   maxResolution: string;
+}
+
+export interface KeyboardRow {
+  keyboardType: string;
+  manufacturer: string;
+  serialNumber: string;
+}
+
+export interface MotherboardRow {
+  product: string;
+  model: string;
+  version: string;
+  partNumber: string;
+  installedDate: string;
 }
 
 export interface NetworkRow {

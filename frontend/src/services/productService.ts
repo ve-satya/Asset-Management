@@ -6,7 +6,7 @@ const BASE = '/api/products';
 export const getProducts   = (params: Record<string, unknown>): Promise<PaginatedResponse<Product>> =>
   axios.get(BASE, { params }).then((r) => r.data);
 
-export const getAllProducts = (): Promise<{ id: number; name: string; productTypeId: number }[]> =>
+export const getAllProducts = (): Promise<Product[]> =>
   axios.get(`${BASE}/all`).then((r) => r.data);
 
 export const getProduct    = (id: number | string): Promise<Product> =>

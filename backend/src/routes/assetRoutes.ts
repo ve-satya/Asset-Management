@@ -5,7 +5,7 @@ import { getAssets, getAsset, createAsset, updateAsset, deleteAsset } from '../c
 const router = express.Router();
 
 const validators = [
-  body('productTypeId').notEmpty().isInt().withMessage('Product Type is required.'),
+  body('productId').notEmpty().isInt().withMessage('Product is required.'),
   body('name').trim().notEmpty().withMessage('Name is required.'),
 ];
 

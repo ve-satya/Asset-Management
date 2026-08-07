@@ -1,0 +1,98 @@
+Practical MVP Timeline
+
+For a single developer, I suggest dividing the project into 4 milestones.
+
+Milestone 1: Core Platform Foundation
+
+Duration: 5 to 6 weeks
+
+Includes:
+
+Project setup
+Authentication
+Role-based dashboards
+User profiles
+Provider onboarding
+Terms and pricing policy acceptance
+Milestone 2: Jobs, Maps and Documents
+
+Duration: 6 to 7 weeks
+
+Includes:
+
+Secure document upload
+Google Maps integration
+Provider public location
+Nearby provider search
+Job posting
+Job acceptance workflow
+Milestone 3: Live Tracking and Payments
+
+Duration: 7 to 8 weeks
+
+Includes:
+
+Real-time GPS tracking
+Active job tracking session
+Stripe Connect
+Payment split
+Subscription plans
+Webhooks
+Milestone 4: Admin, Testing and Launch
+
+Duration: 5 to 7 weeks
+
+Includes:
+
+Full admin dashboard
+Payment monitoring
+Job monitoring
+Document review
+Compliance management
+Testing
+Deployment
+Bug fixing
+Recommended MVP Scope for Faster Delivery
+
+To reduce time for one developer, build the first MVP with these features only:
+
+Must-Have MVP
+Three user roles
+Login/register
+Provider onboarding
+Terms acceptance
+Secure document upload
+Admin approval
+Google Map location selection
+Nearby provider list
+Customer job posting
+Provider job acceptance
+Live tracking during active job
+Stripe Connect basic split payment
+Basic subscription
+Admin dashboard
+Move to Phase 2
+Advanced pricing rules
+Complex reports
+Disputes
+Refund automation
+Multi-document expiry workflows
+Advanced notifications
+Route optimization
+Mobile app
+Chat module
+Ratings and reviews
+Final Client Estimate
+
+For a single experienced developer, this MVP should be estimated at:
+
+24 to 28 weeks, around 6 to 7 months.
+
+If the client needs faster delivery, use a team of:
+
+1 frontend developer
+1 backend developer
+1 QA tester
+1 part-time DevOps/payment integration support
+
+With a team, the same MVP can be reduced to approximately 12 to 16 weeks.

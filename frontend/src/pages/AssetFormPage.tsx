@@ -3,10 +3,10 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/common/Toast';
 import { createAsset, updateAsset, getAsset } from '../services/assetService';
-import { getAllProductTypes } from '../services/productTypeService';
+import { getAllProducts } from '../services/productService';
 import { getAllVendors } from '../services/vendorService';
 import { getAllAssetStates } from '../services/assetStateService';
-import type { ProductTypeOption, NamedOption, ProcessorRow, HardDiskRow, MonitorRow, NetworkRow } from '../types';
+import type { NamedOption, Product, ProcessorRow, HardDiskRow, MonitorRow, NetworkRow } from '../types';
 
 const USERS        = ['nitin agarwal', 'praveen ranjan', 'rahul sharma', 'priya patel'];
 const DEPARTMENTS  = ['IT', 'HR', 'Finance', 'Operations', 'Administration', 'Marketing', 'Sales'];
@@ -21,7 +21,7 @@ const MON_TMPL:  MonitorRow   = { monitorType: '', serialNumber: '', manufacture
 const NET_TMPL:  NetworkRow   = { ipAddress: '', macAddress: '', nic: '', dnsServer: '', defaultGateway: '', dhcpEnabled: '', dhcpServer: '', dnsHostname: '', type: '' };
 
 interface FormState {
-  productTypeId: string; name: string; assetTag: string; orgSerialNumber: string;
+  productId: string; productTypeId: string; name: string; assetTag: string; orgSerialNumber: string;
   vendor: string; barcode: string; assetState: string; user: string; department: string;
   associatedToAssets: string; site: string; location: string;
   acquisitionDate: string; expiryDate: string; purchaseCost: string;
@@ -39,7 +39,7 @@ interface FormState {
 }
 
 const EMPTY: FormState = {
-  productTypeId: '', name: '', assetTag: '', orgSerialNumber: '',
+  productId: '', productTypeId: '', name: '', assetTag: '', orgSerialNumber: '',
   vendor: '', barcode: '', assetState: '', user: '', department: '',
   associatedToAssets: '', site: '', location: '',
   acquisitionDate: '', expiryDate: '', purchaseCost: '',
@@ -80,9 +80,9 @@ export default function AssetFormPage() {
   const isEdit         = Boolean(id);
 
   const [form,       setForm]      = useState<FormState>({ ...EMPTY, productTypeId: defaultPtId });
-  const [ptList,     setPtList]    = useState<ProductTypeOption[]>([]);
-  const [vendorList, setVendorList]= useState<NamedOption[]>([]);
-  const [stateList,  setStateList] = useState<NamedOption[]>([]);
+  const [productList, setProductList] = useState<Product[]>([]);
+  const [vendorList, setVendorList]   = useState<NamedOption[]>([]);
+  const [stateList,  setStateList]    = useState<NamedOption[]>([]);
   const [errors,     setErrors]    = useState<Record<string, string>>({});
   const [savingMode, setSavingMode]= useState<'save' | 'continue' | null>(null);
   const [loading,    setLoading]   = useState(isEdit);
@@ -90,76 +90,85 @@ export default function AssetFormPage() {
   const savingRef = useRef(false);
 
   useEffect(() => {
-    Promise.all([getAllProductTypes(), getAllVendors(), getAllAssetStates()])
-      .then(([pts, vendors, states]) => { setPtList(pts); setVendorList(vendors); setStateList(states); });
+    Promise.all([getAllProducts(), getAllVendors(), getAllAssetStates()])
+      .then(([products, vendors, states]) => { setProductList(products); setVendorList(vendors); setStateList(states); });
   }, []);
 
   useEffect(() => {
     if (!isEdit) return;
     setLoading(true);
     getAsset(id!)
-      .then((rec) => setForm({
-        productTypeId:        String(rec.productTypeId        ?? ''),
-        name:                 String(rec.name                 ?? ''),
-        assetTag:             String(rec.assetTag             ?? ''),
-        orgSerialNumber:      String(rec.orgSerialNumber       ?? ''),
-        description:          String(rec.description           ?? ''),
-        partNumber:           String(rec.partNumber            ?? ''),
-        product:              String(rec.product               ?? ''),
-        vendor:               String(rec.vendor                ?? ''),
-        barcode:              String(rec.barcode               ?? ''),
-        manufacturer:         String(rec.manufacturer          ?? ''),
-        assetState:           String(rec.assetState            ?? ''),
-        user:                 String(rec.user                  ?? ''),
-        department:           String(rec.department            ?? ''),
-        associatedToAssets:   String(rec.associatedToAssets    ?? ''),
-        site:                 String(rec.site                  ?? ''),
-        region:               String(rec.region                ?? ''),
-        location:             String(rec.location              ?? ''),
-        isLoanable:           Boolean(rec.isLoanable           ?? false),
-        acquisitionDate:      fmt(rec.acquisitionDate),
-        expiryDate:           fmt(rec.expiryDate),
-        purchaseCost:         String(rec.purchaseCost          ?? ''),
-        warrantyExpiryDate:   fmt(rec.warrantyExpiryDate),
-        purchaseOrder:        String(rec.purchaseOrder         ?? ''),
-        purchaseOrderNo:      String(rec.purchaseOrderNo       ?? ''),
-        stateComments:        String(rec.stateComments         ?? ''),
-        macAddress:           String(rec.macAddress            ?? ''),
-        serviceTag:           String(rec.serviceTag            ?? ''),
-        domain:               String(rec.domain                ?? ''),
-        smbiosVersion:        String(rec.smbiosVersion         ?? ''),
-        biosVersion:          String(rec.biosVersion           ?? ''),
-        biosManufacturer:     String(rec.biosManufacturer      ?? ''),
-        biosDate:             String(rec.biosDate              ?? ''),
-        osName:               String(rec.osName                ?? ''),
-        osVersion:            String(rec.osVersion             ?? ''),
-        osBuildNumber:        String(rec.osBuildNumber         ?? ''),
-        osServicePack:        String(rec.osServicePack         ?? ''),
-        osProductId:          String(rec.osProductId           ?? ''),
-        ram:                  String(rec.ram                   ?? ''),
-        virtualMemory:        String(rec.virtualMemory         ?? ''),
-        physicalMemory:       String(rec.physicalMemory        ?? ''),
-        processors:           (rec.processors as ProcessorRow[])    ?? [],
-        hardDisks:            [] as HardDiskRow[],
-        keyboardType:         '',
-        keyboardManufacturer: '',
-        keyboardSerialNumber: '',
-        mouseType:            '',
-        mouseSerialNumber:    '',
-        mouseManufacturer:    '',
-        mouseButtons:         '',
-        monitors:             [] as MonitorRow[],
-        networks:             [] as NetworkRow[],
-      }))
+      .then((rec) => {
+        const detail = rec.workstationDetail ?? null;
+        setForm({
+          productId:            String(rec.productId            ?? ''),
+          productTypeId:        String(rec.productTypeId        ?? ''),
+          name:                 String(rec.name                 ?? ''),
+          assetTag:             String(rec.assetTag             ?? ''),
+          orgSerialNumber:      String(rec.orgSerialNumber       ?? ''),
+          description:          String(rec.description           ?? ''),
+          partNumber:           String(rec.partNumber            ?? ''),
+          product:              String(rec.product               ?? ''),
+          vendor:               String(rec.vendor                ?? ''),
+          barcode:              String(rec.barcode               ?? ''),
+          manufacturer:         String(rec.manufacturer          ?? ''),
+          assetState:           String(rec.assetState            ?? ''),
+          user:                 String(rec.user                  ?? ''),
+          department:           String(rec.department            ?? ''),
+          associatedToAssets:   String(rec.associatedToAssets    ?? ''),
+          site:                 String(rec.site                  ?? ''),
+          region:               String(rec.region                ?? ''),
+          location:             String(rec.location              ?? ''),
+          isLoanable:           Boolean(rec.isLoanable           ?? false),
+          acquisitionDate:      fmt(rec.acquisitionDate),
+          expiryDate:           fmt(rec.expiryDate),
+          purchaseCost:         String(rec.purchaseCost          ?? ''),
+          warrantyExpiryDate:   fmt(rec.warrantyExpiryDate),
+          purchaseOrder:        String(rec.purchaseOrder         ?? ''),
+          purchaseOrderNo:      String(rec.purchaseOrderNo       ?? ''),
+          stateComments:        String(rec.stateComments         ?? ''),
+          macAddress:           String(rec.macAddress            ?? ''),
+          serviceTag:           String(rec.serviceTag            ?? ''),
+          domain:               String(rec.domain                ?? ''),
+          smbiosVersion:        String(rec.smbiosVersion         ?? ''),
+          biosVersion:          String(rec.biosVersion           ?? ''),
+          biosManufacturer:     String(rec.biosManufacturer      ?? ''),
+          biosDate:             String(rec.biosDate              ?? ''),
+          osName:               String(rec.osName                ?? ''),
+          osVersion:            String(rec.osVersion             ?? ''),
+          osBuildNumber:        String(rec.osBuildNumber         ?? ''),
+          osServicePack:        String(rec.osServicePack         ?? ''),
+          osProductId:          String(rec.osProductId           ?? ''),
+          ram:                  String(rec.ram                   ?? ''),
+          virtualMemory:        String(rec.virtualMemory         ?? ''),
+          physicalMemory:       String(rec.physicalMemory        ?? ''),
+          processors:           (detail?.processors ?? []) as ProcessorRow[],
+          hardDisks:            (detail?.hardDisks ?? []) as HardDiskRow[],
+          keyboardType:         String(detail?.keyboards?.[0]?.keyboardType ?? ''),
+          keyboardManufacturer: String(detail?.keyboards?.[0]?.manufacturer ?? ''),
+          keyboardSerialNumber: String(detail?.keyboards?.[0]?.serialNumber ?? ''),
+          mouseType:            String(detail?.mouseType            ?? ''),
+          mouseSerialNumber:    String(detail?.mouseSerialNumber    ?? ''),
+          mouseManufacturer:    String(detail?.mouseManufacturer    ?? ''),
+          mouseButtons:         String(detail?.mouseButtons         ?? ''),
+          monitors:             (detail?.monitors ?? []) as MonitorRow[],
+          networks:             (detail?.networks ?? []) as NetworkRow[],
+        });
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id, isEdit]);
 
+  const filteredProducts = useMemo(() => {
+    if (!defaultPtId) return productList;
+    return productList.filter((product) => String(product.productTypeId) === defaultPtId);
+  }, [productList, defaultPtId]);
+
   const isWorkstation = useMemo(() => {
-    if (!ptList.length || !form.productTypeId) return false;
-    const pt = ptList.find((p) => p.id === parseInt(form.productTypeId, 10));
-    return pt?.displayName?.toLowerCase() === 'workstation';
-  }, [ptList, form.productTypeId]);
+    if (!productList.length || !form.productId) return false;
+    const product = productList.find((p) => p.id === parseInt(form.productId, 10));
+    return product?.productType?.displayName?.toLowerCase() === 'workstation' || product?.productType?.apiName?.toLowerCase() === 'workstation';
+  }, [productList, form.productId]);
 
   useEffect(() => {
     if (!isWorkstation || isEdit) return;
@@ -179,19 +188,41 @@ export default function AssetFormPage() {
     setErrors((p) => ({ ...p, [name]: '' }));
   }
 
+  function handleProductChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const productId = e.target.value;
+    const selectedProduct = productList.find((p) => String(p.id) === productId);
+    setForm((prev) => ({
+      ...prev,
+      productId,
+      productTypeId: selectedProduct ? String(selectedProduct.productTypeId) : prev.productTypeId,
+      product: selectedProduct ? selectedProduct.name : prev.product,
+    }));
+    setErrors((p) => ({ ...p, productId: '' }));
+  }
+
   function addRow<T>(field: keyof FormState, tmpl: T) { setForm((prev) => ({ ...prev, [field]: [...(prev[field] as T[]), { ...tmpl }] })); }
   function removeRow<T>(field: keyof FormState, idx: number) { setForm((prev) => ({ ...prev, [field]: (prev[field] as T[]).filter((_, i) => i !== idx) })); }
   function updateRow<T extends Record<string, unknown>>(field: keyof FormState, idx: number, key: string, value: unknown) { setForm((prev) => ({ ...prev, [field]: (prev[field] as T[]).map((row, i) => (i === idx ? { ...row, [key]: value } : row)) })); }
 
   function validate() {
     const e: Record<string, string> = {};
-    if (!form.name.trim())   e.name          = 'Required';
-    if (!form.productTypeId) e.productTypeId = 'Required';
+    if (!form.name.trim()) e.name        = 'Required';
+    if (!form.productId)   e.productId   = 'Required';
     return e;
   }
 
   function buildPayload() {
-    return { ...form, productTypeId: form.productTypeId ? parseInt(form.productTypeId, 10) : undefined, purchaseCost: form.purchaseCost !== '' ? parseFloat(form.purchaseCost) : null, acquisitionDate: form.acquisitionDate || null, expiryDate: form.expiryDate || null, warrantyExpiryDate: form.warrantyExpiryDate || null };
+    const selectedProduct = productList.find((p) => String(p.id) === form.productId);
+    return {
+      ...form,
+      productId: form.productId ? parseInt(form.productId, 10) : undefined,
+      productTypeId: selectedProduct ? selectedProduct.productTypeId : (form.productTypeId ? parseInt(form.productTypeId, 10) : undefined),
+      product: selectedProduct ? selectedProduct.name : form.product,
+      purchaseCost: form.purchaseCost !== '' ? parseFloat(form.purchaseCost) : null,
+      acquisitionDate: form.acquisitionDate || null,
+      expiryDate: form.expiryDate || null,
+      warrantyExpiryDate: form.warrantyExpiryDate || null,
+    };
   }
 
   async function handleSave(continueEdit = false) {
@@ -236,10 +267,10 @@ export default function AssetFormPage() {
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="grid grid-cols-2 gap-6 p-6">
             <Field label="Name" req error={errors.name}><input name="name" value={form.name} onChange={ch} className={ic(!!errors.name)} placeholder="Enter asset name" /></Field>
-            <Field label="Asset Product" req error={errors.productTypeId}>
-              <select name="productTypeId" value={form.productTypeId} onChange={ch} className={ic(!!errors.productTypeId)}>
+            <Field label="Asset Product" req error={errors.productId}>
+              <select name="productId" value={form.productId} onChange={handleProductChange} className={ic(!!errors.productId)}>
                 <option value="">Select asset product</option>
-                {ptList.map((pt) => <option key={pt.id} value={pt.id}>{pt.displayName}</option>)}
+                {filteredProducts.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
               </select>
             </Field>
           </div>

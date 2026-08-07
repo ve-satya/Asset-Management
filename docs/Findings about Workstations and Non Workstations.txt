@@ -1,0 +1,11 @@
+The current frontend/backend workflow for Product Type, Asset Product, workstation assets,
+non-workstation assets, viewing/assigning assets, backend table behavior, and the major missing/gaps.
+Key findings: Workstation logic depends on Product Type displayName or apiName being exactly workstation/workstations.
+Non-workstation assets use only the common assets table.
+Workstation assets additionally maintain asset_workstation_details and child rows for processors, disks, keyboards, monitors, etc.
+Several detail tabs are placeholders: Relationships, Contracts, Financials, History.
+Assignment users are hard-coded.
+Asset history/audit, scanner import, restore workflow, normalized vendor/state/user references, and several workstation UI fields are missing.
+Keyboard and motherboard handling need attention: backend supports them differently/more fully than the current UI exposes.
+
+Created the manual here: docs/WORKSTATION_AND_NON_WORKSTATION_ASSET_MANUAL.md.
